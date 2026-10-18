@@ -1,0 +1,59 @@
+/* Colour study page (studies/colour.html). Requires tokens.css, base.css, player.css.
+   The scopes are drawn inside the canvas; this sheet only shapes the page around it. */
+
+.study--colour .colour-lede {
+  max-width: var(--measure);
+  color: var(--paper-2);
+  font-size: var(--step-0);
+}
+
+/* The picture is draggable: horizontal drags move the divider, vertical touch still scrolls. */
+.study--colour [data-stage-host] .player__canvas { touch-action: pan-y; }
+.study--colour [data-stage-host] .player__frame { outline: var(--hairline); outline-offset: -1px; }
+
+/* The picture and its scopes are the instrument here: lift them above the page grain (base.css
+   body::after), so A/B comparisons, the scope traces and the Print finish's own grain are seen
+   clean. The rest of the page keeps the grain. */
+.study--colour [data-stage-host] { position: relative; z-index: calc(var(--z-grain) + 1); }
+
+/* The two look pickers are long radio groups: keep their pills compact and evenly wrapped. */
+.study--colour .controls__radios { gap: 6px; }
+.study--colour .controls__radio span { padding: 0 10px; }
+
+.colour-notes {
+  margin-top: var(--s8);
+  padding-top: var(--s5);
+  border-top: var(--hairline);
+  display: grid;
+  gap: var(--s5);
+}
+.colour-notes__list {
+  margin: 0;
+  display: grid;
+  gap: var(--s5) var(--s7);
+}
+.colour-notes__list > div { display: grid; gap: var(--s2); align-content: start; }
+.colour-notes__list dt {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  color: var(--paper);
+}
+.colour-notes__list dd {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--paper-2);
+  font-size: var(--step-0);
+}
+
+@media (min-width: 768px) {
+  .colour-notes__list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (min-width: 1280px) {
+  .colour-notes__list { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+}
+
+/* A toggle with a hint: keep the hint on its own full-width row so the checkbox column stays narrow
+   (the generic .controls__item--toggle grid would otherwise put the hint under the checkbox). */
+.study--colour .controls__item--toggle .controls__hint { grid-column: 1 / -1; }

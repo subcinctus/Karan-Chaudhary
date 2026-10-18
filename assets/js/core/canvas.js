@@ -26,14 +26,22 @@ export function makeCanvas(w, h) {
   return c;
 }
 
-// Scratch canvases keyed by name + size; contents are always fully redrawn before use.
+// Scratch canvases keyed by name + size; contents are always fully redrawn before use. A small LRU:
+// every resize makes new keys, so an unbounded map would keep every size ever used. The bound holds
+// one full blur pyramid (≤ 7 levels + the blend canvas) with room for a second layer size.
+export const SCRATCH_MAX = 12;
 const scratchMap = new Map();
 export function scratch(name, w, h) {
   const key = `${name}:${Math.round(w)}x${Math.round(h)}`;
   let c = scratchMap.get(key);
-  if (!c) { c = makeCanvas(w, h); scratchMap.set(key, c); }
+  if (c) scratchMap.delete(key);   // re-insert: most recently used last
+  else c = makeCanvas(w, h);
+  scratchMap.set(key, c);
+  while (scratchMap.size > SCRATCH_MAX) scratchMap.delete(scratchMap.keys().next().value);
   return c;
 }
+/** Test hook: how many scratch canvases are held. */
+export const _scratchSize = () => scratchMap.size;
 
 let filterSupport;
 /** Feature-detect a working ctx.filter blur (pixel test, not just property presence). */
@@ -51,10 +59,23 @@ export function hasCtxFilter() {
 /** Test hook: force the fallback path. */
 export const _setFilterSupport = v => { filterSupport = v; };
 
+const PYR_MAX = 6;
+/**
+ * Pyramid levels for the fallback blur. A box-ish downsample by 2^L approximates σ ≈ 2^L / 2 after a
+ * bilinear upscale, so the ideal level is log2(2σ). Returns the two levels around it and the weight
+ * of the upper one: { lo, hi, f } with hi = lo + 1 (lo = 0 is the unblurred source).
+ */
+export function blurLevels(sigma) {
+  const x = Math.max(0, Math.min(PYR_MAX, Math.log2(Math.max(1e-6, sigma) * 2)));
+  const lo = Math.min(PYR_MAX - 1, Math.floor(x));
+  return { lo, hi: lo + 1, f: x - lo };
+}
+
 /**
  * Draw `src` into `ctx` blurred by Gaussian σ (in destination pixels) at (dx, dy, dw, dh).
- * Uses ctx.filter when it works; otherwise a downsample pyramid (½, ¼, …) then a smoothed upscale,
- * choosing the level from σ. Blur the layer, not the composite.
+ * Uses ctx.filter when it works; otherwise a downsample pyramid (½, ¼, …) then a smoothed upscale.
+ * The two levels around log2(2σ) are blended by its fractional part (premultiplied, 'lighter'), so a
+ * rack focus changes smoothly instead of stepping between levels. Blur the layer, not the composite.
  */
 export function blurLayer(ctx, src, sigma, dx = 0, dy = 0, dw = src.width, dh = src.height) {
   if (!(sigma > 0.05)) { ctx.drawImage(src, dx, dy, dw, dh); return; }
@@ -65,21 +86,39 @@ export function blurLayer(ctx, src, sigma, dx = 0, dy = 0, dw = src.width, dh = 
     ctx.filter = prev || 'none';
     return;
   }
-  // A box-ish downsample by 2^L approximates σ ≈ 2^L / 2 after bilinear upscale.
-  const levels = Math.max(1, Math.min(6, Math.round(Math.log2(sigma * 2))));
-  let cur = src, w = src.width, h = src.height;
-  for (let i = 0; i < levels; i++) {
+  const { lo, hi, f } = blurLevels(sigma);
+  const top = f < 1e-3 ? lo : f > 1 - 1e-3 ? hi : -1;   // one level is enough at (nearly) whole steps
+  const need = top >= 0 ? top : hi;
+  const pyr = [src];
+  let w = src.width, h = src.height;
+  for (let i = 0; i < need; i++) {
     w = Math.max(1, Math.ceil(w / 2)); h = Math.max(1, Math.ceil(h / 2));
     const next = scratch(`pyr${i}`, w, h), k = next.getContext('2d');
     k.setTransform(1, 0, 0, 1, 0, 0);
+    k.globalAlpha = 1; k.globalCompositeOperation = 'source-over';
     k.clearRect(0, 0, w, h);
     k.imageSmoothingEnabled = true; k.imageSmoothingQuality = 'high';
-    k.drawImage(cur, 0, 0, cur.width, cur.height, 0, 0, w, h);
-    cur = next;
+    k.drawImage(pyr[i], 0, 0, pyr[i].width, pyr[i].height, 0, 0, w, h);
+    pyr.push(next);
+  }
+  let out = pyr[need];
+  if (top < 0) {
+    // (1 − f)·lo + f·hi at the lower level's size. 'lighter' adds premultiplied colour, so the mix
+    // is exact for transparent layers too (source-over would not be).
+    const a = pyr[lo], b = pyr[hi];
+    const mix = scratch('pyrmix', a.width, a.height), k = mix.getContext('2d');
+    k.setTransform(1, 0, 0, 1, 0, 0);
+    k.clearRect(0, 0, mix.width, mix.height);
+    k.imageSmoothingEnabled = true; k.imageSmoothingQuality = 'high';
+    k.globalCompositeOperation = 'lighter';
+    k.globalAlpha = 1 - f; k.drawImage(a, 0, 0, a.width, a.height, 0, 0, mix.width, mix.height);
+    k.globalAlpha = f; k.drawImage(b, 0, 0, b.width, b.height, 0, 0, mix.width, mix.height);
+    k.globalAlpha = 1; k.globalCompositeOperation = 'source-over';
+    out = mix;
   }
   const smooth = ctx.imageSmoothingEnabled, q = ctx.imageSmoothingQuality;
   ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
-  ctx.drawImage(cur, 0, 0, cur.width, cur.height, dx, dy, dw, dh);
+  ctx.drawImage(out, 0, 0, out.width, out.height, dx, dy, dw, dh);
   ctx.imageSmoothingEnabled = smooth; ctx.imageSmoothingQuality = q;
 }
 

@@ -12,6 +12,9 @@
   overflow: hidden;
   background: var(--ink-0);
   contain: layout paint;
+  /* Never transition (base.css gives every element a 0.01 ms transition under reduced motion, and
+     Chromium interpolates aspect-ratio): the Player must measure the final size on its first frame. */
+  transition-property: none;
 }
 .player--fill .player__frame { position: absolute; inset: 0; aspect-ratio: auto; height: 100%; }
 
@@ -147,6 +150,8 @@
   background: var(--ink-2); border: 1px solid var(--line-strong); border-radius: var(--radius-2);
 }
 .controls__item--toggle { grid-template-columns: auto 1fr; align-items: center; min-height: var(--target); }
+/* A toggle's hint takes its own full-width row, so the checkbox column stays narrow. */
+.controls__item--toggle .controls__hint { grid-column: 1 / -1; }
 .controls__check { width: 20px; height: 20px; margin: 0 var(--s2) 0 0; accent-color: var(--tungsten); }
 
 @media (forced-colors: active) {

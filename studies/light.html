@@ -1,0 +1,74 @@
+<!doctype html>
+<!--
+  Light study: a plaster bust under classic portrait set-ups (WebGL2 raymarch) with a live
+  top-down lighting plan. Built from studies/_template.html.
+  Normal mode: full-screen Player + generated controls + plan (ui/light-plot.js).
+  Record mode: ?record&w=864&h=1080&fps=24[&seed=1&params=<base64 JSON>] renders a bare canvas and exposes
+  READY / N_FRAMES / FPS / renderFrame(i) / __seek(t) / __meta. To record one set-up, pass the
+  full presetParams(id) from assets/js/pieces/light.js as params.
+  All URLs are relative: the site is served from /Karan-Chaudhary/.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Light study · Karan Chaudhary</title>
+  <meta name="description" content="A plaster bust under Rembrandt, loop, butterfly, split, rim, backlight and low-key set-ups, rendered live in code, with key-to-fill ratio, source size and colour temperature controls and a live lighting plan.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0C0D10">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/player.css">
+  <link rel="stylesheet" href="../assets/css/study-light.css">
+</head>
+<body class="study study--light">
+  <a class="skip-link" href="#study">Skip to study</a>
+  <header class="study__bar">
+    <a class="study__home" href="../index.html">← Karan Chaudhary</a>
+    <button class="study__motion" type="button" data-motion-toggle>Motion off</button>
+  </header>
+
+  <main id="study" class="study__main">
+    <div class="study__layout light-layout">
+      <div class="study__head light-head">
+        <p class="cam-label">Study · Light</p>
+        <h1 class="study__title">Light</h1>
+        <p class="light-lede">A plaster bust under seven portrait set-ups. Choose one and the lights move on the plan; then open or close the key-to-fill ratio, change the size of the source and the colour temperatures, and set the camera’s white balance.</p>
+      </div>
+
+      <div class="light-stage" data-stage-host></div>
+
+      <figure class="light-plan">
+        <svg id="light-plan" class="light-plan__svg" data-light-plan></svg>
+        <figcaption class="light-plan__caption">
+          <p class="light-note" data-light-note></p>
+          <dl class="light-report" data-light-report></dl>
+        </figcaption>
+      </figure>
+
+      <aside class="study__panel light-panel" data-controls aria-label="Study controls"></aside>
+    </div>
+    <p class="study__credits cam-label" data-stage-credits></p>
+    <noscript><p>This study is rendered live with JavaScript and WebGL. Please enable JavaScript to see it.</p></noscript>
+  </main>
+
+  <script type="module">
+    import { runStage, parseStageQuery } from '../assets/js/core/stage.js';
+    import { bindLightPlot } from '../assets/js/ui/light-plot.js';
+
+    const load = () => import('../assets/js/pieces/light.js');
+    if (parseStageQuery().record) runStage({ load });
+    else {
+      bindLightPlot(document.querySelector('[data-stage-host]'), document.querySelector('[data-light-plan]'), {
+        report: document.querySelector('[data-light-report]'),
+        note: document.querySelector('[data-light-note]'),
+      });
+      // The scripted tour runs on desktop only; touch devices start on the resolved Rembrandt frame.
+      runStage({ load, poster: '../media/studies/light/poster.webp', autoplay: !matchMedia('(hover: none)').matches });
+    }
+  </script>
+</body>
+</html>

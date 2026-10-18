@@ -1,0 +1,77 @@
+<!doctype html>
+<!--
+  Focus study: depth of field from real lens maths on a night exterior, with a live DoF ruler.
+  Built from studies/_template.html.
+  Normal mode: full-screen Player + generated controls + ruler and readout (ui/dof-ruler.js).
+  Record mode: ?record&w=1920&h=804&fps=30[&seed=1&params=<base64 JSON>&layout=wide|tall] renders a bare
+  canvas and exposes READY / N_FRAMES / FPS / renderFrame(i) / __seek(t) / __meta. Passing params fixes
+  them (no scripted demo), e.g. {"format":"s35","focal":50,"stop":2.828,"focus":3}.
+  All URLs are relative: the site is served from /Karan-Chaudhary/.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Focus study · Karan Chaudhary</title>
+  <meta name="description" content="Depth of field from real lens maths, rendered live in code: format, focal length, stop and focus distance on a night exterior, with polygonal bokeh and a live depth-of-field ruler.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0C0D10">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/player.css">
+  <link rel="stylesheet" href="../assets/css/study-focus.css">
+</head>
+<body class="study study--focus">
+  <a class="skip-link" href="#study">Skip to study</a>
+  <header class="study__bar">
+    <a class="study__home" href="../index.html">← Karan Chaudhary</a>
+    <button class="study__motion" type="button" data-motion-toggle>Motion off</button>
+  </header>
+
+  <main id="study" class="study__main">
+    <div class="study__layout focus-layout">
+      <div class="study__head focus-head">
+        <p class="cam-label">Study · Focus</p>
+        <h1 class="study__title">Focus</h1>
+        <p class="focus-lede">A night exterior seen through a real lens. Choose a format, a prime and a stop, then pull focus across five planes: a slate at 1.2&nbsp;m, an actor at 3&nbsp;m, a practical lamp at 7&nbsp;m, festoon lights at 18&nbsp;m and the city at 60&nbsp;m. Every blur is the thin-lens equation, and every disc of light takes the shape of the iris.</p>
+      </div>
+
+      <div class="focus-stage" data-stage-host></div>
+
+      <figure class="focus-ruler">
+        <div class="focus-ruler__frame" data-dof-ruler></div>
+        <figcaption class="focus-ruler__caption">
+          <div class="focus-readout" data-dof-readout></div>
+          <ul class="focus-key" role="list">
+            <li><span class="focus-key__band" aria-hidden="true"></span>Band: acceptable focus, where the blur disc is no larger than the circle of confusion</li>
+            <li><span class="focus-key__h" aria-hidden="true"></span>Dashed tick: hyperfocal distance</li>
+            <li><span class="focus-key__disc" aria-hidden="true"></span>Disc size: blur, in circles of confusion</li>
+          </ul>
+        </figcaption>
+      </figure>
+
+      <aside class="study__panel focus-panel" data-controls aria-label="Study controls"></aside>
+    </div>
+    <p class="study__credits cam-label" data-stage-credits></p>
+    <noscript><p>This study is rendered live with JavaScript. Please enable it to see the piece.</p></noscript>
+  </main>
+
+  <script type="module">
+    import { runStage, parseStageQuery } from '../assets/js/core/stage.js';
+    import { bindDofRuler } from '../assets/js/ui/dof-ruler.js';
+
+    const load = () => import('../assets/js/pieces/focus.js');
+    if (parseStageQuery().record) runStage({ load });
+    else {
+      bindDofRuler(document.querySelector('[data-stage-host]'), document.querySelector('[data-dof-ruler]'), {
+        readout: document.querySelector('[data-dof-readout]'),
+        controls: document.querySelector('[data-controls]'),
+      });
+      runStage({ load, poster: '../media/studies/focus/poster.webp' });
+    }
+  </script>
+</body>
+</html>

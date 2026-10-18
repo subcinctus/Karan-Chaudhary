@@ -50,8 +50,14 @@ export function setArbitrationLimits(limits) { Object.assign(LIMITS, limits); ar
 
 const isTouch = () => typeof matchMedia === 'function' && matchMedia('(hover: none)').matches;
 
-function autoLayout(host) {
+/**
+ * 'tall' on a narrow portrait screen. A fill-mode host (its size comes from the page, not from the
+ * frame aspect) is also 'tall' whenever it is portrait itself, at any width. Aspect-fit hosts skip
+ * that test: their height follows the layout, so it would never switch back.
+ */
+function autoLayout(host, fill = false) {
   const w = host.clientWidth || innerWidth;
+  if (fill && host.clientHeight > w) return 'tall';
   return w < 640 && innerHeight > innerWidth ? 'tall' : 'wide';
 }
 
@@ -103,7 +109,7 @@ export function mount(host, o = {}) {
   canvas.setAttribute('aria-label', label ?? 'Loading animation');
   let posterImg = null;
   if (poster) {
-    posterImg = frame.querySelector('.player__poster') ?? frame.appendChild(h('img', 'player__poster', { alt: '', decoding: 'async' }));
+    posterImg = frame.querySelector('.player__poster') ?? frame.appendChild(h('img', 'player__poster', { alt: '', decoding: 'async', loading: eager ? 'eager' : 'lazy' }));
     posterImg.src = poster;
   }
   const bar = h('div', 'player__chrome');
@@ -131,6 +137,7 @@ export function mount(host, o = {}) {
   let qIndex = 0, ema = null, slow = 0, fast = 0;
   let size = { w: 0, h: 0, dpr: 0 }, layout = 'wide';
   let ui = null, lastLabel = '', contextLost = false;
+  let drawnSig = '';   // t, size and params of the frame on the canvas (see render)
   let resolveReady;
   const ready = new Promise(r => { resolveReady = r; });
 
@@ -185,10 +192,17 @@ export function mount(host, o = {}) {
   function render(timed = false) {
     if (!instance || contextLost || state === 'error') return;
     const params = currentParams();
+    // Pieces are pure (pixels = f(t, params, size, dpr, seed)), so an on-demand redraw of the frame
+    // already on the canvas is skipped: a static player draws exactly one frame (e.g. a queued skip()
+    // landing on the reduced-motion frame it already shows). Clock frames are always drawn and leave
+    // no signature, so the next on-demand render after them always draws too.
+    const sig = timed ? '' : `${t}|${size.w}x${size.h}@${size.dpr}|${JSON.stringify(params)}`;
+    if (sig && sig === drawnSig) return;
+    drawnSig = sig;
     const t0 = performance.now();
     try {
       instance.seek(t, params);
-    } catch (err) { fail(err); return; }
+    } catch (err) { drawnSig = ''; fail(err); return; }
     const cost = performance.now() - t0;
     frames++;
     if (!host.dataset.drawn) host.dataset.drawn = '';
@@ -228,7 +242,7 @@ export function mount(host, o = {}) {
 
   function applyLayout() {
     if (!meta) return;
-    layout = layoutOpt === 'auto' ? autoLayout(host) : layoutOpt;
+    layout = layoutOpt === 'auto' ? autoLayout(host, fit === 'fill') : layoutOpt;
     host.dataset.layout = layout;
     if (fit === 'aspect') {
       const a = typeof meta.aspect === 'number' ? meta.aspect : (meta.aspect?.[layout] ?? meta.aspect?.wide ?? 16 / 9);
@@ -246,6 +260,7 @@ export function mount(host, o = {}) {
     size = s;
     setupCanvas(canvas, s.w, s.h, s.dpr);
     try { instance.resize(s.w, s.h, s.dpr, { layout }); } catch (err) { fail(err); return false; }
+    drawnSig = '';   // after resize() always redraw, even at the same size
     render();
     return true;
   }
@@ -331,6 +346,7 @@ export function mount(host, o = {}) {
     const s = measure();
     size = { w: s.w || 1, h: s.h || 1, dpr: s.dpr };
     setupCanvas(canvas, size.w, size.h, size.dpr);
+    drawnSig = '';
     const params = paramSet.at(pt);
     instance = await mod.create(canvas, {
       width: size.w, height: size.h, dpr: size.dpr, params, seed, quality: QUALITY_STEPS[qIndex],
@@ -491,6 +507,8 @@ export function mount(host, o = {}) {
       ended = mode === 'once' && t >= duration();
       if (!ended) endFired = false;
       render();
+      // A paused demo's controls show the scripted params of the frame on screen.
+      if (mode !== 'interactive') ui?.update(currentParams());
     },
     /**
      * Jump to the last frame, pause and fire onEnd (Skip intro). Safe to call while loading:
@@ -511,7 +529,12 @@ export function mount(host, o = {}) {
       if (interactive && (mode === 'loop' || mode === 'once')) enterInteractive(source === 'control' ? Object.keys(partial) : []);
       paramSet.set(partial, pt, { animate });
       if (source !== 'control') ui?.update(paramSet.targets);
-      if (!animate || !raf) render();
+      // Draw now unless a spring is under way and a frame is already scheduled. A key with no spring
+      // (radio, select, toggle, string) or a set that is already settled changes the picture at once,
+      // and a frame queued by the demo is no promise: update() below cancels it when nothing needs
+      // the clock any more.
+      const instant = !animate || paramSet.settled(pt) || Object.keys(partial).some(k => !paramSet.tracks[k]);
+      if (instant || !raf) render();
       update();
     },
     /** Leave interactive mode and return to the scripted demo. */

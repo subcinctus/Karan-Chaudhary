@@ -58,36 +58,49 @@ content the rendered pixels are unchanged):
   - Font constants `JP`, `DISP` changed from `const` to `let` (`setFonts()`).
   - `stage()` background fill made optional through `OPTS.stage`.
   - #005 sample words, font weight/size and tracking moved into `TEXT5` (defaults equal the originals); the top text's `'#fff'` → `C.white` (same value).
-  - ES module exports appended (`CELLS_BY_ID`, `MOTION`, `C`, `OPTS`, `TEXT5`, `setFonts`, …).
+  - ES module exports appended (`CELLS_BY_ID`, `MOTION`, `C`, `OPTS`, `TEXT5`, `C_DEFAULT`, `TEXT5_DEFAULT`, `resetPalette`, `setFonts`, `getFonts`).
 
-Site-level uses (palette remapped per film, content swapped, play-once-and-hold timing) are
-documented in the files that call these modules.
+Where the vendored cells are used. Beyond the `[mod]` lines above (which, inside a cell, only turn
+#005's sample text into the `TEXT5` data), no element's code is changed; the site files work only
+through what the kits expose:
+
+| Element | Used by | How |
+|---|---|---|
+| #005 Mask reveal | `assets/js/pieces/title.js` | The name reveal, played once to its hold. Content is swapped through the kit's own hooks only: the words, weight, size and tracking through `TEXT5`, colours through `C`, faces through `setFonts()`, and the stage fill turned off through `OPTS.stage`. |
+| #027 #030 #031 #032 #033 #043 | `assets/js/pieces/shotcard.js` (real-time hover loop in `assets/js/ui/shotcard-mount.js`) | The shot-language cards. Each draw remaps the kit palette `C` to the film's palette, draws the cell and calls `resetPalette()` in the same synchronous call. The kit's viewfinder keys (corner marks, REC label, HUD pill) are set transparent and a quieter viewfinder is drawn on top; the kit's REC dot, drawn in the subject's colour, is clipped out. The kit's `ctx.filter` blur radii are scaled to the card size through a thin context proxy. The card is cropped to the film's aspect and played once and held. |
+
+The same six camera moves are also the vocabulary of the Unreal previs. Their spec numbers
+(distances, angles, timings, easing) are rebuilt in Unreal units by `tools/previs-shotlist.mjs`,
+which carries their licence lines, into `previs/shotlist.json`.
 
 ### Numbers only (rebuilt, nothing vendored)
 
 These elements' timings, easings and amounts were carried over and re-implemented with real events
-or in other code; each file that uses them carries the element's licence line as a comment.
+or in other code. Each file that uses them carries the element's licence line as a comment.
 
 | ID | Element | Used in |
 |---|---|---|
-| #074 | Fade-in on scroll | <!-- TODO(integration): file --> |
-| #079 | Scroll progress (timecode) | <!-- TODO(integration): file --> |
-| #087 | Before/after wipe | <!-- TODO(integration): file --> |
-| #089 | Film-leader preloader | <!-- TODO(integration): file --> |
-| #092 | Shutter page transition | <!-- TODO(integration): file --> |
-| #097 | Backlight | `assets/js/core/presets.js` |
-| #098 | Rim light | `assets/js/core/presets.js` |
-| #100 | Split light | `assets/js/core/presets.js` |
-| #101 | Rembrandt light | `assets/js/core/presets.js` |
-| #102 | Butterfly light | `assets/js/core/presets.js` |
-| #105 | Bokeh | <!-- TODO(integration): file --> |
-| #112 | Vignette | <!-- TODO(integration): file --> |
-| #114 | Low-key | `assets/js/core/presets.js` |
-| #115 | Black and white | <!-- TODO(integration): file --> |
-| #117 | Teal and orange | <!-- TODO(integration): file --> |
-| #118 | Film grain | `assets/js/core/grain.js` |
+| #033 | Rack focus | `assets/js/pieces/focus.js` (1.6 s pull, cubic in-out, travelling corner brackets), `assets/js/pieces/title.js` (the name's focus-pull timing) |
+| #074 | Fade-in on scroll | `assets/js/site/reveal.js`, `assets/css/site.css` |
+| #079 | Scroll progress (timecode) | `assets/js/site/progress.js`, `assets/css/site.css` |
+| #087 | Before/after wipe | `assets/js/pieces/colour.js` |
+| #089 | Film-leader preloader | `assets/js/site/preloader.js`, `assets/css/site.css` |
+| #092 | Shutter page transition | `assets/js/site/shutter.js`, `assets/css/site.css` |
+| #097 | Backlight | `assets/js/core/presets.js`, `assets/js/pieces/light.js`, `assets/js/pieces/light-shader.js` (the backlight veil, rebuilt as a lit haze), `tools/previs-bust.mjs` (its Unreal haze note) |
+| #098 | Rim light | `assets/js/core/presets.js`, `assets/js/pieces/light.js` |
+| #100 | Split light | `assets/js/core/presets.js`, `assets/js/pieces/light.js` |
+| #101 | Rembrandt light | `assets/js/core/presets.js`, `assets/js/pieces/light.js` |
+| #102 | Butterfly light | `assets/js/core/presets.js`, `assets/js/pieces/light.js` |
+| #105 | Bokeh | `assets/js/pieces/focus.js`, `assets/js/pieces/still.js` |
+| #112 | Vignette | `assets/js/pieces/title.js`, `assets/js/pieces/shotcard.js`, `assets/js/pieces/still.js` |
+| #114 | Low-key | `assets/js/core/presets.js`, `assets/js/pieces/light.js` |
+| #115 | Black and white | `assets/js/pieces/colour-grade.js` |
+| #117 | Teal and orange | `assets/js/pieces/colour-grade.js` |
+| #118 | Film grain | `assets/js/core/grain.js` (the speckle tiles); `assets/js/pieces/still.js` (static); `assets/css/tokens.css` and `assets/css/base.css` (the static page grain); `assets/js/pieces/title.js` and `assets/js/pieces/shotcard.js` (re-seeded at 24 fps, a deviation: they are moving images; the cards only while the camera moves); `assets/js/pieces/colour-scene.js` and `assets/js/pieces/colour-grade.js` (modified: a speck on every pixel at 18 % of #118's opacity, quantised to 32 levels, instead of sparse squares) |
 
-<!-- TODO(integration): confirm the final list and file paths once every piece has landed. -->
+The lighting presets (#097 #098 #100 #101 #102 #114) also reach `previs/shotlist.json` through
+`assets/js/core/presets.js`. The remaining pieces' text and prompts (`prompts/*.md`) cite Motion
+Prompt IDs by name only. No other Motion Prompt element is used.
 
 ## Fonts (SIL Open Font License 1.1)
 
@@ -99,15 +112,29 @@ Served by Google Fonts; not redistributed in this repository.
 
 Licence text: <https://openfontlicense.org/>
 
-## Inspiration
+## Inspiration: Awesome Opus 5.5 Videos
 
-The "film as code" approach (every frame a pure function `seek(t)`, recorded to video) was
-inspired by **Awesome Opus 5.5 Videos** by yihui-dev (MIT) —
-<https://github.com/yihui-dev/awesome-opus5-5-videos>. No prompts' outputs or media from that
-collection are re-hosted on this site; the pieces here are original.
+The "film as code" approach was inspired by **Awesome Opus 5.5 Videos** by yihui-dev:
+<https://github.com/yihui-dev/awesome-opus5-5-videos>. The list is MIT-licensed. In this site, that
+means:
 
-## Unreal Engine
+- the approach is every frame a pure function `seek(t)`, recorded to video;
+- the prompts in `prompts/` borrow the collection's block structure:
+  `<inputs>` / `<direction>` / `<structure>` / `<build>` / `<gotchas>` / `<start>`;
+- the videos and prompts in the collection belong to their creators. None of them, and none of their
+  outputs or media, is copied, embedded or re-hosted here;
+- every piece on this site is original.
 
-The previs workflow refers to Epic Games' Unreal Engine and its Claude Code plugin
-(`unreal-engine-skills-for-claude-code`). Neither is included in this repository; Unreal Engine is
-subject to its own EULA.
+## Unreal Engine and the Unreal Engine Skills plugin
+
+The previs workflow (`previs/README.md`, `prompts/previs-unreal.md`, `.claude/settings.json`) uses
+two things that are **not** included in this repository:
+
+- **The Unreal Engine Skills for Claude Code plugin** by Epic Games:
+  `unreal-engine-skills-for-claude-code@claude-plugins-official`, from Anthropic's official plugin
+  marketplace. It is referenced by name in `.claude/settings.json` and installed by the user.
+- **Epic Games' Unreal Engine.** It is subject to its own EULA.
+
+The Motion Prompt plugin is also referenced in `.claude/settings.json` (marketplace
+`showheyohtaki/motion-prompt`); it is not vendored. Any Unreal renders committed under
+`media/previs/` are original output of this project's own previs scenes.

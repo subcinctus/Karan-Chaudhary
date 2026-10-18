@@ -111,12 +111,22 @@ export function buildControls(container, schema = [], { values = {}, onInput, de
     input.addEventListener('input', () => { const v = sliderToValue(p, input.value); emit(p, v, { animate: false }); paint(v); });
     const node = el('div', { class: 'controls__item controls__item--range' },
       el('div', { class: 'controls__row' }, el('label', { class: 'controls__label', for: cid, text: p.label }), out), input, hint);
-    return { p, node, set: v => { input.value = String(valueToSlider(p, v)); paint(v); } };
+    return {
+      p, node,
+      set: v => { input.value = String(valueToSlider(p, v)); paint(v); },
+      repaint: () => paint(current[p.key] ?? v0),
+    };
+  }
+
+  /** Re-render every range's <output> and aria-valuetext: a format may depend on other params (units). */
+  function repaintRanges(except) {
+    for (const e of entries) if (e.repaint && e.p.key !== except) e.repaint();
   }
 
   function emit(p, v, opts) {
     current = { ...current, [p.key]: v };
     onInput?.({ [p.key]: v }, { ...opts, source: 'control', key: p.key });
+    repaintRanges(p.key);
     announce(readout(p.key));
   }
 
@@ -126,6 +136,7 @@ export function buildControls(container, schema = [], { values = {}, onInput, de
     update(vals) {
       current = { ...current, ...vals };
       for (const e of entries) if (e.p.key in vals) e.set(vals[e.p.key]);
+      for (const e of entries) if (e.repaint && !(e.p.key in vals)) e.repaint();
     },
     announce,
     destroy() { clearTimeout(timer); root.remove(); if (!live) liveEl.remove(); },

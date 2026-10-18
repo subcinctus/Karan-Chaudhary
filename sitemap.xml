@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Home + every film in data/portfolio.js (npm run check verifies that all slugs are listed). -->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://subcinctus.github.io/Karan-Chaudhary/</loc><changefreq>monthly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://subcinctus.github.io/Karan-Chaudhary/project.html?slug=untitled-short-01</loc><priority>0.8</priority></url>
+  <url><loc>https://subcinctus.github.io/Karan-Chaudhary/project.html?slug=night-exterior-sample</loc><priority>0.8</priority></url>
+  <url><loc>https://subcinctus.github.io/Karan-Chaudhary/project.html?slug=sample-music-video</loc><priority>0.8</priority></url>
+  <url><loc>https://subcinctus.github.io/Karan-Chaudhary/project.html?slug=untitled-documentary-sample</loc><priority>0.8</priority></url>
+  <url><loc>https://subcinctus.github.io/Karan-Chaudhary/project.html?slug=coastal-study-sample</loc><priority>0.8</priority></url>
+  <url><loc>https://subcinctus.github.io/Karan-Chaudhary/project.html?slug=sample-commercial</loc><priority>0.8</priority></url>
+</urlset>

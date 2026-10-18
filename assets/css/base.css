@@ -25,7 +25,7 @@ body {
   overflow-x: clip;
 }
 
-/* Static film grain over everything. No blend mode: keeps scrolling cheap. */
+/* Static film grain over the page. No blend mode: keeps scrolling cheap. */
 body::after {
   content: "";
   position: fixed;
@@ -35,6 +35,14 @@ body::after {
   background-image: var(--grain);
   background-size: var(--grain-size) var(--grain-size);
   opacity: var(--grain-opacity);
+}
+
+/* Pictures sit above the page grain, so a canvas never shows a second layer of grain over its own
+   (e.g. the hero title). Zero specificity: a page's own position (sticky, absolute) and z-index win,
+   and a lifted container keeps its children's order (the hero's stage stays under its buttons). */
+:where([data-stage-host], .player, [data-hero], .frame:has(> canvas)) {
+  position: relative;
+  z-index: var(--z-picture);
 }
 
 img, svg, video, canvas { display: block; max-width: 100%; }
@@ -78,7 +86,7 @@ a:hover { text-decoration-color: var(--tungsten); }
 
 .skip-link {
   position: absolute; left: var(--s4); top: var(--s4);
-  z-index: calc(var(--z-grain) + 1);
+  z-index: var(--z-skip);
   padding: var(--s3) var(--s4);
   background: var(--paper); color: var(--ink-0);
   font-family: var(--font-mono); font-size: var(--step--1);

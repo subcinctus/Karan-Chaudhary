@@ -1,0 +1,25 @@
+{
+  "name": "Karan Chaudhary — Cinematographer",
+  "short_name": "K·C",
+  "description": "Cinematographer / director of photography. Reel, selected work, and light, lens and colour studies rendered live in code.",
+  "lang": "en",
+  "start_url": "./",
+  "scope": "./",
+  "display": "browser",
+  "background_color": "#0C0D10",
+  "theme_color": "#0C0D10",
+  "icons": [
+    {
+      "src": "assets/icons/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

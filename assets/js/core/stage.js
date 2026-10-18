@@ -43,7 +43,10 @@ export function parseStageQuery(search = location.search) {
 
 /**
  * Run a study page.
- * @param {{ load: () => Promise<{meta, create}>, host?: string|HTMLElement, controls?: string|HTMLElement, poster?: string, heavy?: boolean }} o
+ * @param {{ load: () => Promise<{meta, create}>, host?: string|HTMLElement, controls?: string|HTMLElement, poster?: string,
+ *   autoplay?: boolean, heavy?: boolean, params?: object }} o
+ *   poster: relative URL shown until the first frame (normal mode only); autoplay: false starts the
+ *   demo paused on its first frame (the play button and controls still work).
  */
 export async function runStage(o) {
   const q = parseStageQuery();
@@ -70,11 +73,20 @@ async function runRecord({ load }, q) {
     document.body.replaceChildren(canvas);
 
     const fontsOk = await loadFonts(meta.fonts ?? []);
+    // The piece creates its own context (2D or WebGL) on this canvas; the harness never touches it.
     const instance = await create(canvas, { width: w, height: h, dpr: 1, params: base, seed: q.seed, quality: 1, record: true, reducedMotion: false, layout });
+    if (!instance || typeof instance.seek !== 'function') throw new Error('create() must return { seek, resize, dispose }');
     const paramsAt = t => (!fixed && instance.script ? { ...base, ...instance.script(t) } : base);
     const duration = meta.duration ?? 0;
 
-    window.__seek = t => { instance.seek(t, paramsAt(t)); return t; };
+    // A frame that throws is reported (STAGE_ERROR) as well as thrown, so a recorder polling the
+    // page sees the failure instead of encoding a stale canvas.
+    window.__seek = t => {
+      const time = Number(t);
+      if (!Number.isFinite(time)) throw new Error(`__seek: bad time ${t}`);
+      try { instance.seek(time, paramsAt(time)); } catch (err) { window.STAGE_ERROR = String(err?.stack ?? err); throw err; }
+      return time;
+    };
     window.renderFrame = i => window.__seek(i / fps);
     window.FPS = fps;
     window.N_FRAMES = Math.max(1, Math.round(duration * fps));
@@ -92,14 +104,14 @@ async function runRecord({ load }, q) {
   }
 }
 
-async function runNormal({ load, host = '[data-stage-host]', controls = '[data-controls]', poster, heavy = true, params }, q) {
+async function runNormal({ load, host = '[data-stage-host]', controls = '[data-controls]', poster, autoplay = true, heavy = true, params }, q) {
   applyPageGrain();
   const toggle = document.querySelector('[data-motion-toggle]');
   if (toggle) bindMotionToggle(toggle);
   const hostEl = typeof host === 'string' ? document.querySelector(host) : host;
   const ctlEl = typeof controls === 'string' ? document.querySelector(controls) : controls;
   const player = mount(hostEl, {
-    load, poster, heavy, eager: true, seed: q.seed, controls: ctlEl ?? false,
+    load, poster, autoplay, heavy, eager: true, seed: q.seed, controls: ctlEl ?? false,
     params: { ...(params ?? {}), ...(q.params ?? {}) },
   });
   window.__stage = player;

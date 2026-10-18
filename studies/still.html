@@ -1,0 +1,134 @@
+<!doctype html>
+<!--
+  Procedural stills: the placeholder frame grabs the site shows for any film that has no real stills
+  yet (assets/js/pieces/still.js → renderStill). Built from studies/_template.html.
+  Normal mode: for every film in data/portfolio.js, its stillKinds in its palette and aspect, plus a
+  contact sheet of all six compositions.
+  Record mode: ?record&w=1280&h=536[&seed=1&params=<base64 JSON>] renders one still on a bare canvas and
+  exposes READY / N_FRAMES / FPS / renderFrame(i) / __seek(t) / __meta, e.g.
+  params = {"kind":"night-street","palette":["#0B0C10","#2B2A33","#D98E32","#F2C46D","#E9E4D8"],"aspect":1.85}.
+  All URLs are relative: the site is served from /Karan-Chaudhary/.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Procedural stills · Karan Chaudhary</title>
+  <meta name="description" content="Placeholder frame grabs painted in code from each film's palette and aspect ratio, until the real stills are added.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0C0D10">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/player.css">
+  <style>
+    .stills-page { max-width: var(--container); }
+    .stills-page__lede { max-width: var(--measure); color: var(--paper-2); margin: 0; }
+    .reel-row { margin-top: var(--s8); display: grid; gap: var(--s4); }
+    .reel-row__head { display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--s2) var(--s4); margin: 0; }
+    .reel-row__title { font-family: var(--font-display); font-weight: 500; font-size: var(--step-2); margin: 0; }
+    .reel-row__title a { color: inherit; text-decoration: none; }
+    .reel-row__title a:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+    .swatches { display: inline-flex; gap: 3px; }
+    .swatches i { width: 12px; height: 12px; border-radius: 1px; outline: 1px solid rgb(236 230 218 / 0.12); }
+    .frames { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s4); align-items: end; }
+    @media (min-width: 720px) { .frames { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    .frames figure { margin: 0; display: grid; gap: var(--s2); }
+    .frames .frame { outline: 1px solid var(--line); outline-offset: -1px; }
+    .frames .frame img { opacity: 0; transition: opacity var(--dur-3) var(--ease-out); }
+    .frames .frame img.is-in { opacity: 1; }
+    .contact { margin-top: var(--s9); }
+    .contact summary { cursor: pointer; min-height: var(--target); display: flex; align-items: baseline; gap: var(--s4); list-style: none; }
+    .contact summary::-webkit-details-marker { display: none; }
+    .contact summary::before { content: "+"; font-family: var(--font-mono); color: var(--tungsten); width: 1ch; }
+    .contact[open] summary::before { content: "−"; }
+    .contact summary h2 { font-family: var(--font-display); font-weight: 500; font-size: var(--step-2); margin: 0; display: inline; }
+    .contact .frames { margin-top: var(--s4); }
+    @media (min-width: 720px) { .contact .frames { grid-template-columns: repeat(6, minmax(0, 1fr)); gap: var(--s2); } }
+  </style>
+</head>
+<body class="study study--still">
+  <a class="skip-link" href="#study">Skip to stills</a>
+  <header class="study__bar">
+    <a class="study__home" href="../index.html">← Karan Chaudhary</a>
+    <button class="study__motion" type="button" data-motion-toggle>Motion off</button>
+  </header>
+
+  <main id="study" class="study__main stills-page">
+    <div class="study__head">
+      <p class="cam-label">Study · Placeholder stills</p>
+      <h1 class="study__title">Procedural stills</h1>
+      <p class="stills-page__lede">Until the real frames are in, every film shows composed placeholders painted from its own palette and cropped to its delivery aspect: six set-ups on a rule-of-thirds grid, lit the way I would light them. Each is clearly marked; adding stills to <code>data/portfolio.js</code> replaces them.</p>
+    </div>
+    <div data-films></div>
+    <details class="contact" data-contact>
+      <summary><h2>Contact sheet</h2><span class="cam-label">six compositions × six palettes</span></summary>
+      <ul class="frames" role="list" data-sheet></ul>
+    </details>
+    <p class="study__credits cam-label">Bokeh, vignette and grain from the numbers of Motion Prompt #105, #112 and #118 by Shohei Ohtaki (MIT).</p>
+    <noscript><p>These stills are painted with JavaScript. Please enable it to see them.</p></noscript>
+  </main>
+
+  <script type="module">
+    import { runStage, parseStageQuery } from '../assets/js/core/stage.js';
+    import { applyPageGrain } from '../assets/js/core/grain.js';
+    import { bindMotionToggle } from '../assets/js/core/motion-pref.js';
+    import { hashString } from '../assets/js/core/prng.js';
+
+    const load = () => import('../assets/js/pieces/still.js');
+    if (parseStageQuery().record) runStage({ load });
+    else page();
+
+    async function page() {
+      applyPageGrain();
+      bindMotionToggle(document.querySelector('[data-motion-toggle]'));
+      const [{ renderStill, STILL_KINDS }, { default: data }] = await Promise.all([load(), import('../data/portfolio.js')]);
+      const films = data.films ?? [];
+      const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+      const ratio = a => `${Number(a).toFixed(2)}:1`;
+      const label = k => String(k).replace(/-/g, ' ');
+      const frame = (f, kind, i, seed) => `
+        <li><figure>
+          <div class="frame" style="--ar:${Number(f.aspect) || 1.78}" data-kind="${esc(kind)}" data-slug="${esc(f.slug)}" data-seed="${seed}"></div>
+          <figcaption class="cam-label">${String(i + 1).padStart(2, '0')} · ${esc(label(kind))} · ${ratio(f.aspect)}</figcaption>
+        </figure></li>`;
+
+      document.querySelector('[data-films]').innerHTML = films.map(f => `
+        <section class="reel-row" aria-labelledby="h-${esc(f.slug)}">
+          <p class="reel-row__head"><span class="reel-row__title" id="h-${esc(f.slug)}"><a href="../project.html?slug=${encodeURIComponent(f.slug)}">${esc(f.title)}</a></span>
+            <span class="cam-label">${esc(f.format)} · ${ratio(f.aspect)} · ${esc(f.move)}</span>
+            <span class="swatches" aria-hidden="true">${(f.palette ?? []).map(c => `<i style="background:${esc(c)}"></i>`).join('')}</span></p>
+          <ul class="frames" role="list">${(f.stillKinds ?? STILL_KINDS.slice(0, 3)).map((k, i) => frame(f, k, i, hashString(f.slug + i))).join('')}</ul>
+        </section>`).join('');
+      document.querySelector('[data-sheet]').innerHTML = films.flatMap(f => STILL_KINDS.map((k, i) => frame(f, k, i, hashString(f.slug + k)))).join('');
+
+      const bySlug = new Map(films.map(f => [f.slug, f]));
+      const dpr = Math.min(2, devicePixelRatio || 1);
+      const timings = [];
+      const paint = async el => {
+        if (el.dataset.done) return;
+        el.dataset.done = '1';
+        const f = bySlug.get(el.dataset.slug);
+        const t0 = performance.now();
+        const url = await renderStill({ palette: f.palette, aspect: f.aspect, seed: Number(el.dataset.seed), kind: el.dataset.kind, width: Math.round(el.clientWidth * dpr) || 960 });
+        timings.push(performance.now() - t0);
+        const img = new Image();
+        img.alt = `Placeholder still for ${f.title}: ${label(el.dataset.kind)}`;
+        img.decoding = 'async';
+        img.onload = () => img.classList.add('is-in');
+        img.src = url;
+        el.append(img);
+      };
+      const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { io.unobserve(e.target); paint(e.target); } }), { rootMargin: '300px 0px' });
+      document.querySelectorAll('[data-films] .frame').forEach(el => io.observe(el));
+      document.querySelector('[data-contact]').addEventListener('toggle', e => {
+        if (e.target.open) document.querySelectorAll('[data-sheet] .frame').forEach(el => io.observe(el));
+      });
+      window.__paintAll = async sel => { for (const el of document.querySelectorAll(sel)) await paint(el); return timings; };
+      window.READY = true;
+    }
+  </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 /* Design tokens. Every colour, size and duration the site uses is defined here.
    Contrast figures are against --ink-1 (#0C0D10); `npm run check` recomputes them. */
+/* Motion Prompt #118 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#118 */
 
 :root {
   color-scheme: dark;
@@ -83,9 +84,12 @@
   /* Letterbox */
   --ar: 2.39;
 
-  /* Layers */
+  /* Layers. The page grain lies over the page but under pictures (live canvases carry their own
+     grain, or none on purpose); the header, overlays and the skip link sit above both. */
   --z-player-chrome: 2;
+  --z-grain: 10;
+  --z-picture: 11;  /* players, stage hosts, the hero, frames holding a canvas (base.css) */
   --z-nav: 50;
   --z-overlay: 90;
-  --z-grain: 100;
+  --z-skip: 100;
 }

@@ -1,0 +1,140 @@
+<!doctype html>
+<!--
+  Shot language: the six camera moves the Selected-work cards perform, each painted in the palette and
+  cropped to the aspect of the film that uses it. Built from studies/_template.html.
+  Normal mode: a gallery of six cards (assets/js/ui/shotcard-mount.js → mountShotCard, drawing assets/js/pieces/shotcard.js). Hover or focus a card,
+  or scroll it into view on a touch screen: the move plays once and holds.
+  Record mode: ?record&w=1280&h=536&fps=30[&seed=1&params=<base64 JSON>] renders ONE move on a bare canvas
+  and exposes READY / N_FRAMES / FPS / renderFrame(i) / __seek(t) / __meta, e.g.
+  params = {"move":"#031","palette":["#0D1316","#2C3E46","#6F8C96","#B8C9CC","#EEF2F1"],"aspect":2.76}.
+  Passing "u" in params pins the cell time; without it, t plays the 8 s enter / hold / exit timeline.
+  All URLs are relative: the site is served from /Karan-Chaudhary/.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Shot language · Karan Chaudhary</title>
+  <meta name="description" content="Six camera moves (dolly in, orbit, crane up, dolly zoom, rack focus, whip pan) rendered live in code, each in the palette and aspect ratio of a film.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0C0D10">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/player.css">
+  <style>
+    .shots { max-width: var(--container); }
+    .shots__lede { max-width: var(--measure); color: var(--paper-2); margin: 0; }
+    .shots__how { max-width: var(--measure); color: var(--paper-3); margin: var(--s3) 0 0; }
+    .shots__grid { list-style: none; margin: var(--s7) 0 0; padding: 0; display: grid; gap: var(--s8) var(--s6); }
+    .shot { display: flex; flex-direction: column; gap: var(--s4); min-width: 0; }
+    /* Two columns: each card spans five subgrid rows, so frames of different aspects share a bottom line
+       and the titles beneath them line up. */
+    @media (min-width: 860px) {
+      .shots__grid { grid-template-columns: repeat(2, minmax(0, 1fr)); row-gap: 0; }
+      .shot { display: grid; grid-row: span 5; grid-template-rows: subgrid; row-gap: var(--s4); padding-bottom: var(--s8); }
+      /* A common 2.39 gate (a scope monitor): every frame sits in it at its own aspect, pillarboxed
+         or letterboxed, so a 4:3 card does not tower over a 2.76 one and the rows stay even. */
+      .shot__gate { align-self: end; aspect-ratio: 2.39; display: flex; align-items: center; justify-content: center; background: var(--ink-0); }
+      .shot__frame--narrow { width: auto; height: 100%; }
+    }
+    .shot__frame { outline: 1px solid var(--line); outline-offset: -1px; transition: outline-color var(--dur-2) var(--ease-out); }
+    .shot:hover .shot__frame, .shot:focus-within .shot__frame { outline-color: var(--paper-3); }
+    .shot__aspect {
+      position: absolute; left: var(--s2); top: var(--s2); z-index: 1; padding: 1px 6px;
+      background: rgb(7 8 10 / 0.6); border-radius: var(--radius-1);
+      font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: var(--tracking-mono); color: var(--paper-2);
+    }
+    .shot__head { display: flex; align-items: baseline; gap: var(--s3); flex-wrap: wrap; margin: 0; }
+    .shot__id { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--tracking-mono); color: var(--tungsten); }
+    .shot__name { font-family: var(--font-display); font-weight: 500; font-size: var(--step-2); line-height: var(--leading-tight); margin: 0; }
+    .shot__what { margin: 0; color: var(--paper); max-width: 60ch; }
+    .shot__when { margin: 0; color: var(--paper-2); max-width: 60ch; }
+    .shot__when b { font-weight: 500; color: var(--paper-2); }
+    .shot__meta { margin: 0; display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); }
+    .shot__meta a { color: var(--paper-2); text-underline-offset: 3px; }
+    .shot__meta a:hover { color: var(--paper); }
+    .shot__swatches { display: inline-flex; gap: 3px; vertical-align: middle; }
+    .shot__swatches i { width: 10px; height: 10px; border-radius: 1px; outline: 1px solid rgb(236 230 218 / 0.12); }
+  </style>
+</head>
+<body class="study study--shotcard">
+  <a class="skip-link" href="#study">Skip to study</a>
+  <header class="study__bar">
+    <a class="study__home" href="../index.html">← Karan Chaudhary</a>
+    <button class="study__motion" type="button" data-motion-toggle>Motion off</button>
+  </header>
+
+  <main id="study" class="study__main shots">
+    <div class="study__head">
+      <p class="cam-label">Study · Shot language</p>
+      <h1 class="study__title">Shot language</h1>
+      <p class="shots__lede">Six camera moves, the grammar behind the cards in my selected work. Each one is drawn in the palette of a film and cropped to the aspect ratio it was delivered in, so the same move reads differently in a 2.76 coastline and a 4:3 documentary.</p>
+      <p class="shots__how cam-label" data-how>Hover or focus a frame: the move plays once and holds. Move away and it returns.</p>
+    </div>
+
+    <ol class="shots__grid" role="list" data-shots></ol>
+
+    <p class="study__credits cam-label">Camera moves: Motion Prompt #027 #030 #031 #032 #033 #043 by Shohei Ohtaki (MIT), run unchanged and repainted. Vignette and grain from the numbers of #112 and #118.</p>
+    <noscript><p>These cards are rendered live with JavaScript. Please enable it to see them.</p></noscript>
+  </main>
+
+  <script type="module">
+    import { runStage, parseStageQuery } from '../assets/js/core/stage.js';
+    import { applyPageGrain } from '../assets/js/core/grain.js';
+    import { bindMotionToggle, isReducedMotion, onMotionChange } from '../assets/js/core/motion-pref.js';
+
+    const load = () => import('../assets/js/pieces/shotcard.js');
+    if (parseStageQuery().record) runStage({ load });
+    else gallery();
+
+    async function gallery() {
+      applyPageGrain();
+      bindMotionToggle(document.querySelector('[data-motion-toggle]'));
+      const [{ MOVES, MOVE_IDS, moveKey }, { mountShotCard }, { default: data }] = await Promise.all([load(), import('../assets/js/ui/shotcard-mount.js'), import('../data/portfolio.js')]);
+      const films = data.films ?? [];
+      const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+      const ratio = a => (Math.abs(a - 1.33) < 0.01 ? '1.33:1 (4:3)' : Math.abs(a - 1.78) < 0.01 ? '1.78:1 (16:9)' : `${Number(a).toFixed(2)}:1`);
+      const noHover = matchMedia('(hover: none)').matches;
+      const how = document.querySelector('[data-how]');
+      const setHow = () => {
+        how.textContent = isReducedMotion()
+          ? 'Motion is off: each frame shows the held end of its move.'
+          : noHover ? 'Scroll a frame into view: the move plays once and holds. Scroll on and it returns.'
+          : 'Hover or focus a frame: the move plays once and holds. Move away and it returns.';
+      };
+      setHow(); onMotionChange(setHow);
+
+      const list = document.querySelector('[data-shots]');
+      list.innerHTML = MOVE_IDS.map(k => {
+        const m = MOVES[k];
+        const film = films.find(f => moveKey(f.move) === k) ?? { palette: null, aspect: 2.39 };
+        const a = Number(film.aspect) || 2.39;
+        return `
+        <li class="shot" data-move="${k}">
+          <div class="shot__gate"><div class="frame shot__frame${a < 2.39 ? ' shot__frame--narrow' : ''}" style="--ar:${a}" data-frame><span class="shot__aspect" aria-hidden="true">${esc(ratio(a))}</span></div></div>
+          <p class="shot__head"><span class="shot__id">${esc(m.id)}</span><span class="shot__name">${esc(m.name)}</span></p>
+          <p class="shot__what">${esc(m.what)}</p>
+          <p class="shot__when"><b>When:</b> ${esc(m.when)}</p>
+          <p class="shot__meta cam-label">
+            <span>Plays to ${m.uHold.toFixed(1)} s, holds</span>
+            <span>Exit ${m.exit[0].toFixed(1)}→${m.exit[1].toFixed(1)} s</span>
+            ${film.slug ? `<span>Film: <a href="../project.html?slug=${encodeURIComponent(film.slug)}">${esc(film.title)}</a></span>` : ''}
+            ${film.palette ? `<span class="shot__swatches" aria-hidden="true">${film.palette.map(c => `<i style="background:${esc(c)}"></i>`).join('')}</span>` : ''}
+          </p>
+        </li>`;
+      }).join('');
+
+      window.__cards = [];
+      for (const li of list.querySelectorAll('.shot')) {
+        const k = li.dataset.move;
+        const film = films.find(f => moveKey(f.move) === k) ?? { move: k, aspect: 2.39 };
+        window.__cards.push(mountShotCard(li.querySelector('[data-frame]'), film, { trigger: li }));
+      }
+      window.READY = true;
+    }
+  </script>
+</body>
+</html>
