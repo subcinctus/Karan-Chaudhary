@@ -1,0 +1,77 @@
+# Static checks, then deploy the site to GitHub Pages (https://subcinctus.github.io/Karan-Chaudhary/).
+# One-time setup by the owner: Settings → Pages → Build and deployment → Source: "GitHub Actions".
+# Only an explicit list of files is deployed (plus THIRD-PARTY-NOTICES.md): tools/, prompts/, .claude/, previs/README.md and the
+# Unreal PNG sequences under media/previs/<shot>/ never ship. No .nojekyll is needed (no Jekyll build).
+name: Deploy site to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deployment at a time; let an in-progress deployment finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Unit tests (core maths, tooling)
+        run: node --test tools/test/
+      - name: Static checks (URLs, determinism grep, licences, data, SEO, sitemap, contrast)
+        run: node tools/check.mjs --no-browser
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - name: Stage site
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p _site
+          # Required: the pages, their data and code.
+          for f in index.html project.html 404.html assets data studies; do
+            if [ ! -e "$f" ]; then echo "::error::missing required path $f"; exit 1; fi
+            cp -R "$f" _site/
+          done
+          # Optional: copied when present. THIRD-PARTY-NOTICES.md carries the MIT notice that must travel
+          # with the vendored Motion Prompt code (assets/js/vendor/ points to it).
+          for f in sitemap.xml site.webmanifest THIRD-PARTY-NOTICES.md media; do
+            if [ -e "$f" ]; then cp -R "$f" _site/; else echo "::warning::optional path $f not found, skipped"; fi
+          done
+          if [ -f previs/shotlist.json ]; then
+            mkdir -p _site/previs && cp previs/shotlist.json _site/previs/
+          else
+            echo "::warning::previs/shotlist.json not found, skipped"
+          fi
+          # Never ship Unreal PNG sequences (media/previs/<shot>/); only the encoded .mp4/.jpg.
+          if [ -d _site/media/previs ]; then
+            find _site/media/previs -mindepth 1 -maxdepth 1 -type d -exec rm -rf {} +
+          fi
+          # Never ship editor or OS noise.
+          find _site \( -name '.DS_Store' -o -name 'Thumbs.db' -o -name '*.swp' \) -delete
+          echo "Staged $(find _site -type f | wc -l) files, $(du -sh _site | cut -f1)"
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - id: deployment
+        uses: actions/deploy-pages@v4

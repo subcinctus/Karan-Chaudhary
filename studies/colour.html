@@ -1,0 +1,78 @@
+<!doctype html>
+<!--
+  Colour study: one scene-referred frame graded from ARRI LogC3 to finished looks, with a before/after
+  wipe and live scopes drawn inside the canvas.
+  Normal mode: full-screen Player + generated controls; the divider is also draggable on the picture.
+  Record mode: ?record&w=1920&h=1280&fps=30[&seed=1&params=<base64 JSON>&layout=wide|tall]
+  All URLs are relative: the site is served from /Karan-Chaudhary/.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Colour study · Karan Chaudhary</title>
+  <meta name="description" content="A dusk road built in scene-linear light, graded live from ARRI Log C to Rec.709, teal and orange, bleach bypass, black and white and day for night, read on a waveform and a vectorscope.">
+  <meta name="theme-color" content="#0C0D10">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/player.css">
+  <link rel="stylesheet" href="../assets/css/study-colour.css">
+</head>
+<body class="study study--colour">
+  <a class="skip-link" href="#study">Skip to study</a>
+  <header class="study__bar">
+    <a class="study__home" href="../index.html">← Karan Chaudhary</a>
+    <button class="study__motion" type="button" data-motion-toggle>Motion off</button>
+  </header>
+
+  <main id="study" class="study__main">
+    <div class="study__head">
+      <p class="cam-label">Study · Colour</p>
+      <h1 class="study__title" data-stage-title>Colour · From Log C to the look</h1>
+      <p class="colour-lede">One frame, lit in linear light and recorded the way a camera would, then graded live. Compare two looks across the divider and read them on the scopes.</p>
+    </div>
+    <div class="study__layout">
+      <div data-stage-host></div>
+      <aside class="study__panel" data-controls aria-label="Study controls"></aside>
+    </div>
+
+    <section class="colour-notes" aria-labelledby="colour-notes-title">
+      <h2 id="colour-notes-title" class="cam-label">Notes</h2>
+      <dl class="colour-notes__list">
+        <div>
+          <dt>The frame</dt>
+          <dd>A dusk road built in scene-linear light. The streetlamps are tungsten (3200 K), the oncoming car is daylight (5600 K), and the motel sign is teal neon. The camera is balanced for 5600 K, so the lamps read amber. The figure is rim-lit by the lamp behind them, and the horizon lights their face.</dd>
+        </div>
+        <div>
+          <dt>The pipeline</dt>
+          <dd>Scene light is encoded to ARRI Log C3 at EI 800 (18 % grey sits at 0.391). Each look is built from there: a filmic Rec.709 display transform, teal and orange on the 123° skin axis, bleach bypass, black and white, and day for night that keeps the practicals. Exposure moves in thirds of a stop, in linear light, before the look.</dd>
+        </div>
+        <div>
+          <dt>Reading the scopes</dt>
+          <dd>The waveform plots luma for each column of the picture, so the divider shows up in it too. The vectorscope plots hue around the circle and saturation outward. The tungsten line is the skin line: a teal and orange grade pulls the trace onto it.</dd>
+        </div>
+        <div>
+          <dt>Using it</dt>
+          <dd>Drag the divider on the picture, or use the Wipe slider with the arrow keys. Choose a look for each side. A spoken summary of the scopes follows every change.</dd>
+        </div>
+      </dl>
+    </section>
+
+    <p class="study__credits cam-label" data-stage-credits></p>
+    <noscript><p>This study is rendered live with JavaScript. Please enable it to see the piece.</p></noscript>
+  </main>
+
+  <script type="module">
+    import { runStage } from '../assets/js/core/stage.js';
+    const load = () => import('../assets/js/pieces/colour.js');
+    const player = await runStage({ load });
+    if (player?.canvas) {
+      const { bindWipeDrag } = await load();
+      bindWipeDrag(player);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,107 @@
+<!doctype html>
+<!--
+  Film detail page: project.html?slug=<film slug from data/portfolio.js>.
+  assets/js/site/project.js renders the film (camera report, palette, stills, BTS, prev/next) and
+  sets the title, description, canonical and CreativeWork JSON-LD. Unknown slug → a not-found state.
+  Every URL is relative: the site is served from https://subcinctus.github.io/Karan-Chaudhary/.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Selected work — Karan Chaudhary, Cinematographer</title>
+  <meta name="description" content="A film photographed by Karan Chaudhary: logline, camera report, lenses, palette and frames.">
+  <link rel="canonical" href="https://subcinctus.github.io/Karan-Chaudhary/project.html" data-canonical>
+  <meta name="theme-color" content="#0C0D10">
+  <meta name="color-scheme" content="dark">
+  <meta property="og:type" content="article">
+  <meta property="og:site_name" content="Karan Chaudhary">
+  <meta property="og:title" content="Selected work — Karan Chaudhary, Cinematographer">
+  <meta property="og:description" content="A film photographed by Karan Chaudhary: logline, camera report, lenses, palette and frames.">
+  <meta property="og:image" content="https://subcinctus.github.io/Karan-Chaudhary/media/og/og-title.jpg">
+  <meta property="og:image:alt" content="Karan Chaudhary, Cinematographer: the main title, a name revealed in a letterboxed frame.">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/player.css">
+  <link rel="stylesheet" href="assets/css/site.css">
+
+  <!-- Arriving half of the #092 shutter (never under reduced motion; a safety timer uncovers). -->
+  <script>
+    (function () {
+      var d = document.documentElement; d.classList.add('js');
+      try {
+        var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || localStorage.getItem('kc:motion') === 'off';
+        d.dataset.motion = reduce ? 'off' : 'on';
+        if (!reduce && sessionStorage.getItem('kc:shutter')) d.classList.add('shutter-cover');
+        sessionStorage.removeItem('kc:shutter');
+      } catch (e) { /* storage blocked */ }
+      setTimeout(function () { d.classList.remove('shutter-cover'); }, 3000);
+    })();
+  </script>
+</head>
+<body class="site site--project">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="shutter" aria-hidden="true" data-shutter><span class="shutter__mark">K<span>·</span>C</span></div>
+  <div class="progress" aria-hidden="true"><span class="progress__fill" data-progress></span></div>
+
+  <header class="site-header" data-header>
+    <a class="site-header__mark" href="index.html" aria-label="Karan Chaudhary, home">K<span aria-hidden="true">·</span>C</a>
+    <nav class="site-nav" aria-label="Primary">
+      <ul role="list">
+        <li><a href="index.html#reel">Reel</a></li>
+        <li><a href="index.html#work" aria-current="true">Work</a></li>
+        <li><a href="index.html#studies">Studies</a></li>
+        <li><a href="index.html#previs">Previs</a></li>
+        <li><a href="index.html#about">About</a></li>
+        <li><a href="index.html#credits">Credits</a></li>
+        <li><a href="index.html#contact">Contact</a></li>
+      </ul>
+    </nav>
+    <p class="site-header__tc" aria-hidden="true" data-tc>TC 00:00:00:00</p>
+    <button class="site-header__motion" type="button" data-motion-toggle>Motion off</button>
+    <button class="site-header__menu" type="button" aria-haspopup="dialog" aria-controls="menu" aria-expanded="false" data-menu-open>Menu</button>
+  </header>
+
+  <dialog class="menu" id="menu" aria-label="Site menu" data-menu>
+    <div class="menu__top">
+      <span class="menu__mark" aria-hidden="true">K·C</span>
+      <button class="menu__close" type="button" data-menu-close>Close</button>
+    </div>
+    <nav aria-label="Site menu">
+      <ol class="menu__list" role="list">
+        <li><a href="index.html#reel"><span class="cam-label">Sc. 01</span>Reel</a></li>
+        <li><a href="index.html#work"><span class="cam-label">Sc. 02</span>Selected work</a></li>
+        <li><a href="index.html#studies"><span class="cam-label">Sc. 03</span>Studies</a></li>
+        <li><a href="index.html#previs"><span class="cam-label">Sc. 04</span>Previs</a></li>
+        <li><a href="index.html#about"><span class="cam-label">Sc. 05</span>About</a></li>
+        <li><a href="index.html#credits"><span class="cam-label">Sc. 06</span>Credits</a></li>
+        <li><a href="index.html#contact"><span class="cam-label">Sc. 07</span>Contact</a></li>
+      </ol>
+    </nav>
+    <button class="btn btn--ghost menu__motion" type="button" data-motion-toggle>Motion off</button>
+  </dialog>
+
+  <main id="main" tabindex="-1" data-project>
+    <noscript>
+      <section class="film-missing container">
+        <h1 class="film-missing__title">Selected work</h1>
+        <p class="film-missing__text">This page shows one film from Karan Chaudhary’s selected work. It needs JavaScript to read the film from the portfolio data. <a href="index.html">Back to the home page</a>.</p>
+      </section>
+    </noscript>
+  </main>
+
+  <footer class="site-footer site-footer--slim">
+    <div class="container" data-render="colophon"></div>
+  </footer>
+
+  <script type="module" src="assets/js/site/project.js"></script>
+</body>
+</html>

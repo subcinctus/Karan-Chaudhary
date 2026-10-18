@@ -1,0 +1,104 @@
+/* Light study page (studies/light.html). Requires tokens.css, base.css, player.css.
+   Layout: phone = head, picture, plan, controls stacked; tablet = picture full width, plan + controls
+   side by side; desktop = picture as tall as the viewport allows, with the head and plan beside it and
+   the controls in a sticky column. The 4:5 picture's width follows the viewport height. */
+
+.study--light .study__main { padding-top: var(--s5); }
+
+.light-layout.study__layout {
+  display: grid;
+  gap: var(--s6);
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: "head" "stage" "plan" "panel";
+  align-items: start;
+}
+.light-head { grid-area: head; margin: 0; }
+.light-stage { grid-area: stage; width: min(100%, calc((100svh - 150px) * 0.8)); justify-self: center; }
+.light-plan { grid-area: plan; }
+.light-panel { grid-area: panel; }
+
+.light-lede {
+  max-width: 52ch;
+  color: var(--paper-2);
+  font-size: var(--step-0);
+}
+
+/* --- Plan ----------------------------------------------------------------- */
+
+.light-plan { margin: 0; display: grid; gap: var(--s4); align-content: start; min-width: 0; }
+.light-plan__svg {
+  width: 100%;
+  max-width: 440px;
+  aspect-ratio: 1;
+  justify-self: center;
+  border: var(--hairline);
+  border-radius: var(--radius-2);
+  background: var(--ink-0);
+}
+.light-plan__caption { display: grid; gap: var(--s4); }
+.light-note {
+  font-family: var(--font-display);
+  font-size: var(--step-1);
+  font-style: italic;
+  line-height: 1.3;
+  color: var(--paper);
+  text-wrap: balance;
+}
+.light-report { margin: 0; display: grid; gap: var(--s2); }
+.light-report > div {
+  display: grid;
+  grid-template-columns: 7.5ch minmax(0, 1fr);
+  gap: var(--s3);
+  padding-top: var(--s2);
+  border-top: var(--hairline);
+}
+.light-report dt, .light-report dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.light-report dt { color: var(--paper-3); }
+.light-report dd { color: var(--paper); text-transform: none; overflow-wrap: break-word; }
+
+/* Kelvin detents: hairline ticks at 3200 K and 5600 K on the two colour-temperature sliders
+   (2700–6500 K → 13.16 % and 76.32 %). */
+.light-panel input[id$="-keyK"],
+.light-panel input[id$="-fillK"] {
+  background:
+    linear-gradient(var(--paper-3), var(--paper-3)) 13.16% 50% / 1px 10px no-repeat,
+    linear-gradient(var(--paper-3), var(--paper-3)) 76.32% 50% / 1px 10px no-repeat;
+}
+
+/* --- Tablet: picture full width, plan and controls side by side ------------ */
+
+@media (min-width: 720px) {
+  .light-layout.study__layout {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-areas: "head head" "stage stage" "plan panel";
+  }
+}
+
+/* --- Desktop: picture beside head + plan, controls sticky ------------------- */
+
+@media (min-width: 1100px) {
+  .light-layout.study__layout {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas: "stage head" "stage plan" "stage panel";
+    column-gap: var(--s7);
+  }
+  .light-stage { width: min(calc((100svh - 120px) * 0.8), 48vw); position: sticky; top: var(--s5); }
+  .light-panel { position: static; }
+}
+
+@media (min-width: 1360px) {
+  .light-layout.study__layout {
+    grid-template-columns: auto minmax(0, 1fr) minmax(260px, 0.9fr);
+    grid-template-areas: "stage head head" "stage plan panel";
+    grid-template-rows: auto 1fr;
+  }
+  .light-panel { position: sticky; top: var(--s5); }
+  .light-plan__svg { max-width: none; }
+}

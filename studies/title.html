@@ -1,0 +1,73 @@
+<!doctype html>
+<!--
+  Main title sequence (assets/js/pieces/title.js), 7.0 s, played once. seek(7.0) is the hero frame.
+  Normal mode: full-screen Player (no controls: the piece has no parameters).
+  Record mode: ?record&w=1920&h=1080&fps=24[&layout=wide|tall&t=7] exposes READY / N_FRAMES / renderFrame(i) / __seek(t) / __meta.
+  All URLs are relative: the site is served from /Karan-Chaudhary/.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Main title · Karan Chaudhary</title>
+  <meta name="description" content="The main title sequence: a nine-blade iris opens onto out-of-focus tungsten lamps and focus racks to the name. Rendered live in code.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0C0D10">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/player.css">
+  <style>
+    /* Breakdown panel (this page only). */
+    .title-notes { display: grid; gap: var(--s4); }
+    .title-notes__lede { margin: 0; color: var(--paper-2); max-width: 46ch; }
+    .title-notes__list { margin: 0; display: grid; gap: 0; border-top: var(--hairline); }
+    .title-notes__list > div { display: grid; grid-template-columns: 6.5em 1fr; gap: var(--s3); padding: var(--s2) 0; border-bottom: var(--hairline); }
+    .title-notes__list dt { font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--tracking-mono); color: var(--paper-3); padding-top: 0.15em; }
+    .title-notes__list dd { margin: 0; color: var(--paper); font-size: var(--step--1); line-height: 1.5; }
+    .title-notes__id { font-family: var(--font-mono); color: var(--tungsten); letter-spacing: var(--tracking-mono); margin-left: 0.35em; white-space: nowrap; }
+    .title-notes__foot { margin: 0; }
+  </style>
+</head>
+<body class="study">
+  <a class="skip-link" href="#study">Skip to the title sequence</a>
+  <header class="study__bar">
+    <a class="study__home" href="../index.html">← Karan Chaudhary</a>
+    <button class="study__motion" type="button" data-motion-toggle>Motion off</button>
+  </header>
+
+  <main id="study" class="study__main">
+    <div class="study__head">
+      <p class="cam-label">Study · Main title</p>
+      <h1 class="study__title" data-stage-title>Main title</h1>
+    </div>
+    <div class="study__layout">
+      <div data-stage-host></div>
+      <!-- The title has no parameters, so the panel holds the shot breakdown instead of controls. -->
+      <aside class="study__panel title-notes" aria-labelledby="title-notes-h">
+        <h2 class="cam-label" id="title-notes-h">Breakdown · 7.0 s · once</h2>
+        <p class="title-notes__lede">The first seconds of the site, written as a main title. The lights are already down; an iris opens on out-of-focus tungsten practicals, and focus pulls from the lamps to the name.</p>
+        <dl class="title-notes__list">
+          <div><dt>0.3–1.6 s</dt><dd>Nine-blade iris opens. The bokeh grows and rounds off with the aperture.</dd></div>
+          <div><dt>0.4–1.4 s</dt><dd>Vignette fades in <span class="title-notes__id">#112</span></dd></div>
+          <div><dt>2.0–3.4 s</dt><dd>Name rises from behind a tungsten hairline <span class="title-notes__id">#005</span></dd></div>
+          <div><dt>2.4–4.0 s</dt><dd>Rack focus, lamps to name: each layer blurs on its own <span class="title-notes__id">#033</span></dd></div>
+          <div><dt>4.8–5.6 s</dt><dd>Letterbox settles from 1.85 to 2.39:1 (4:5 on a phone)</dd></div>
+          <div><dt>5.4–6.2 s</dt><dd>Camera report types on</dd></div>
+          <div><dt>0–7.0 s</dt><dd>Grain, re-seeded every frame at 24 fps <span class="title-notes__id">#118</span></dd></div>
+        </dl>
+        <p class="title-notes__foot cam-label">Lamps 2700–3200 K, seen by a camera balanced for 5600 K. Every frame is a pure function of time.</p>
+      </aside>
+    </div>
+    <p class="study__credits cam-label" data-stage-credits></p>
+    <noscript><p>This study is rendered live with JavaScript. Please enable it to see the piece.</p></noscript>
+  </main>
+
+  <script type="module">
+    import { runStage } from '../assets/js/core/stage.js';
+    runStage({ load: () => import('../assets/js/pieces/title.js') });
+  </script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <title>Karan Chaudhary</title>
+  <rect width="64" height="64" rx="12" fill="#07080A"/>
+  <circle cx="32" cy="32" r="25" fill="#F4B26A"/>
+  <path d="M39.08 26.12L56.61 36.38M41.2 32.05L48.04 51.17M39.02 37.95L31.96 57M33.55 41.07L15.9 51.13M27.36 39.94L7.37 36.31M23.34 35.1L10.37 19.47M23.37 28.81L23.48 8.5M27.44 24.01L40.58 8.52M33.65 22.95L53.67 19.53" fill="none" stroke="#07080A" stroke-width="1.6" stroke-linecap="round"/>
+  <path d="M33.65 22.95L39.08 26.12L41.2 32.05L39.02 37.95L33.55 41.07L27.36 39.94L23.34 35.1L23.37 28.81L27.44 24.01Z" fill="#07080A"/>
+  <circle cx="32" cy="32" r="25" fill="none" stroke="#07080A" stroke-opacity=".35" stroke-width="1"/>
+</svg>

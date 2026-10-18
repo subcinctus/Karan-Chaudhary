@@ -5,7 +5,7 @@
 //     path?:   [{ x, y }, …],                                          // camera path, drawn dashed with an arrow
 //     subject: { x = 0, y = 0, r = 0.12, facing = 'camera', label },  // facing: 'camera' or an angle in degrees
 //     lights:  [{ role, az, el, dist, kelvin, label?, size? } | { role, x, y, kelvin, label? }, …],
-//     labels:  { title, desc, scale = true },
+//     labels:  { title, desc, scale = true, extent? },                 // extent: minimum half-width (m) for a stable scale
 //   })
 //
 // Plan coordinates: subject at the origin, camera toward +y (drawn at the bottom), +x = screen right.
@@ -24,6 +24,7 @@ const s = (tag, attrs = {}, text) => {
 };
 const f = v => +v.toFixed(3);
 const deg = r => (r * 180) / Math.PI;
+const FONT = 3.7;   // label size in plan pixels (1/100 of the view)
 
 /** Resolve a light to plan (x, y). */
 function lightXY(l) {
@@ -40,26 +41,38 @@ export function renderPlan(svg, { camera = {}, path = null, subject = {}, lights
   const sub = { x: 0, y: 0, r: 0.12, facing: 'camera', ...subject };
   const L = lights.map(l => ({ ...l, xy: lightXY(l) }));
 
-  for (const l of L) l.text = l.label ?? (Number.isFinite(l.el) ? lightLabel(l) : `${(l.role ?? 'light').toUpperCase()} ${l.kelvin ?? ''}K`);
+  let axial = 0;
+  for (const l of L) {
+    const [x, y] = l.xy;
+    if (Math.abs(Math.cos(Math.atan2(y - sub.y, x - sub.x))) < 0.3) l.side = axial++ % 2 ? 'left' : 'right';
+    l.text = l.label ?? (Number.isFinite(l.el) ? lightLabel(l) : `${(l.role ?? 'light').toUpperCase()} ${l.kelvin ?? ''}K`);
+    // Two lines when the label starts with its role ("KEY" / "3200K · 45°↑"): narrower boxes, calmer plan.
+    const role = (l.role ?? '').toUpperCase();
+    l.lines = !l.label && role && l.text.startsWith(role + ' ') ? [role, l.text.slice(role.length + 1)] : [l.text];
+  }
 
-  // Fit every point and every label box (estimated mono advance 0.62 em), in a square viewBox.
-  // Label sizes depend on the scale, which depends on the extents: iterate to the fixed point.
+  // Fit: centred on the subject left-right (so the plan doesn't drift as lights move), with every
+  // point and label box inside a square. Label boxes are in plan units that depend on the scale,
+  // so iterate to the fixed point. labels.extent sets a minimum half-width for a stable scale.
   const pts = [[cam.x, cam.y], [sub.x, sub.y], ...L.map(l => l.xy), ...(path ?? []).map(p => [p.x, p.y])];
   let minX, maxX, minY, maxY, half, unit = 0;
-  for (let pass = 0; pass < 6; pass++) {
+  for (let pass = 0; pass < 8; pass++) {
     const box = [...pts];
     for (const l of L) {
       const lay = labelLayout(l, sub, unit);
-      const w = l.text.length * unit * 3.2 * 0.62;
+      const w = Math.max(...l.lines.map(t => t.length)) * unit * FONT * 0.62;
       const x0 = lay.anchor === 'start' ? lay.x : lay.anchor === 'end' ? lay.x - w : lay.x - w / 2;
-      box.push([x0, lay.y - unit * 3], [x0 + w, lay.y + unit * 2]);
+      box.push([x0, lay.y - unit * FONT], [x0 + w, lay.y + unit * FONT * (l.lines.length * 1.3 - 0.3)]);
     }
-    box.push([cam.x, cam.y + unit * 10]);   // camera label
-    minX = Math.min(...box.map(p => p[0])); maxX = Math.max(...box.map(p => p[0]));
-    minY = Math.min(...box.map(p => p[1])); maxY = Math.max(...box.map(p => p[1]));
-    const span = Math.max(maxX - minX, maxY - minY, 2.4);
-    half = span / 2 + span * 0.08;
-    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+    const cw = cam.label.length * unit * FONT * 0.62;
+    box.push([cam.x - cw / 2, cam.y + unit * 11], [cam.x + cw / 2, cam.y + unit * 11]);
+    const xs = box.map(p => p[0]), ys = box.map(p => p[1]);
+    minY = Math.min(...ys); maxY = Math.max(...ys);
+    const hx = Math.max(...xs.map(x => Math.abs(x - sub.x)));
+    half = Math.max(hx, (maxY - minY) / 2, labels.extent ?? 1.2) * 1.06;
+    // With a requested extent the centre is fixed (midway between subject and camera): a stable frame.
+    const cx = sub.x, cy = labels.extent ? (sub.y + cam.y) / 2 : (minY + maxY) / 2;
+    if (labels.extent) half = Math.max(half, Math.max(cy - Math.min(...ys), Math.max(...ys) - cy) * 1.06);
     minX = cx - half; maxX = cx + half; minY = cy - half; maxY = cy + half;
     unit = (maxX - minX) / 100;   // 1 "plan pixel" for strokes and type
   }
@@ -77,14 +90,19 @@ export function renderPlan(svg, { camera = {}, path = null, subject = {}, lights
   if (tid) svg.setAttribute('aria-labelledby', `${tid} ${did}`);
 
   const stroke = { 'vector-effect': 'non-scaling-stroke', fill: 'none' };
-  const mono = { 'font-family': 'var(--font-mono, monospace)', 'font-size': f(unit * 3.2), style: 'letter-spacing:0.06em' };
+  const mono = { 'font-family': 'var(--font-mono, monospace)', 'font-size': f(unit * FONT), style: 'letter-spacing:0.06em' };
 
   // Distance rings every metre around the subject.
   const g0 = s('g', { style: 'stroke:var(--line, #2A2E36)' });
-  for (let r = 1; r <= Math.ceil(half * 1.5); r++) g0.append(s('circle', { cx: sub.x, cy: sub.y, r, ...stroke, 'stroke-width': 1 }));
+  for (let r = 1; r <= Math.ceil(half * 1.45); r++) g0.append(s('circle', { cx: sub.x, cy: sub.y, r, ...stroke, 'stroke-width': 1 }));
   svg.append(g0);
   if (labels.scale !== false) {
-    svg.append(s('text', { x: f(sub.x + 1 + unit), y: f(sub.y - unit), ...mono, style: 'fill:var(--paper-3, #8A857C)' }, '1 m'));
+    // Scale bar in the bottom-left corner (rings are 1 m apart).
+    const bx = minX + unit * 5, by = maxY - unit * 5;
+    svg.append(
+      s('path', { d: `M${f(bx)} ${f(by - unit)}V${f(by)}H${f(bx + 1)}V${f(by - unit)}`, ...stroke, style: 'stroke:var(--paper-3, #8A857C)', 'stroke-width': 1 }),
+      s('text', { x: f(bx + 1 + unit * 1.5), y: f(by), ...mono, style: 'fill:var(--paper-3, #8A857C)' }, '1 m'),
+    );
   }
 
   // Camera FOV wedge aimed at the subject.
@@ -119,7 +137,7 @@ export function renderPlan(svg, { camera = {}, path = null, subject = {}, lights
     s('rect', { x: f(-unit * 1.2), y: f(unit * 0.8), width: f(unit * 2.4), height: f(unit * 1.8), style: 'fill:var(--paper, #ECE6DA)' }),
   );
   svg.append(cb);
-  svg.append(s('text', { x: f(cam.x), y: f(cam.y + unit * 8), 'text-anchor': 'middle', ...mono, style: 'fill:var(--paper-2, #B9B3A8)' }, cam.label));
+  svg.append(s('text', { x: f(cam.x), y: f(cam.y + unit * 10), 'text-anchor': 'middle', ...mono, style: 'fill:var(--paper-2, #B9B3A8)' }, cam.label));
 
   // Subject: head circle + nose tick toward its facing direction.
   const face = sub.facing === 'camera' ? Math.atan2(cam.y - sub.y, cam.x - sub.x) : (Number(sub.facing) * Math.PI) / 180;
@@ -141,7 +159,12 @@ export function renderPlan(svg, { camera = {}, path = null, subject = {}, lights
     );
     svg.append(g);
     const lay = labelLayout(l, sub, unit);
-    svg.append(s('text', { x: f(lay.x), y: f(lay.y + unit * 1.1), 'text-anchor': lay.anchor, ...mono, style: 'fill:var(--paper, #ECE6DA)' }, l.text));
+    const t = s('text', { x: f(lay.x), y: f(lay.y + unit * 1.1), 'text-anchor': lay.anchor, ...mono, style: 'fill:var(--paper, #ECE6DA)' });
+    l.lines.forEach((line, i) => t.append(s('tspan', {
+      x: f(lay.x), dy: i ? f(unit * FONT * 1.3) : null,
+      style: i ? 'fill:var(--paper-2, #B9B3A8)' : `fill:${chip}`,
+    }, line)));
+    svg.append(t);
   }
 
   return { bounds: { minX, minY, maxX, maxY } };
@@ -150,8 +173,12 @@ export function renderPlan(svg, { camera = {}, path = null, subject = {}, lights
 /** Label placement outside a light, away from the subject. */
 function labelLayout(l, sub, unit) {
   const [x, y] = l.xy, out = Math.atan2(y - sub.y, x - sub.x);
-  const anchor = Math.abs(Math.cos(out)) < 0.3 ? 'middle' : Math.cos(out) > 0 ? 'start' : 'end';
-  return { x: x + Math.cos(out) * unit * 7, y: y + Math.sin(out) * unit * 7, anchor };
+  // Lights on (or near) the subject–camera axis put their label beside them, alternating sides.
+  if (Math.abs(Math.cos(out)) < 0.3) {
+    const right = l.side !== 'left';
+    return { x: x + (right ? 1 : -1) * unit * 6, y: y - unit * 1.5, anchor: right ? 'start' : 'end' };
+  }
+  return { x: x + Math.cos(out) * unit * 6, y: y + Math.sin(out) * unit * 6, anchor: Math.cos(out) > 0 ? 'start' : 'end' };
 }
 
 /** Plain-language description used for <desc> when none is given. */

@@ -1,0 +1,167 @@
+<!doctype html>
+<!--
+  Karan Chaudhary, cinematographer. Home page.
+  Static shell: SEO/OG/JSON-LD tags here must match data/portfolio.js (npm run check compares them).
+  Sections are rendered from data/portfolio.js by assets/js/site/main.js. Every URL is relative:
+  the site is served from https://subcinctus.github.io/Karan-Chaudhary/.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Karan Chaudhary — Cinematographer</title>
+  <meta name="description" content="Cinematographer / director of photography. Reel, selected work, and light, lens and colour studies rendered live in code.">
+  <link rel="canonical" href="https://subcinctus.github.io/Karan-Chaudhary/">
+  <meta name="theme-color" content="#0C0D10">
+  <meta name="color-scheme" content="dark">
+  <meta name="author" content="Karan Chaudhary">
+
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Karan Chaudhary">
+  <meta property="og:title" content="Karan Chaudhary — Cinematographer">
+  <meta property="og:description" content="Cinematographer / director of photography. Reel, selected work, and light, lens and colour studies rendered live in code.">
+  <meta property="og:url" content="https://subcinctus.github.io/Karan-Chaudhary/">
+  <meta property="og:image" content="https://subcinctus.github.io/Karan-Chaudhary/media/og/og-title.jpg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Karan Chaudhary, Cinematographer: the main title, a name revealed in a letterboxed frame.">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Karan Chaudhary — Cinematographer">
+  <meta name="twitter:description" content="Cinematographer / director of photography. Reel, selected work, and light, lens and colour studies rendered live in code.">
+  <meta name="twitter:image" content="https://subcinctus.github.io/Karan-Chaudhary/media/og/og-title.jpg">
+
+  <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/player.css">
+  <link rel="stylesheet" href="assets/css/study-focus.css">
+  <link rel="stylesheet" href="assets/css/site.css">
+  <link rel="modulepreload" href="assets/js/site/main.js">
+
+  <!-- Before first paint: decide whether the film-leader preloader (#089, first visit per session) or
+       the arriving half of the shutter transition (#092) covers the page. Never under reduced motion;
+       a safety timer uncovers the page even if the modules fail to load. -->
+  <script>
+    (function () {
+      var d = document.documentElement; d.classList.add('js');
+      try {
+        var s = sessionStorage, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || localStorage.getItem('kc:motion') === 'off';
+        d.dataset.motion = reduce ? 'off' : 'on';
+        if (!reduce && s.getItem('kc:shutter')) d.classList.add('shutter-cover');
+        if (!reduce && !s.getItem('kc:leader') && !location.hash) d.classList.add('is-preloading');
+        s.removeItem('kc:shutter');
+      } catch (e) { /* storage blocked: no intro */ }
+      setTimeout(function () { d.classList.remove('is-preloading', 'shutter-cover'); }, 4500);
+    })();
+  </script>
+
+  <script type="application/ld+json" id="ld-person">{"@context":"https://schema.org","@type":"Person","name":"Karan Chaudhary","jobTitle":"Cinematographer","hasOccupation":{"@type":"Occupation","name":"Director of Photography"},"url":"https://subcinctus.github.io/Karan-Chaudhary/","image":"https://subcinctus.github.io/Karan-Chaudhary/media/og/og-title.jpg","knowsAbout":["Cinematography","Lighting","Colour grading","Previsualization","Unreal Engine"],"sameAs":[]}</script>
+</head>
+<body class="site site--home">
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <!-- #089 film leader (first visit per session). Decorative: hidden from assistive tech. -->
+  <div class="preloader" aria-hidden="true" data-preloader>
+    <div class="leader">
+      <div class="leader__sweep" data-leader-sweep></div>
+      <svg class="leader__dial" viewBox="0 0 200 200" focusable="false">
+        <circle cx="100" cy="100" r="96"/><circle cx="100" cy="100" r="78"/>
+        <path d="M100 0V200M0 100H200"/>
+      </svg>
+      <span class="leader__num" data-leader-num>8</span>
+    </div>
+    <div class="preloader__bar"><span data-leader-bar></span></div>
+    <p class="preloader__label"><span>Karan Chaudhary</span><span>Reel 1</span><span data-leader-pct>000</span></p>
+  </div>
+
+  <!-- #092 shutter panel for page transitions. -->
+  <div class="shutter" aria-hidden="true" data-shutter><span class="shutter__mark">K<span>·</span>C</span></div>
+
+  <!-- #079 timecode scroll progress. -->
+  <div class="progress" aria-hidden="true"><span class="progress__fill" data-progress></span></div>
+
+  <header class="site-header" data-header>
+    <a class="site-header__mark" href="#top" aria-label="Karan Chaudhary, back to the top">K<span aria-hidden="true">·</span>C</a>
+    <nav class="site-nav" aria-label="Primary">
+      <ul role="list">
+        <li><a href="#reel">Reel</a></li>
+        <li><a href="#work">Work</a></li>
+        <li><a href="#studies">Studies</a></li>
+        <li><a href="#previs">Previs</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#credits">Credits</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
+    <p class="site-header__tc" aria-hidden="true" data-tc>TC 00:00:00:00</p>
+    <button class="site-header__motion" type="button" data-motion-toggle>Motion off</button>
+    <button class="site-header__menu" type="button" aria-haspopup="dialog" aria-controls="menu" aria-expanded="false" data-menu-open>Menu</button>
+  </header>
+
+  <dialog class="menu" id="menu" aria-label="Site menu" data-menu>
+    <div class="menu__top">
+      <span class="menu__mark" aria-hidden="true">K·C</span>
+      <button class="menu__close" type="button" data-menu-close>Close</button>
+    </div>
+    <nav aria-label="Site menu">
+      <ol class="menu__list" role="list">
+        <li><a href="#reel"><span class="cam-label">Sc. 01</span>Reel</a></li>
+        <li><a href="#work"><span class="cam-label">Sc. 02</span>Selected work</a></li>
+        <li><a href="#studies"><span class="cam-label">Sc. 03</span>Studies</a></li>
+        <li><a href="#previs"><span class="cam-label">Sc. 04</span>Previs</a></li>
+        <li><a href="#about"><span class="cam-label">Sc. 05</span>About</a></li>
+        <li><a href="#credits"><span class="cam-label">Sc. 06</span>Credits</a></li>
+        <li><a href="#contact"><span class="cam-label">Sc. 07</span>Contact</a></li>
+      </ol>
+    </nav>
+    <button class="btn btn--ghost menu__motion" type="button" data-motion-toggle>Motion off</button>
+  </dialog>
+
+  <main id="main" tabindex="-1">
+    <section class="hero" id="top" aria-labelledby="hero-title" data-hero>
+      <div class="hero__fallback">
+        <div class="hero__picture">
+          <p class="hero__slate cam-label">A-CAM · 40mm · T2.0 · 5600K · 24 fps · 2.39:1</p>
+          <h1 class="hero__title" id="hero-title"><span class="hero__name">Karan Chaudhary</span><span class="visually-hidden">, </span><span class="hero__role">Cinematographer</span></h1>
+        </div>
+      </div>
+      <div class="hero__stage" data-hero-stage></div>
+      <div class="hero__foot">
+        <a class="btn hero__cta" href="#reel" data-watch-reel><span class="btn__play" aria-hidden="true"></span>Watch reel</a>
+        <button class="btn btn--ghost hero__skip" type="button" data-skip-intro hidden>Skip intro <kbd>Esc</kbd></button>
+        <a class="hero__down cam-label" href="#work">Selected work <span aria-hidden="true">↓</span></a>
+      </div>
+    </section>
+
+    <noscript>
+      <section class="section noscript container">
+        <h2>Karan Chaudhary</h2>
+        <p>Cinematographer · Director of Photography.</p>
+        <p>Contact: <a href="mailto:hello@example.com">hello@example.com</a></p>
+        <p class="cam-label">The reel, the selected work and the live light, lens and colour studies on this page need JavaScript. Please enable it to see them.</p>
+      </section>
+    </noscript>
+
+    <section class="section section--reel" id="reel" aria-labelledby="reel-title"><div class="container" data-render="reel"></div></section>
+    <section class="section section--work" id="work" aria-labelledby="work-title"><div class="container" data-render="work"></div></section>
+    <section class="section section--studies" id="studies" aria-labelledby="studies-title"><div class="container" data-render="studies"></div></section>
+    <section class="section section--previs" id="previs" aria-labelledby="previs-title"><div class="container" data-render="previs"></div></section>
+    <section class="section section--about" id="about" aria-labelledby="about-title"><div class="container" data-render="about"></div></section>
+    <section class="section section--kit" id="kit" aria-labelledby="kit-title"><div class="container" data-render="kit"></div></section>
+    <section class="credits" id="credits" aria-labelledby="credits-title" data-render="credits"></section>
+  </main>
+
+  <footer class="site-footer" id="contact" aria-labelledby="contact-title">
+    <div class="container" data-render="contact"></div>
+    <div class="container" data-render="colophon"></div>
+  </footer>
+
+  <script type="module" src="assets/js/site/main.js"></script>
+</body>
+</html>
