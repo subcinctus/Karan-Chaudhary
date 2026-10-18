@@ -1,0 +1,167 @@
+/* Base: reset, typography, grain overlay, focus, letterbox frame, accessibility modes.
+   Requires tokens.css. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  background: var(--ink-1);
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  background: var(--ink-1);
+  color: var(--paper);
+  font-family: var(--font-sans);
+  font-size: var(--step-0);
+  line-height: var(--leading-body);
+  font-kerning: normal;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+/* Static film grain over everything. No blend mode: keeps scrolling cheap. */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-grain);
+  pointer-events: none;
+  background-image: var(--grain);
+  background-size: var(--grain-size) var(--grain-size);
+  opacity: var(--grain-opacity);
+}
+
+img, svg, video, canvas { display: block; max-width: 100%; }
+img, video { height: auto; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+p, ul, ol, dl, figure, blockquote { margin: 0; }
+ul[role="list"], ol[role="list"] { list-style: none; padding: 0; }
+
+h1, h2, h3, h4 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 500;
+  line-height: var(--leading-tight);
+  text-wrap: balance;
+}
+h1 { font-size: var(--step-5); letter-spacing: 0.02em; }
+h2 { font-size: var(--step-4); }
+h3 { font-size: var(--step-2); }
+h4 { font-size: var(--step-1); }
+p { text-wrap: pretty; }
+
+a { color: var(--paper); text-decoration-color: var(--line-strong); text-underline-offset: 0.2em; }
+a:hover { text-decoration-color: var(--tungsten); }
+
+::selection { background: var(--tungsten); color: var(--ink-0); }
+
+/* Focus: a tungsten ring on keyboard focus only. */
+:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+:focus:not(:focus-visible) { outline: none; }
+
+/* Utility */
+.visually-hidden:not(:focus):not(:active) {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0; border: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%);
+  white-space: nowrap;
+}
+.container { width: min(100% - 2 * var(--gutter), var(--container)); margin-inline: auto; }
+
+.skip-link {
+  position: absolute; left: var(--s4); top: var(--s4);
+  z-index: calc(var(--z-grain) + 1);
+  padding: var(--s3) var(--s4);
+  background: var(--paper); color: var(--ink-0);
+  font-family: var(--font-mono); font-size: var(--step--1);
+  text-transform: uppercase; letter-spacing: var(--tracking-mono);
+  transform: translateY(-200%);
+}
+.skip-link:focus { transform: none; }
+
+/* Camera-report metadata: "A-CAM · 40mm · T2.0 · 5600K · 2.39:1" */
+.cam-label, .slate {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  color: var(--paper-3);
+}
+.slate b, .slate strong, .cam-value { color: var(--paper); font-weight: 500; }
+.display-caps {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-display);
+}
+
+/* Letterbox frame: content clipped to a delivery aspect, with an optional aspect label. */
+.frame {
+  position: relative;
+  aspect-ratio: var(--ar);
+  width: 100%;
+  overflow: hidden;
+  background: var(--ink-0);
+}
+.frame > img, .frame > video, .frame > canvas {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+}
+.frame[data-aspect-label]::after {
+  content: attr(data-aspect-label);
+  position: absolute; right: var(--s2); bottom: var(--s2);
+  font-family: var(--font-mono); font-size: 0.7rem;
+  letter-spacing: var(--tracking-mono); color: var(--paper-3);
+}
+.frame--lines { outline: var(--hairline); outline-offset: -1px; }
+
+/* SAMPLE badge on placeholder content (data placeholder:true) */
+.badge-sample {
+  display: inline-flex; align-items: center; gap: var(--s1);
+  padding: 2px var(--s2);
+  border: 1px solid var(--sample);
+  border-radius: var(--radius-1);
+  color: var(--sample);
+  font-family: var(--font-mono);
+  font-size: 0.7rem; line-height: 1.4;
+  letter-spacing: var(--tracking-mono);
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+/* Higher contrast: drop the grain, strengthen hairlines. */
+@media (prefers-contrast: more) {
+  body::after { display: none; }
+  :root { --line: #5A606C; --paper-3: #B9B3A8; }
+}
+
+/* Windows High Contrast / forced colours: let the system palette win, keep canvases framed. */
+@media (forced-colors: active) {
+  body::after { display: none; }
+  canvas { border: 1px solid CanvasText; }
+  .badge-sample { border-color: CanvasText; color: CanvasText; }
+  :focus-visible { outline-color: Highlight; }
+}
+
+/* Reduced motion: OS setting or the site's "Motion off" toggle (motion-pref.js sets data-motion). */
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+:root[data-motion="off"] { scroll-behavior: auto; }
+:root[data-motion="off"] *, :root[data-motion="off"] *::before, :root[data-motion="off"] *::after {
+  animation: none !important;
+  transition-duration: 0.01ms !important;
+}

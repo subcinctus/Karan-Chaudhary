@@ -1,0 +1,21 @@
+{
+  "name": "karan-chaudhary-portfolio",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cinematographer portfolio for Karan Chaudhary: static site whose moving images are rendered live in code.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "serve": "node tools/serve.mjs --port 8080",
+    "record": "node tools/record.mjs",
+    "record:posters": "node tools/record.mjs all --formats poster",
+    "og": "node tools/record.mjs og icons",
+    "check": "node tools/check.mjs",
+    "check:static": "node tools/check.mjs --no-browser",
+    "test": "node --test tools/test/",
+    "previs:shotlist": "node tools/previs-shotlist.mjs",
+    "previs:encode": "node tools/encode-previs.mjs"
+  }
+}

@@ -1,0 +1,14 @@
+# Dependencies (the project itself has none; a local Playwright install is optional)
+node_modules/
+
+# Generated clips, screenshots and contact sheets (kept out of the repo; for applications)
+.artifacts/
+.cache/
+
+# Unreal Movie Render Queue PNG sequences; only the encoded media/previs/*.mp4 and posters ship
+media/previs/*/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.swp

@@ -1,0 +1,52 @@
+<!doctype html>
+<!--
+  Study page template. To make studies/<id>.html:
+    1. copy this file,
+    2. change <title>, the meta description, the <h1> text and the import path of the piece,
+    3. add a study stylesheet after player.css if the study needs one (assets/css/study-<id>.css).
+  Normal mode: full-screen Player + generated controls.
+  Record mode: ?record&w=1280&h=536&fps=24[&seed=1&params=<base64 JSON>&layout=wide|tall]
+  renders a bare canvas and exposes READY / N_FRAMES / FPS / renderFrame(i) / __seek(t) / __meta.
+  All URLs are relative: the site is served from /Karan-Chaudhary/.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Template study · Karan Chaudhary</title>
+  <meta name="description" content="Reference study page: a film leader rendered live in code.">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#0C0D10">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <link rel="stylesheet" href="../assets/css/tokens.css">
+  <link rel="stylesheet" href="../assets/css/base.css">
+  <link rel="stylesheet" href="../assets/css/player.css">
+</head>
+<body class="study">
+  <a class="skip-link" href="#study">Skip to study</a>
+  <header class="study__bar">
+    <a class="study__home" href="../index.html">← Karan Chaudhary</a>
+    <button class="study__motion" type="button" data-motion-toggle>Motion off</button>
+  </header>
+
+  <main id="study" class="study__main">
+    <div class="study__head">
+      <p class="cam-label">Study · Template</p>
+      <h1 class="study__title" data-stage-title>Template · Leader</h1>
+    </div>
+    <div class="study__layout">
+      <div data-stage-host></div>
+      <aside class="study__panel" data-controls aria-label="Study controls"></aside>
+    </div>
+    <p class="study__credits cam-label" data-stage-credits></p>
+    <noscript><p>This study is rendered live with JavaScript. Please enable it to see the piece.</p></noscript>
+  </main>
+
+  <script type="module">
+    import { runStage } from '../assets/js/core/stage.js';
+    runStage({ load: () => import('../assets/js/pieces/_template.js') });
+  </script>
+</body>
+</html>

@@ -1,0 +1,91 @@
+/* Design tokens. Every colour, size and duration the site uses is defined here.
+   Contrast figures are against --ink-1 (#0C0D10); `npm run check` recomputes them. */
+
+:root {
+  color-scheme: dark;
+
+  /* Ink (backgrounds) */
+  --ink-0: #07080A;   /* letterbox bars */
+  --ink-1: #0C0D10;   /* page */
+  --ink-2: #14161A;   /* surfaces */
+  --ink-3: #1E2127;   /* raised / hover */
+  --line: #2A2E36;    /* hairlines */
+  --line-strong: #3A3F49;
+
+  /* Paper (text) */
+  --paper: #ECE6DA;   /* primary text, ~15:1 */
+  --paper-2: #B9B3A8; /* secondary, ~9:1 */
+  --paper-3: #8A857C; /* camera-report labels / meta, ~5.2:1 */
+
+  /* Light */
+  --tungsten: #F4B26A; /* accent + focus ring: 3200 K seen at 5600 K WB, nudged */
+  --daylight: #8DB2F0; /* cool accent: 5600 K seen at 3200 K WB */
+  --tally: #E5484D;    /* REC dot only */
+  --sample: #F4B26A;   /* SAMPLE badge */
+
+  /* Type */
+  --font-display: "Cormorant Garamond", "Iowan Old Style", Georgia, serif;
+  --font-sans: "Inter Tight", Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --tracking-display: 0.18em;
+  --tracking-mono: 0.08em;
+
+  /* Fluid type scale: ratio 1.25 at 390 px → 1.333 at 1440 px */
+  --step--1: clamp(0.78rem, 0.7577rem + 0.0914vw, 0.84rem);
+  --step-0: clamp(1rem, 0.9536rem + 0.1905vw, 1.125rem);
+  --step-1: clamp(1.25rem, 1.1571rem + 0.3810vw, 1.5rem);
+  --step-2: clamp(1.56rem, 1.3966rem + 0.6705vw, 2rem);
+  --step-3: clamp(1.95rem, 1.6863rem + 1.0819vw, 2.66rem);
+  --step-4: clamp(2.44rem, 2.0277rem + 1.6914vw, 3.55rem);
+  --step-5: clamp(3.05rem, 2.4223rem + 2.5752vw, 4.74rem);
+  --leading-tight: 1.1;
+  --leading-body: 1.6;
+
+  /* Spacing (4 px base) */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 64px;
+  --s9: 96px;
+  --s10: 128px;
+  --section-pad: clamp(64px, 10vw, 160px);
+  --container: 1440px;
+  --gutter: clamp(20px, 5vw, 80px);
+  --measure: 66ch;
+
+  /* Shape */
+  --radius-1: 2px;
+  --radius-2: 4px;
+  --radius-pill: 999px;
+  --hairline: 1px solid var(--line);
+  --target: 44px; /* minimum touch target */
+
+  /* Focus */
+  --focus-ring: 2px solid var(--tungsten);
+  --focus-offset: 3px;
+
+  /* Motion (kit easings: eIO = cubic in-out, eOut = cubic out) */
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+  --dur-1: 150ms;
+  --dur-2: 300ms;
+  --dur-3: 700ms;
+
+  /* Film grain overlay (static #118 tile; grain.js sets --grain to a data URL) */
+  --grain: none;
+  --grain-opacity: 0.5;
+  --grain-size: 128px;
+
+  /* Letterbox */
+  --ar: 2.39;
+
+  /* Layers */
+  --z-player-chrome: 2;
+  --z-nav: 50;
+  --z-overlay: 90;
+  --z-grain: 100;
+}
