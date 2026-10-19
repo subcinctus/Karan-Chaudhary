@@ -37,6 +37,9 @@
     a.btn:hover { border-color: var(--tungsten); color: var(--tungsten); }
     a.btn.ghost { border-color: var(--line); color: var(--paper2); }
     :focus-visible { outline: 2px solid var(--tungsten); outline-offset: 3px; }
+    /* On a phone the 720-unit slate is drawn about half size: its small labels grow, and the bottom
+       row of decorative camera facts goes. */
+    @media (max-width: 639px) { .slate .s-small { font-size: 20px; } .slate .s-foot { display: none; } }
     @media (prefers-contrast: more) { :root { --line: #5A606C; --paper3: #B9B3A8; } }
   </style>
 </head>
@@ -78,18 +81,18 @@
           </g>
         </g>
         <circle cx="10" cy="38" r="3" fill="#3A3F49"/>
-        <text x="24" y="98" fill="#8A857C" font-size="13">Prod.</text>
+        <text x="24" y="98" fill="#8A857C" font-size="13" class="s-small">Prod.</text>
         <text x="96" y="101" fill="#ECE6DA" font-size="24" class="serif" style="text-transform:none;letter-spacing:.04em">Karan Chaudhary</text>
-        <text x="696" y="98" fill="#8A857C" font-size="13" text-anchor="end">A-Cam · Roll 404</text>
-        <text x="24" y="166" fill="#8A857C" font-size="13">Scene</text>
-        <text x="264" y="166" fill="#8A857C" font-size="13">Take</text>
-        <text x="504" y="166" fill="#8A857C" font-size="13">Status</text>
+        <text x="696" y="98" fill="#8A857C" font-size="13" class="s-small" text-anchor="end">A-Cam · Roll 404</text>
+        <text x="24" y="166" fill="#8A857C" font-size="13" class="s-small">Scene</text>
+        <text x="264" y="166" fill="#8A857C" font-size="13" class="s-small">Take</text>
+        <text x="504" y="166" fill="#8A857C" font-size="13" class="s-small">Status</text>
         <text x="24" y="208" fill="#ECE6DA" font-size="40" class="serif" style="letter-spacing:.02em">404</text>
         <text x="264" y="208" fill="#ECE6DA" font-size="40" class="serif" style="letter-spacing:.02em">1</text>
         <text x="504" y="208" fill="#F4B26A" font-size="40" class="serif" style="letter-spacing:.06em">NG</text>
-        <text x="24" y="264" fill="#8A857C" font-size="12">Lens 40mm · T2.0</text>
-        <text x="264" y="264" fill="#8A857C" font-size="12">5600K · 24 fps</text>
-        <text x="504" y="264" fill="#8A857C" font-size="12">2.39:1</text>
+        <text x="24" y="264" fill="#8A857C" font-size="12" class="s-foot">Lens 40mm · T2.0</text>
+        <text x="264" y="264" fill="#8A857C" font-size="12" class="s-foot">5600K · 24 fps</text>
+        <text x="504" y="264" fill="#8A857C" font-size="12" class="s-foot">2.39:1</text>
       </g>
     </svg>
 

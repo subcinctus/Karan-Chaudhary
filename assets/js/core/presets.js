@@ -34,8 +34,10 @@ export const LIGHTING_PRESETS = {
   rembrandt: {
     id: 'rembrandt', label: 'Rembrandt', mp: '#101',
     note: 'Key 45° and high; a triangle of light closes on the shadow-side cheek.',
+    // Balanced between the two sources: the tungsten key reads as a warm choice on off-white plaster,
+    // the daylight fill a touch cool, instead of a yellow cast over everything.
     lights: [L('key', 45, 45, 1.5, 0.6, 3200), L('fill', -30, 5, 2, 1.2, 5600)],
-    ratio: 4, cameraWB: 5600, ambient: 0.02, backgroundStops: -2,
+    ratio: 4, cameraWB: 4300, ambient: 0.02, backgroundStops: -2,
   },
   split: {
     id: 'split', label: 'Split', mp: '#100',

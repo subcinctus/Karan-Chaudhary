@@ -40,8 +40,8 @@ const C = {
   blue: '#3B7BFF', coral: '#FF6B5C', yel: '#FFC83D', mint: '#2EDBA8', white: '#FFFFFF', cream: '#FFF1D6'
 };
 const PAL = [C.blue, C.coral, C.yel, C.mint];
-let JP = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif';
-let DISP = '"Avenir Next", "Helvetica Neue", system-ui, sans-serif';
+let JP = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif';   // [mod] const → let (setFonts)
+let DISP = '"Avenir Next", "Helvetica Neue", system-ui, sans-serif';   // [mod] const → let (setFonts)
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a, b, x) => a + (b - a) * x;
 const P = (t, a, b) => clamp((t - a) / (b - a));

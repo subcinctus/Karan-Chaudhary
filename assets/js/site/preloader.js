@@ -95,6 +95,10 @@ export function runPreloader({ enabled = true, rise = [] } = {}) {
   }
 
   active = { skip: () => { if (!lifted) lift(now(), true); else done(); } };
+  // A keyboard user must never tab into a page the leader still covers: the first Tab lifts it.
+  const onKey = e => { if (e.key === 'Tab' && active) active.skip(); };
+  addEventListener('keydown', onKey, { capture: true });
+  liftStarted.then(() => removeEventListener('keydown', onKey, { capture: true }));
   // Content under the leader starts hidden so the rise reads; WAAPI fill:'backwards' holds it.
   if (now() >= T.liftIn) lift(now(), true);
   frame();

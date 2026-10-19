@@ -43,6 +43,7 @@ and each kit keeps its own licence line.
 |---|---|
 | `assets/js/vendor/motion-prompt/camera.js` | Camera kit (#025–048) + #027 Dolly in, #030 Orbit, #031 Crane up, #032 Dolly zoom, #033 Rack focus, #043 Whip pan |
 | `assets/js/vendor/motion-prompt/motion.js` | Motion kit (#001–024) + #005 Mask reveal |
+| `assets/js/core/time.js` | Kit helpers `P`, `eIO`, `eIOs`, `eOut`, `eOut5`, `eIn`, `backIn`, `backOut`, copied (formulas verbatim) from the motion (#001–024) and camera (#025–048) kits; both kit licence lines are at the top of the file |
 
 Modifications (each changed line is tagged `[mod]` in the file; with the default palette and
 content the rendered pixels are unchanged):
@@ -96,7 +97,7 @@ or in other code. Each file that uses them carries the element's licence line as
 | #114 | Low-key | `assets/js/core/presets.js`, `assets/js/pieces/light.js` |
 | #115 | Black and white | `assets/js/pieces/colour-grade.js` |
 | #117 | Teal and orange | `assets/js/pieces/colour-grade.js` |
-| #118 | Film grain | `assets/js/core/grain.js` (the speckle tiles); `assets/js/pieces/still.js` (static); `assets/css/tokens.css` and `assets/css/base.css` (the static page grain); `assets/js/pieces/title.js` and `assets/js/pieces/shotcard.js` (re-seeded at 24 fps, a deviation: they are moving images; the cards only while the camera moves); `assets/js/pieces/colour-scene.js` and `assets/js/pieces/colour-grade.js` (modified: a speck on every pixel at 18 % of #118's opacity, quantised to 32 levels, instead of sparse squares) |
+| #118 | Film grain | `assets/js/core/grain.js` (the speckle tiles); `assets/js/pieces/still.js` (static); `assets/css/tokens.css` (the static page grain; `assets/css/base.css` only uses its tokens); `assets/js/pieces/title.js` and `assets/js/pieces/shotcard.js` (re-seeded at 24 fps, a deviation: they are moving images; the cards only while the camera moves); `assets/js/pieces/colour-scene.js` and `assets/js/pieces/colour-grade.js` (modified: a speck on every pixel at 18 % of #118's opacity, quantised to 32 levels, instead of sparse squares) |
 
 The lighting presets (#097 #098 #100 #101 #102 #114) also reach `previs/shotlist.json` through
 `assets/js/core/presets.js`. The remaining pieces' text and prompts (`prompts/*.md`) cite Motion

@@ -11,7 +11,7 @@ focus, **#112** Vignette and **#118** Film grain are numbers only.
 Ask me for these, and use the default when I don't answer:
 - Name, role and camera-report slate. Default: read them from `data/portfolio.js`
   (`person.name`, `person.role`, `person.slate` → "A-CAM · 40mm · T2.0 · 5600K · 24fps · 2.39:1").
-- Length. Default: 7.0 s, played once per session, then held. `seek(7.0)` is the hero frame, the
+- Length. Default: 4.5 s (the name sharp by 2.6 s), played once per session, then held. `seek(4.5)` is the hero frame, the
   reduced-motion frame, the poster and the OG image.
 - Picture. Default: letterbox settles from 1.85 to 2.39:1 on landscape screens; on a phone in
   portrait, from 1:1 to 4:5, with the name on two lines.
@@ -48,14 +48,14 @@ the bottom-right 120×60 px (player chrome).
 <structure>
 | Time (s) | Layer | Numbers |
 |---|---|---|
-| 0–7.0 | Grain, picture only | 8 seeded 256² tiles, tile `floor(t·24) mod 8`; dark #3A3530 55 % / white 45 %, ≤ 38 % alpha × 0.16; 16 % lean to #F2DDBE (#118) |
-| 0.3–1.6 | Iris opens | `R = R_open · eOut(P(t, .3, 1.6))`, rotation `0.35·(1 − open)`; 6 % sheen on each blade's leading edge |
-| 0.4–1.4 | Vignette in (eIO) | clear to 45 % of a 0.62·W radius, vertical × (picture h / W) × 1.35, rgb(32,35,43) to 70 % (#112) |
-| 2.0–3.4 | Name reveal | `u = min(t − 2.0, 1.4)`: line 0.1–0.5 (eIO), name +120 card px 0.35–1.0 (eOut5), role −60 card px 0.55–1.15 (#005) |
-| 2.4–4.0 | Rack focus (eIO) | `σ_name = 7·s → 0`, `σ_bg = 0 → 6·s`, s = 0.5·W/539 (0.86·W/539 tall) (#033) |
-| 4.8–5.6 | Letterbox (eIO) | 1.85 → 2.39 (tall 1.0 → 0.8), ink bars |
-| 5.4–6.2 | Slate types on | `floor(n · eOut(P(t, 5.4, 6.2)))` characters, a tungsten caret while typing |
-| 6.2–7.0 | Hold | `seek(7.0)` = hero = reduced motion = poster = OG |
+| 0–4.5 | Grain, picture only | 8 seeded 256² tiles, tile `floor(t·24) mod 8`; dark #3A3530 55 % / white 45 %, ≤ 38 % alpha × 0.16; 16 % lean to #F2DDBE (#118) |
+| 0.1–1.0 | Iris opens | `R = R_open · eOut(P(t, .1, 1.0))`, rotation `0.35·(1 − open)`; 6 % sheen on each blade's leading edge |
+| 0.1–0.9 | Vignette in (eIO) | clear to 45 % of a 0.62·W radius, vertical × (picture h / W) × 1.35, rgb(32,35,43) to 70 % (#112) |
+| 1.0–2.4 | Name reveal | `u = min(t − 1.0, 1.4)`: line 0.1–0.5 (eIO, drawn at 40 % length, 55 % alpha), name +120 card px 0.35–1.0 (eOut5), role −60 card px 0.55–1.15 (#005) |
+| 1.5–2.6 | Rack focus (eIO) | `σ_name = 7·s → 0`, `σ_bg = 0 → 6·s`, s = 0.5·W/539 (0.86·W/539 tall) (#033) |
+| 2.6–3.3 | Letterbox (eIO) | 1.85 → 2.39 (tall 1.0 → 0.8), ink bars |
+| 3.1–3.8 | Slate types on | `floor(n · eOut(P(t, 3.1, 3.8)))` characters, a tungsten caret while typing |
+| 3.8–4.5 | Hold | `seek(4.5)` = hero = reduced motion = poster = OG |
 </structure>
 
 <build>
@@ -74,9 +74,9 @@ the bottom-right 120×60 px (player chrome).
   passes so each is centred on its own ink.
 - Rack focus with `core/canvas.js` `blurLayer` (feature-detected `ctx.filter`, pyramid fallback).
   The lamps live on a half-resolution layer (all soft light); the name on its own band.
-- Record: `?record&w=1920&h=1080&fps=24` on `studies/title.html`; OG at 1200×630 with `&t=7`.
-  **Check stills before the full render:** a contact sheet at t = 0.2, 0.8, 1.6, 2.6, 3.4, 4.2,
-  5.2, 6.2, 7.0 at 1440×900 and 390×844. Look at legibility, focus timing, vignette density and
+- Record: `?record&w=1920&h=1080&fps=24` on `studies/title.html`; OG at 1200×630 with `&t=4.5`.
+  **Check stills before the full render:** a contact sheet at t = 0.2, 0.6, 1.0, 1.6, 2.2, 2.6,
+  3.2, 3.8, 4.5 at 1440×900 and 390×844. Look at legibility, focus timing, vignette density and
   spacing; fix the worst thing and look again.
 </build>
 

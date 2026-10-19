@@ -40,6 +40,10 @@ function target(e) {
   if (url.origin !== location.origin) return null;
   if (!/(\.html|\/)$/.test(url.pathname)) return null;   // pages only, not media or PDFs
   const here = new URL(location.href);
+  // Only pages that play the arriving half (index.html, project.html, next to this page): the study
+  // pages and the 404 do not, and would leave the flag behind for a later, unrelated load.
+  const dir = p => p.slice(0, p.lastIndexOf('/') + 1), file = url.pathname.slice(url.pathname.lastIndexOf('/') + 1);
+  if (dir(url.pathname) !== dir(here.pathname) || !['', 'index.html', 'project.html'].includes(file)) return null;
   if (url.pathname === here.pathname && url.search === here.search) return null;   // in-page anchor
   return url;
 }

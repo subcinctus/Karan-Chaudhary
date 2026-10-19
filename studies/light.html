@@ -52,20 +52,24 @@
       <aside class="study__panel light-panel" data-controls aria-label="Study controls"></aside>
     </div>
     <p class="study__credits cam-label" data-stage-credits></p>
+    <p class="study__credits study__disclosure cam-label">Rendered live in your browser from code written with Claude Opus 5.5 (Anthropic). <a href="../index.html#contact">How this site was made</a>.</p>
     <noscript><p>This study is rendered live with JavaScript and WebGL. Please enable JavaScript to see it.</p></noscript>
   </main>
 
   <script type="module">
     import { runStage, parseStageQuery } from '../assets/js/core/stage.js';
-    import { bindLightPlot } from '../assets/js/ui/light-plot.js';
 
     const load = () => import('../assets/js/pieces/light.js');
     if (parseStageQuery().record) runStage({ load });
     else {
-      bindLightPlot(document.querySelector('[data-stage-host]'), document.querySelector('[data-light-plan]'), {
-        report: document.querySelector('[data-light-report]'),
-        note: document.querySelector('[data-light-note]'),
-      });
+      // The plan binds first, through a guarded import: a failure leaves the poster and the player.
+      try {
+        const { bindLightPlot } = await import('../assets/js/ui/light-plot.js');
+        bindLightPlot(document.querySelector('[data-stage-host]'), document.querySelector('[data-light-plan]'), {
+          report: document.querySelector('[data-light-report]'),
+          note: document.querySelector('[data-light-note]'),
+        });
+      } catch (err) { console.info('[light] plan unavailable', err?.message ?? err); }
       // The scripted tour runs on desktop only; touch devices start on the resolved Rembrandt frame.
       runStage({ load, poster: '../media/studies/light/poster.webp', autoplay: !matchMedia('(hover: none)').matches });
     }

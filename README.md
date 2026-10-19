@@ -11,7 +11,8 @@ are:
 
 - the main title;
 - three studies (Focus, Light, Colour) that run on real lens, light and colour maths;
-- the shot-language cards on each film;
+- the camera move each film card performs on its frame grab (and the shot-language diagrams on
+  `studies/shotcard.html`);
 - the previs plans.
 
 The same code records frame-exact clips for applications.
@@ -34,8 +35,10 @@ same `/Karan-Chaudhary/` path GitHub Pages uses, so a broken link shows up here 
 
 ## Make it yours: `data/portfolio.js`
 
-Every word, film, still and link on the site comes from **one file**, `data/portfolio.js`. It is
-commented throughout.
+Every film, still, link and every word written in your voice comes from **one file**,
+`data/portfolio.js`. It is commented throughout. (The fixed interface copy — section ledes, button
+labels, the study pages' explanations — lives in the page templates and is written in neutral third
+person, so it never speaks for you.)
 
 1. **Find what's left.** Search the file for `TODO(owner)`. Every field that still needs real
    information is marked.
@@ -51,10 +54,14 @@ commented throughout.
    ],
    ```
    While `stills` is empty, the site draws procedural placeholder frames from the film's palette,
-   labelled "PLACEHOLDER STILL". Use JPEG or WebP at about 2400 px wide.
+   labelled "PLACEHOLDER STILL". Use JPEG or WebP at about 2400 px wide. The `featured` still is the
+   film's card on the home page, and the card performs the film's camera move on it; the second still
+   is where a `#043` whip pan lands. Optionally tell the move where the subject is, as fractions of
+   the frame: `focus: [[0.62, 0.4], [0.3, 0.6]]` (subject, then the rack-focus target).
 5. **Add the reel.** Set `reel.provider` to `'vimeo'` or `'youtube'` and give its `id`, or use
    `'file'` and give a `src` such as `media/reel/reel.mp4`. Add a `poster`. The reel only loads when
-   someone clicks play.
+   someone clicks play. Until a reel is set, the reel section and its links are left out and the
+   hero's button leads to Selected work.
 6. **Use relative paths everywhere.** Write `media/...`, never `/media/...`. The site lives in a
    sub-folder.
 7. **Turn off the badges last.** Set `site.showPlaceholderBadges` to `false` only when nothing is
@@ -80,7 +87,7 @@ Applications often want a video file. The recorder renders any piece frame by fr
 is ever dropped:
 
 ```sh
-npm run record -- title                           # the 7 s main title at its default size
+npm run record -- title                           # the 4.5 s main title at its default size
 npm run record -- title --w 1920 --h 1080 --fps 24
 npm run record -- focus --seconds 12              # the Focus study's scripted demo
 npm run record -- shotcard:027                    # a film card's camera move

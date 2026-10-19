@@ -86,6 +86,7 @@ const h = (tag, cls, attrs = {}) => {
  * @param {'auto'|'wide'|'tall'} [o.layout='auto']
  * @param {'aspect'|'fill'} [o.fit='aspect']  aspect: frame uses meta.aspect; fill: frame fills host
  * @param {boolean} [o.eager=false]  init immediately instead of when near the viewport
+ * @param {string} [o.lazyMargin='400px 0px']  how far ahead of the viewport a lazy player starts
  * @param {boolean} [o.chrome=true]  show the play/pause and Resume demo buttons
  * @param {boolean} [o.adaptive=true]
  * @param {string} [o.label]  fallback canvas aria-label
@@ -96,7 +97,7 @@ export function mount(host, o = {}) {
   const {
     load, params: initialParams = {}, seed = 1, autoplay = true, dprCap = 2, maxPixels = 2.1e6,
     poster, controls = false, heavy = false, layout: layoutOpt = 'auto', fit = 'aspect',
-    eager = false, chrome = true, adaptive = true, label, onEnd, onState,
+    eager = false, lazyMargin = '400px 0px', chrome = true, adaptive = true, label, onEnd, onState,
   } = o;
 
   // DOM: frame > canvas + poster + chrome. Reuse a frame/canvas the page already provides.
@@ -391,6 +392,7 @@ export function mount(host, o = {}) {
     ui = buildControls(target, meta.params, {
       values: currentParams(),
       describe: instance.describe ? p => instance.describe(p) : undefined,
+      summary: instance.summary ? (p, k) => instance.summary(p, k) : undefined,
       onInput: (partial, opts) => api.set(partial, opts),
     });
   }
@@ -427,12 +429,12 @@ export function mount(host, o = {}) {
     visIO.observe(host);
   } else ratio = 1;
 
-  // Lazy init 400 px before the host scrolls into view.
+  // Lazy init `lazyMargin` (400 px by default) before the host scrolls into view.
   if (eager || typeof IntersectionObserver === 'undefined') queueMicrotask(init);
   else {
     lazyIO = new IntersectionObserver(entries => {
       if (entries.some(e => e.isIntersecting)) { lazyIO.disconnect(); lazyIO = null; init(); }
-    }, { rootMargin: '400px 0px' });
+    }, { rootMargin: lazyMargin });
     lazyIO.observe(host);
   }
 
@@ -480,6 +482,8 @@ export function mount(host, o = {}) {
 
   const api = {
     ready, host, canvas,
+    /** Start loading now (e.g. keyboard focus is heading this way); a no-op once started. */
+    prime() { lazyIO?.disconnect(); lazyIO = null; init(); },
     get state() { return state; },
     get mode() { return mode; },
     get meta() { return meta; },

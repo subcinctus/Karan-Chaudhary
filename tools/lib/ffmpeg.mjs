@@ -36,7 +36,7 @@ export function run(cmd, args, { input } = {}) {
  * Arguments for one-pass PNG-pipe → MP4 (H.264) + WebM (VP9).
  * subframes S > 1 renders S sub-frames per frame and averages them with tmix (motion blur).
  */
-export function encodeArgs({ fps, subframes = 1, out, formats = ['mp4', 'webm'], crf = 18, tune = 'film', vp9crf = 32 }) {
+export function encodeArgs({ fps, subframes = 1, out, formats = ['mp4', 'webm'], crf = 18, tune = 'film', vp9crf = 24 }) {
   const S = Math.max(1, Math.round(subframes));
   const blur = S > 1 ? `tmix=frames=${S}:weights='${Array(S).fill(1).join(' ')}',framestep=${S},` : '';
   const outs = formats.filter(f => f === 'mp4' || f === 'webm');

@@ -49,7 +49,8 @@ about the rest.
   - The fill is the scroll fraction, using `animation-timeline: scroll(root)` with a rAF fallback.
   - The readout is `TC hh:mm:ss:ff`, computed as fraction × runtime at 24 fps.
 - **Intro.**
-  - The main title (`pieces/title.js`, 7 s) plays once per session, after the leader lifts.
+  - The main title (`pieces/title.js`, 4.5 s) plays once per session. It is the only intro: the
+    film leader is off by default (it would stack a second countdown in front of the name).
   - Skip intro, Esc, the first scroll or an arrival on a `#hash` resolves it, using the Player's
     `skip()`, which is queued if the piece is still loading.
   - The header and CTA wait at opacity 0 while it plays but stay reachable by keyboard.

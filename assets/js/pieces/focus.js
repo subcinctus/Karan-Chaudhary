@@ -53,9 +53,13 @@ export const RING_MARKS = {
   ft: [2, 3, 4, 5, 7, 10, 15, 25, 50, Infinity].map(ft => (Number.isFinite(ft) ? ft / M_TO_FT : ft)),
 };
 
-/** The five subject planes. `anchor` is the world point (m) the focus brackets frame. */
+/**
+ * The five subject planes. `anchor` is the world point (m) the focus brackets frame; `box` (world m,
+ * [x0, y0, x1, y1]) is an object the brackets go around instead, corners outside it, as a focus
+ * puller marks a board rather than its lettering.
+ */
 export const SUBJECTS = [
-  { id: 'A', key: 'slate', name: 'Slate', label: 'Slate on a C-stand arm', d: 1.2, anchor: [-0.185, 1.555] },
+  { id: 'A', key: 'slate', name: 'Slate', label: 'Slate on a C-stand arm', d: 1.2, anchor: [-0.185, 1.555], box: [-0.275, 1.495, -0.095, 1.627] },
   { id: 'B', key: 'actor', name: 'Actor', label: 'Actor stand-in', d: 3, anchor: [0.225, 1.63] },
   { id: 'C', key: 'lamp', name: 'Lamp', label: 'Practical lamp', d: 7, anchor: [-0.55, 1.56] },
   { id: 'D', key: 'festoon', name: 'Festoon', label: 'Festoon string lights', d: 18, anchor: [0.6, 2.75] },
@@ -715,7 +719,8 @@ export async function create(canvas, opts) {
   // --- HUD ------------------------------------------------------------------------------
 
   function hud(g, L, p) {
-    const R = readout(p), Wc = g.PW / dpr, narrow = Wc < 620;
+    const R = readout(p), Wc = g.PW / dpr;
+    let narrow = Wc < 620;
     const fs = Math.round(clamp(Wc * 0.0094, 10, 12.5) * dpr);
     const pad = Math.round(clamp(Wc * 0.022, 12, 26) * dpr);
     const lh = Math.round(fs * 1.65);
@@ -738,8 +743,21 @@ export async function create(canvas, opts) {
     };
     const dot = ' · ';
     ctx.textAlign = 'left';
+    // Wide frames put the subject chips top right, on line 1's row. Measure both: if they would meet,
+    // drop "A-CAM · " first, then fall back to the narrow layout (chips bottom left).
+    const labels = L.subjects.map(sbj => `${sbj.id} ${sbj.name.toUpperCase()}`);
+    const gap = fs * 1.3, cr = fs * 0.22;
+    const widths = labels.map(t => cr * 2 + fs * 0.4 + ctx.measureText(t).width);
+    const chipsW = widths.reduce((a, b) => a + b, 0) + gap * (labels.length - 1);
+    const line1 = cam => [[`${cam ? 'A-CAM · ' : ''}${R.format} · ${L.f}MM · ${R.stop} · ${WB}K`, PAPER3], [dot, PAPER3], [`FOCUS ${R.focus.toUpperCase()}`, TUNG]];
+    const line1W = cam => line1(cam).reduce((w, [t]) => w + ctx.measureText(t).width, 0);
+    let cam = !narrow;
+    if (!narrow) {
+      const avail = g.PW - pad * 2 - chipsW - fs * 2;
+      if (line1W(true) > avail) { cam = false; if (line1W(false) > avail) narrow = true; }
+    }
     // Line 1: camera report, then the focus mark in tungsten. Line 2: the depth-of-field solution.
-    seq([[`${narrow ? '' : 'A-CAM · '}${R.format} · ${L.f}MM · ${R.stop} · ${WB}K`, PAPER3], [dot, PAPER3], [`FOCUS ${R.focus.toUpperCase()}`, TUNG]], pad, y1);
+    seq(line1(cam), pad, y1);
     const pairs = narrow
       ? [['NEAR ', R.near], ['FAR ', R.far], ['DOF ', R.dof], ['H ', R.hyperfocal]]
       : [['NEAR ', R.near], ['FAR ', R.far], ['DOF ', R.dof], ['HYPERFOCAL ', R.hyperfocal]];
@@ -757,10 +775,7 @@ export async function create(canvas, opts) {
       return x + r * 2 + fs * 0.4 + ctx.measureText(label).width;
     };
     if (!narrow) {
-      const labels = L.subjects.map(sbj => `${sbj.id} ${sbj.name.toUpperCase()}`);
-      const gap = fs * 1.3, r = fs * 0.22;
-      const widths = labels.map(t => r * 2 + fs * 0.4 + ctx.measureText(t).width);
-      let x = g.PW - pad - widths.reduce((a, b) => a + b, 0) - gap * (labels.length - 1);
+      let x = g.PW - pad - chipsW;
       L.subjects.forEach((sbj, i) => { x = chip1(sbj, x, y1, labels[i]) + gap; });
     } else {
       const yb = g.PH - pad;
@@ -773,26 +788,38 @@ export async function create(canvas, opts) {
     ctx.restore();
   }
 
-  /** #033-style focus brackets: travel between subjects in log distance, like a puller's mark. */
+  /**
+   * #033-style focus brackets: travel between subjects in log distance, like a puller's mark. A
+   * subject with a `box` (the slate) is framed around its board, 6 % outside it; the others by a
+   * square on their anchor. Each mark is a rectangle [cx, cy, half-width, half-height].
+   */
   function brackets(g, L) {
     const s = L.inf ? 1e9 : L.s / 1000;
-    const pts = SUBJECTS.map(o => ({ ...toScreen(g, o.d, o.anchor[0], o.anchor[1]), d: o.d }));
-    let i = 0;
-    while (i < pts.length - 2 && s > pts[i + 1].d) i++;
-    const a = pts[i], b = pts[i + 1];
-    const u = eIO(clamp(Math.log(s / a.d) / Math.log(b.d / a.d)));
     const size = Math.min(g.PW, g.PH);
-    const x = clamp(lerp(a.x, b.x, u), size * 0.14, g.PW - size * 0.14);
-    const y = clamp(lerp(a.y, b.y, u), size * 0.3, g.PH - size * 0.16);
     const r = lerp(0.085, 0.05, clamp(Math.log(s / 1.2) / Math.log(60 / 1.2))) * size;
-    const arm = r * 0.3;
+    const clampPt = (x, y) => [clamp(x, size * 0.14, g.PW - size * 0.14), clamp(y, size * 0.3, g.PH - size * 0.16)];
+    const marks = SUBJECTS.map(o => {
+      if (o.box) {
+        const [x0, y0, x1, y1] = o.box, pw = (x1 - x0) * 0.06, ph = (y1 - y0) * 0.06;
+        const a = toScreen(g, o.d, x0 - pw, y1 + ph), b = toScreen(g, o.d, x1 + pw, y0 - ph);
+        return { d: o.d, m: [(a.x + b.x) / 2, (a.y + b.y) / 2, (b.x - a.x) / 2, (b.y - a.y) / 2] };
+      }
+      const p = toScreen(g, o.d, o.anchor[0], o.anchor[1]);
+      return { d: o.d, m: [...clampPt(p.x, p.y), r, r] };
+    });
+    let i = 0;
+    while (i < marks.length - 2 && s > marks[i + 1].d) i++;
+    const a = marks[i], b = marks[i + 1];
+    const u = eIO(clamp(Math.log(s / a.d) / Math.log(b.d / a.d)));
+    const [x, y, rx, ry] = a.m.map((v, j) => lerp(v, b.m[j], u));
+    const arm = Math.min(rx, ry) * 0.3;
     ctx.save();
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalAlpha = 0.5;
     ctx.strokeStyle = '#ECE6DA'; ctx.lineWidth = Math.max(1, dpr);
     ctx.beginPath();
     for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
-      ctx.moveTo(x + sx * r, y + sy * r - sy * arm); ctx.lineTo(x + sx * r, y + sy * r); ctx.lineTo(x + sx * r - sx * arm, y + sy * r);
+      ctx.moveTo(x + sx * rx, y + sy * ry - sy * arm); ctx.lineTo(x + sx * rx, y + sy * ry); ctx.lineTo(x + sx * rx - sx * arm, y + sy * ry);
     }
     ctx.stroke();
     ctx.restore();
@@ -854,8 +881,12 @@ export async function create(canvas, opts) {
   function describe(p) {
     const R = readout(p), L = R.lens;
     const lc = t => t[0].toLowerCase() + t.slice(1);   // "slate on a C-stand arm"
-    const sharp = L.subjects.filter(o => o.sharp).map(o => lc(o.label));
-    const soft = L.subjects.filter(o => !o.sharp).map(o => lc(o.label));
+    // A subject whose anchor falls outside the frame at this focal length is said to be out of frame.
+    const half = (L.fmt.w / 2) / L.f, aspect = meta.aspect[layout] ?? meta.aspect.wide;
+    const inFrame = o => Math.abs(o.anchor[0] / o.d) <= half && Math.abs((o.anchor[1] - CAM_H) / o.d) <= half / aspect;
+    const name = o => `${lc(o.label)}${inFrame(o) ? '' : ' (out of frame at this focal length)'}`;
+    const sharp = L.subjects.filter(o => o.sharp).map(name);
+    const soft = L.subjects.filter(o => !o.sharp).map(name);
     const iris = p.blades ? `${p.blades}-blade iris` : 'round iris';
     return `Focus study, a night exterior on a rooftop: ${L.fmt.label}, ${L.f} mm at ${R.stop}, ${iris}, focused at ${R.focus}. ` +
       `${R.line}. Sharp: ${sharp.length ? sharp.join(', ') : 'nothing'}. Soft: ${soft.length ? soft.join(', ') : 'nothing'}.`;
@@ -879,5 +910,11 @@ export async function create(canvas, opts) {
     },
     script: demoParams,
     describe,
+    /** Short spoken delta for the controls' live region. */
+    summary(p, key) {
+      if (key === 'units' || key === 'blades') return '';
+      const R = readout(p);
+      return `Near ${R.near}, far ${R.far}, depth of field ${R.dof}.`;
+    },
   };
 }

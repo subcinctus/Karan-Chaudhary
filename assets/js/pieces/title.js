@@ -1,32 +1,34 @@
-// Main title sequence (hero). Canvas 2D, 7.0 s, played once; seek(7.0) is the hero frame, the
+// Main title sequence (hero). Canvas 2D, 4.5 s, played once; seek(4.5) is the hero frame, the
 // reduced-motion frame, the poster and the OG image.
 //
 // Motion Prompt #005 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#005
 //   run-the-code port: the vendored cell from ../vendor/motion-prompt/motion.js draws the name reveal,
-//   played once and held (u = min(t − 2.0, 1.4)); only its text, fonts and palette are swapped
-//   through the module's exported TEXT5 / C / setFonts / OPTS.stage.
+//   played once and held (u = min(t − 1.0, 1.4)); only its text, fonts and palette are swapped
+//   through the module's exported TEXT5 / C / setFonts / OPTS.stage. The mask line is drawn as a
+//   separate pass at 40 % of its length and 55 % alpha, so it reads as a rule between name and role.
 // Motion Prompt #033 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#033
-//   numbers only: blur amounts 7 px / 6 px (× band scale), 1.6 s cubic in-out; direction reversed
-//   (the far plane goes soft while the title plane comes into focus).
+//   numbers only: blur amounts 7 px / 6 px (× band scale), cubic in-out (shortened from 1.6 s to
+//   1.1 s so the name is sharp by 2.6 s); direction reversed (the far plane goes soft while the title
+//   plane comes into focus).
 // Motion Prompt #112 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#112
 //   numbers only: ellipse clear to 45 % of a 0.62·W radius, vertical × 1.35, rgb(32,35,43) to 70 %,
-//   in over 0.4–1.4 s. Composited with 'multiply' so it darkens a low-key frame instead of lifting it.
+//   in over 0.1–0.9 s (shortened from 0.4–1.4 s). Composited with 'multiply' so it darkens a low-key frame instead of lifting it.
 // Motion Prompt #118 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#118
 //   numbers only: dark #3A3530 55 % / white 45 % speckle up to 38 % alpha; 16 % lean towards #F2DDBE.
 //   Deviations: the grain is re-seeded at 24 fps (it is a moving image, not a still), and the cream
 //   lean is applied multiplicatively so the blacks stay black.
 //
 // Timeline (s)
-//   0–7      grain, picture area only (8 tiles, tile = floor(t·24) mod 8)
-//   0.3–1.6  original 9-blade iris opens (eOut) onto out-of-focus tungsten practicals; the bokeh
+//   0–4.5    grain, picture area only (8 tiles, tile = floor(t·24) mod 8)
+//   0.1–1.0  original 9-blade iris opens (eOut) onto out-of-focus tungsten practicals; the bokeh
 //            grows and rounds off with the aperture, its 9-gon turning with the blades
-//   0.4–1.4  #112 vignette fades in (eIO), on the room layer under the type
-//   0.3–6.6  slow push-in on the room, 2.5 % (eIO), so the lamps drift apart; still for the hold
-//   2.0–3.4  #005 mask reveal of the name, hairline and role; held from u = 1.4
-//   2.4–4.0  #033 rack focus: σ_name 7·s → 0, σ_bg 0 → 6·s (eIO); layers blurred, never the composite
-//   4.8–5.6  letterbox settles 1.85 → 2.39 (tall layout: 1:1 → 4:5)
-//   5.4–6.2  camera-report slate types on (IBM Plex Mono)
-//   6.2–7.0  hold
+//   0.1–0.9  #112 vignette fades in (eIO), on the room layer under the type
+//   0.1–4.2  slow push-in on the room, 2.5 % (eIO), so the lamps drift apart; still for the hold
+//   1.0–2.4  #005 mask reveal of the name, hairline and role; held from u = 1.4
+//   1.5–2.6  #033 rack focus: σ_name 7·s → 0, σ_bg 0 → 6·s (eIO); layers blurred, never the composite
+//   2.6–3.3  letterbox settles 1.85 → 2.39 (tall layout: 1:1 → 4:5)
+//   3.1–3.8  camera-report slate types on (IBM Plex Mono)
+//   3.8–4.5  hold
 // No flare pass, no light leak (cut for restraint).
 
 import data from '../../../data/portfolio.js';
@@ -44,7 +46,8 @@ const CREAM = hexToRgb('#F2DDBE');
 const rgba = ([r, g, b], a) => `rgba(${r},${g},${b},${a})`;
 const lean = hex => rgbToHex(hexToRgb(hex).map((v, i) => v * (0.84 + 0.16 * CREAM[i] / 255)));
 const PAPER = lean('#ECE6DA'), PAPER2 = lean('#B9B3A8'), PAPER3 = lean('#8A857C'), TUNGSTEN = lean('#F4B26A');
-const HAIRLINE = (() => { const [r, g, b] = hexToRgb(TUNGSTEN); return `rgba(${r},${g},${b},0.85)`; })();
+const HAIRLINE = (() => { const [r, g, b] = hexToRgb(TUNGSTEN); return `rgba(${r},${g},${b},0.55)`; })();
+const RULE_LEN = 0.4;   // the mask line's length as drawn, as a fraction of the cell's 380 px
 const DISPLAY = '"Cormorant Garamond", "Iowan Old Style", Georgia, serif';
 const SANS = '"Inter Tight", Inter, system-ui, sans-serif';
 const MONO = '"IBM Plex Mono", ui-monospace, monospace';
@@ -52,9 +55,9 @@ const W_NAME = 500, W_ROLE = 500, W_SLATE = 400;
 
 // Timeline.
 const T = {
-  irisA: 0.3, irisB: 1.6, vigA: 0.4, vigB: 1.4,
-  reveal: 2.0, revealHold: 1.4, stagger: 0.12,
-  rackA: 2.4, rackB: 4.0, push: 6.6, boxA: 4.8, boxB: 5.6, slateA: 5.4, slateB: 6.2, end: 7.0,
+  irisA: 0.1, irisB: 1.0, vigA: 0.1, vigB: 0.9,
+  reveal: 1.0, revealHold: 1.4, stagger: 0.12,
+  rackA: 1.5, rackB: 2.6, push: 4.2, boxA: 2.6, boxB: 3.3, slateA: 3.1, slateB: 3.8, end: 4.5,
 };
 const BLADES = 9;
 const GRAIN = 0.16;   // #118 effect amount (tile alpha is already 0–38 %)
@@ -301,13 +304,14 @@ export async function create(canvas, opts) {
       TEXT5.bottomFont = `${W_ROLE} ${g.RF.toFixed(2)}px`; TEXT5.bottomTracking = g.lsR;
 
       const base = [dpr * g.k, 0, 0, dpr * g.k, dpr * (g.ox - g.bandLeft), dpr * (g.oy - g.bandTop)];
-      const pass = (u, { top = '', bottom = '', line = false, dx = 0, dy = 0 }) => {
+      const pass = (u, { top = '', bottom = '', line = false, dx = 0, dy = 0, sx = 1 }) => {
         if (u <= 0) return;
         TEXT5.top = top; TEXT5.bottom = bottom;
         C5.coral = line ? HAIRLINE : 'rgba(0,0,0,0)';
         n.save();
         n.setTransform(...base);
         n.translate(dx, dy);
+        if (sx !== 1) { n.translate(g.cardW / 2, 0); n.scale(sx, 1); n.translate(-g.cardW / 2, 0); }
         cell(n, g.cardW, MOTION.h, Math.min(u, T.revealHold));
         n.restore();
       };
@@ -317,7 +321,7 @@ export async function create(canvas, opts) {
         // letterSpacing adds a trailing gap; centre the ink, not the advance.
         pass(u0 - i * T.stagger, { top: s, dx: -(m.R - m.L) / 2, dy: g.dyName - (last - i) * g.lineStepCard });
       });
-      pass(u0, { line: true });
+      pass(u0, { line: true, sx: RULE_LEN });
       pass(u0 - last * T.stagger, { bottom: tx.role, dx: -(g.mRole.R - g.mRole.L) / 2, dy: g.dyRole });
     } finally {
       Object.assign(C5, keep.C); Object.assign(TEXT5, keep.TEXT5);
@@ -391,7 +395,7 @@ export async function create(canvas, opts) {
     const ph = Math.min(H, W / ar), py = (H - ph) / 2;
 
     // 1. The room: practicals blurred as a layer (#033), then #112 vignette and #118 cream lean, all at
-    //    half resolution and cached by their inputs (static from 4.0 s on).
+    //    half resolution and cached by their inputs (static from 2.6 s on).
     const va = eIO(P(t, T.vigA, T.vigB));
     const kB = `${g.key}|${open.toFixed(5)}|${rk.toFixed(5)}|${va.toFixed(5)}`;
     if (kB !== bgKey) {
@@ -423,7 +427,7 @@ export async function create(canvas, opts) {
       resetCtx(f, 1);
       bgKey = kB;
     }
-    // Slow push-in on the room (2.5 %, eIO, settled by 6.6 s) so the lamps drift apart; the title
+    // Slow push-in on the room (2.5 %, eIO, settled by 4.2 s) so the lamps drift apart; the title
     // plane does not move.
     const push = 1 + 0.025 * eIO(P(t, T.irisA, T.push));
     resetCtx(ctx, 1);

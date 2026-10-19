@@ -104,7 +104,10 @@ export function renderPlan(svg, { camera = {}, cameras = [], path = null, subjec
   if (tid) svg.setAttribute('aria-labelledby', `${tid} ${did}`);
 
   const stroke = { 'vector-effect': 'non-scaling-stroke', fill: 'none' };
-  const mono = { 'font-family': 'var(--font-mono, monospace)', 'font-size': f(unit * FONT), style: 'letter-spacing:0.06em' };
+  // Every label carries a thin ink halo (painted under the glyphs), so a camera path or a frustum edge
+  // that runs through it breaks around the letters instead of striking them through.
+  const mono = { 'font-family': 'var(--font-mono, monospace)', 'font-size': f(unit * FONT), style: 'letter-spacing:0.06em',
+    stroke: '#0E1013', 'stroke-width': f(unit * 1.1), 'stroke-linejoin': 'round', 'paint-order': 'stroke' };
 
   // Distance rings every metre around the subject.
   const g0 = s('g', { style: 'stroke:var(--line, #2A2E36)' });

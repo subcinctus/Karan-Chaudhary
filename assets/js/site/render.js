@@ -56,6 +56,39 @@ export function slateLine(s = {}) {
 }
 export const studyAnchor = id => `study-${id}`;
 
+/** Template strings in data/portfolio.js that are not real information yet: never shown on the site. */
+const TEMPLATE_TEXT = new Set(['Director Name', 'Production / School', 'Artist / Label', 'Agency / Client', 'City, Country',
+  'School name', 'Programme / course', 'Years']);
+/** The value, or null while it still holds template text (so "dir. Director Name" is left out). */
+export const filled = v => (v == null || TEMPLATE_TEXT.has(String(v).trim()) ? null : v);
+
+/** True when data.reel points at something playable (a Vimeo / YouTube id or a video file). */
+export function hasReel(data) {
+  const r = data?.reel ?? {};
+  if (r.provider === 'file') return !!safeUrl(r.src);
+  if (r.provider === 'vimeo') return /^\d{4,12}$/.test(String(r.id ?? ''));
+  if (r.provider === 'youtube') return /^[\w-]{6,20}$/.test(String(r.id ?? ''));
+  return false;
+}
+/** True once at least one previs shot has a rendered video. */
+export const hasPrevisMedia = data => Object.values(data?.previs?.media ?? {}).some(m => !!safeUrl(m?.video));
+/** Scene number for a section: the reel is Sc. 01 when there is one; without it every scene moves up. */
+export const scNo = (data, n) => pad2(hasReel(data) ? n : n - 1);
+
+/**
+ * Without a reel there is no reel section: hide it, drop every "#reel" link (header, menu sheet) and
+ * renumber the menu's scene labels, so the first thing under the name is the work, not an absence.
+ */
+export function pruneReel(data) {
+  if (hasReel(data)) return;
+  document.getElementById('reel')?.setAttribute('hidden', '');
+  for (const a of document.querySelectorAll('a[href="#reel"], a[href="index.html#reel"]')) {
+    if (a.matches('[data-watch-reel]')) continue;
+    (a.closest('li') ?? a).remove();
+  }
+  document.querySelectorAll('.menu__list > li .cam-label').forEach((el, i) => { el.textContent = `Sc. ${pad2(i + 1)}`; });
+}
+
 /** Visible SAMPLE badge for placeholder records (when the site switch allows it). */
 export function badge(rec, data, label = 'Sample') {
   if (!rec?.placeholder || data?.site?.showPlaceholderBadges === false) return '';
@@ -119,7 +152,7 @@ export function renderFilmCard(film, i, data) {
         <div class="work-card__text">
           <p class="work-card__slate cam-label"><span>${pad2(i + 1)}</span><span>${[film.year, film.format].filter(Boolean).join(' · ')}</span></p>
           <h3 class="work-card__title" id="film-${film.slug}-title">${film.title}</h3>
-          <p class="work-card__role">${film.role}${film.director ? html` <span class="work-card__dir">· dir. ${film.director}</span>` : ''}</p>
+          <p class="work-card__role">${film.role}${filled(film.director) ? html` <span class="work-card__dir">· dir. ${film.director}</span>` : ''}</p>
           <p class="work-card__foot cam-label"><span>${film.move ? `${film.move} ${MOVE_NAMES[film.move] ?? ''}`.trim() : ''}</span>${badge(film, data)}</p>
         </div>
       </a>
@@ -131,7 +164,7 @@ export function renderWork(data) {
   const years = films.map(f => f.year).filter(Number.isFinite);
   const span = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : '';
   return html`
-    ${sectionHead({ sc: '02', label: 'Selected work', title: 'Selected work', id: 'work-title', aside: `${films.length} films${span ? ` · ${span}` : ''}`,
+    ${sectionHead({ sc: scNo(data, 2), label: 'Selected work', title: 'Selected work', id: 'work-title', aside: `${films.length} films${span ? ` · ${span}` : ''}`,
       lede: 'Each frame is cropped to the aspect ratio the film was delivered in. Hover or focus a card to see the camera move that defines it.' })}
     <ol class="work-grid" role="list">${films.map((f, i) => renderFilmCard(f, i, data))}</ol>
     <p class="work-note cam-label" data-reveal>Camera moves: Motion Prompt #027 #030 #031 #032 #033 #043 by Shohei Ohtaki (MIT).</p>`;
@@ -165,7 +198,7 @@ export function renderStudy(study, data) {
       </div>
       <p class="study-block__foot cam-label">
         ${credits ? html`<span>Motion Prompt ${credits} (MIT)</span>` : ''}
-        <a class="study-block__open" href="${safeUrl(study.href) ?? `studies/${study.id}.html`}">Open full screen <span aria-hidden="true">→</span></a>
+        <a class="study-block__open" href="${safeUrl(study.href) ?? `studies/${study.id}.html`}">Open <span class="visually-hidden">the ${study.title} study </span>full screen <span aria-hidden="true">→</span></a>
       </p>
     </article>`;
 }
@@ -173,15 +206,16 @@ export function renderStudy(study, data) {
 export function renderStudies(data) {
   const studies = data.studies ?? [];
   return html`
-    ${sectionHead({ sc: '03', label: 'Studies', title: 'Focus / Light / Colour', id: 'studies-title', aside: 'Rendered live',
-      lede: 'Three working studies, each rendered live in your browser from the maths a camera department uses. They are how I think about the job.' })}
+    ${sectionHead({ sc: scNo(data, 3), label: 'Studies', title: 'Focus\u00a0/ Light\u00a0/ Colour', id: 'studies-title', aside: 'Rendered live',
+      lede: 'Three working studies, each rendered live in your browser from the maths a camera department uses.' })}
     ${studies.map(s => renderStudy(s, data))}`;
 }
 
 export function renderPrevisShell(data) {
   const p = data.previs ?? {};
   return html`
-    ${sectionHead({ sc: '04', label: 'Previs', title: p.heading || 'Virtual production / Previs', id: 'previs-title', aside: 'Unreal Engine · Sequencer', lede: p.intro })}
+    ${sectionHead({ sc: scNo(data, 4), label: 'Previs', title: String(p.heading || 'Virtual production / Previs').replace(/ \//g, '\u00a0/'), id: 'previs-title', aside: 'Unreal Engine · Sequencer',
+      lede: hasPrevisMedia(data) ? p.intro : (p.introPending || p.intro) })}
     <ol class="previs-grid" role="list" data-previs-grid hidden></ol>`;
 }
 
@@ -190,11 +224,11 @@ export function renderAbout(data) {
   const bio = p.bio ?? {};
   const portrait = safeUrl(p.portrait?.src);
   const facts = [
-    ['Name', p.name], ['Role', (p.roles ?? [p.role]).filter(Boolean).join(' / ')], ['Based', p.base], ['Status', p.availability],
+    ['Name', p.name], ['Role', (p.roles ?? [p.role]).filter(Boolean).join(' / ')], ['Based', filled(p.base)], ['Status', p.availability],
   ];
-  const edu = (p.education ?? []).filter(e => e.school);
+  const edu = (p.education ?? []).filter(e => filled(e.school));
   return html`
-    ${sectionHead({ sc: '05', label: 'About & approach', title: 'About', id: 'about-title' })}
+    ${sectionHead({ sc: scNo(data, 5), label: 'About & approach', title: 'About', id: 'about-title' })}
     <div class="about">
       <div class="about__lead" data-reveal>
         ${portrait ? html`<figure class="about__portrait frame" style="--ar:0.8"><img src="${portrait}" alt="${p.portrait?.alt ?? ''}" loading="lazy" decoding="async"></figure>` : ''}
@@ -216,7 +250,8 @@ export function renderAbout(data) {
           <p class="approach__text">${a.text}</p>
           ${a.study ? html`<a class="approach__link" href="#${studyAnchor(a.study)}" data-study-link="${a.study}" ${a.preset ? raw(`data-study-preset="${esc(a.preset)}"`) : ''}>See it in the ${cap(a.study)} study${a.preset ? ` · ${presetName(a.preset)}` : ''} <span aria-hidden="true">→</span></a>` : ''}
         </li>`)}
-    </ol>`;
+    </ol>
+    ${badge(p, data) ? html`<p class="approach__note cam-label" data-reveal>${badge(p, data, 'Sample approach')}</p>` : ''}`;
 }
 const cap = s => String(s).charAt(0).toUpperCase() + String(s).slice(1);
 const presetName = id => cap(String(id).replace(/[-_]/g, ' '));
@@ -229,7 +264,7 @@ export function renderKit(data) {
       <dl class="kit__list">${groups.map(g => html`<div class="kit__row"><dt>${g.group}</dt><dd>${(g.items ?? []).join(' · ')}</dd></div>`)}</dl>
     </div>`;
   return html`
-    ${sectionHead({ sc: '06', label: 'Kit', title: 'Kit', id: 'kit-title', aside: k.placeholder ? '' : 'Camera report', lede: '' })}
+    ${sectionHead({ sc: scNo(data, 6), label: 'Kit', title: 'Kit', id: 'kit-title', aside: k.placeholder ? '' : 'Camera report', lede: '' })}
     <div class="kit">${table('Owned', k.owned)}${table('Experienced with', k.experienced)}</div>
     ${badge(k, data) ? html`<p class="kit__note cam-label" data-reveal>${badge(k, data, 'Sample kit list')}</p>` : ''}`;
 }
@@ -245,7 +280,7 @@ export function renderCredits(data) {
         ${list.map(c => html`
           <li class="credits__row">
             <span class="credits__role">${c.role}</span>
-            <span class="credits__name"><span class="credits__film">${c.title}</span><span class="credits__meta">${[c.kind, c.year, c.director && `Dir. ${c.director}`].filter(Boolean).join(' · ')}</span>${badge(c, data)}</span>
+            <span class="credits__name"><span class="credits__film">${c.title}</span><span class="credits__meta">${[c.kind, c.year, filled(c.director) && `Dir. ${c.director}`].filter(Boolean).join(' · ')}</span>${badge(c, data)}</span>
           </li>`)}
       </ol>
       <div class="credits__end">
@@ -263,9 +298,9 @@ export function renderContact(data) {
   const cv = safeUrl(c.cv);
   return html`
     <div class="contact" data-reveal>
-      <p class="cam-label">Sc. 07 · Contact</p>
-      <h2 class="contact__title" id="contact-title">Let’s make something.</h2>
-      <p class="contact__avail">${data.person?.availability}${data.person?.base ? ` · ${data.person.base}` : ''}</p>
+      <p class="cam-label">Sc. ${scNo(data, 7)} · Contact</p>
+      <h2 class="contact__title" id="contact-title">${c.heading || 'Contact'}</h2>
+      <p class="contact__avail">${data.person?.availability}${filled(data.person?.base) ? ` · ${data.person.base}` : ''}</p>
       ${mail ? html`<p class="contact__mail"><a href="${mail}">${c.email}</a></p>` : ''}
       <ul class="contact__links" role="list">
         ${c.phone ? html`<li><a href="${safeUrl(`tel:${String(c.phone).replace(/[^+\d]/g, '')}`, { allowMail: true }) ?? '#contact'}">${c.phone}</a></li>` : ''}
@@ -279,12 +314,20 @@ export function renderContact(data) {
 
 export function renderColophon(data, { replay = true } = {}) {
   const col = data.colophon ?? {};
+  const footage = hasReel(data) || hasPrevisMedia(data);
+  const unconfirmed = col.confirmed !== true && data?.site?.showPlaceholderBadges !== false;
+  const credit = c => {
+    if (typeof c === 'string') return html`<li>${c}</li>`;
+    const links = (c?.links ?? []).map(l => ({ ...l, href: safeUrl(l?.href) })).filter(l => l.href);
+    return html`<li>${c?.text ?? ''}${links.length ? html` ${links.map((l, i) => html`${i ? ' · ' : ''}<a href="${l.href}"${/^https?:/.test(l.href) ? raw(' rel="noopener"') : ''}>${l.label ?? l.href}</a>`)}` : ''}</li>`;
+  };
   return html`
     <div class="colophon">
       <div class="colophon__text">
         <p class="cam-label">Colophon · How this site was made</p>
-        <p class="colophon__lead">${col.text}</p>
-        <ul class="colophon__credits" role="list">${(col.credits ?? []).map(t => html`<li>${t}</li>`)}</ul>
+        <p class="colophon__lead">${col.text}${footage ? ' The reel and the previs renders are camera and engine footage.' : ''}</p>
+        ${unconfirmed ? html`<p class="colophon__flag"><span class="badge-sample" title="The owner has not yet confirmed this disclosure: data/portfolio.js colophon.confirmed">To confirm</span></p>` : ''}
+        <ul class="colophon__credits" role="list">${(col.credits ?? []).map(credit)}</ul>
       </div>
       <div class="colophon__tools">
         ${replay ? html`<button class="btn btn--ghost" type="button" data-replay-titles>Replay titles</button>` : html`<a class="btn btn--ghost" href="index.html">Home</a>`}
@@ -299,7 +342,7 @@ export function renderColophon(data, { replay = true } = {}) {
 export function filmReport(f) {
   const lens = f.lenses ?? {}, cam = f.camera ?? {};
   return [
-    ['Role', f.role], ['Director', f.director], ['Production', f.production], ['Format', f.format], ['Runtime', f.runtime],
+    ['Role', f.role], ['Director', filled(f.director)], ['Production', filled(f.production)], ['Format', f.format], ['Runtime', f.runtime],
     ['Camera', cam.body], ['Mode', cam.mode], ['Codec', cam.codec],
     ['Lenses', [lens.set, lens.range].filter(Boolean).join(' · ')], ['Anamorphic', lens.anamorphic ? 'Yes' : null], ['Filtration', lens.filtration],
     ['Aspect', f.aspect ? aspectLabel(f.aspect) : null], ['Frame rate', f.frameRate ? fpsLabel(f.frameRate) : null],
@@ -376,7 +419,9 @@ export function personLD(data) {
     '@context': 'https://schema.org', '@type': 'Person', name: p.name, jobTitle: p.role,
     hasOccupation: { '@type': 'Occupation', name: (p.roles ?? [])[0] ?? p.role },
     url: data.site?.url, image: abs(data, data.site?.ogImage),
-    knowsAbout: ['Cinematography', 'Lighting', 'Colour grading', 'Previsualization', 'Unreal Engine'],
+    // Unreal Engine is claimed only once a previs render exists (data.previs.media.*.video).
+    knowsAbout: (p.knowsAbout ?? ['Cinematography', 'Lighting', 'Colour grading', 'Previsualization'])
+      .filter(k => k !== 'Unreal Engine' || hasPrevisMedia(data)),
     sameAs: (p.sameAs ?? []).filter(u => /^https:\/\//.test(u)),
   };
 }
@@ -428,13 +473,25 @@ export function initChrome({ bindMotionToggle, solidAfter = () => 8 }) {
   const open = document.querySelector('[data-menu-open]');
   if (menu && open && typeof menu.showModal === 'function') {
     const setOpen = v => { open.setAttribute('aria-expanded', String(v)); root.classList.toggle('menu-open', v); };
-    open.addEventListener('click', () => { menu.showModal(); setOpen(true); });
+    let via = null;   // the link that closed the sheet, if any
+    open.addEventListener('click', () => { via = null; menu.showModal(); setOpen(true); });
     menu.querySelector('[data-menu-close]')?.addEventListener('click', () => menu.close());
-    menu.addEventListener('close', () => { setOpen(false); open.focus({ preventScroll: true }); });
+    menu.addEventListener('close', () => {
+      setOpen(false);
+      const a = via; via = null;
+      // Esc, Close or the backdrop: back to the Menu button. A same-page link: focus lands on the
+      // section it scrolled to, so the next Tab continues from there instead of the header.
+      const target = a && a.pathname === location.pathname && a.hash ? document.getElementById(decodeURIComponent(a.hash.slice(1))) : null;
+      if (!a) open.focus({ preventScroll: true });
+      else if (target) requestAnimationFrame(() => {
+        if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+        target.focus({ preventScroll: true });
+      });
+    });
     menu.addEventListener('click', e => {
       if (e.target === menu) menu.close();                 // backdrop
       const a = e.target.closest('a[href]');
-      if (a) { menu.close(); }                             // then the link navigates / scrolls
+      if (a) { via = a; menu.close(); }                    // then the link navigates / scrolls
     });
     // A wide window never shows the sheet.
     matchMedia('(min-width: 900px)').addEventListener?.('change', e => { if (e.matches && menu.open) menu.close(); });
@@ -455,6 +512,43 @@ export function initChrome({ bindMotionToggle, solidAfter = () => 8 }) {
     }, { rootMargin: '-45% 0px -50% 0px' });
     sections.forEach(s => io.observe(s));
   }
+}
+
+/**
+ * Keep in-page anchor jumps honest while the page below is still growing (study players, plans and
+ * controls mount as they come near, so a section can move down during a smooth scroll). When the
+ * scroll ends, re-aim at the target if it is no longer at the top; at most a few times, and never
+ * against the visitor (any wheel, touch or key press cancels it).
+ */
+export function initAnchorAim() {
+  let token = 0;
+  const cancel = () => { token++; };
+  for (const ev of ['wheel', 'touchstart', 'keydown']) addEventListener(ev, cancel, { passive: true });
+  const ended = () => new Promise(res => {
+    let t = 0;
+    const done = () => { clearTimeout(t); removeEventListener('scrollend', done); res(); };
+    if ('onscrollend' in window) addEventListener('scrollend', done);
+    t = setTimeout(done, 1600);   // no scrollend (Safari), or no scroll at all
+  });
+  async function aim(el) {
+    const my = ++token;
+    for (let i = 0; i < 4; i++) {
+      await ended();
+      if (my !== token) return;
+      const pad = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+      const off = el.getBoundingClientRect().top - pad;
+      if (Math.abs(off) < 6) return;
+      el.scrollIntoView({ block: 'start' });
+    }
+  }
+  document.addEventListener('click', e => {
+    const a = e.target.closest?.('a[href*="#"]');
+    if (!a || a.pathname !== location.pathname || !a.hash || e.defaultPrevented || e.button) return;
+    let el = null;
+    try { el = document.getElementById(decodeURIComponent(a.hash.slice(1))); } catch { return; }
+    if (el) requestAnimationFrame(() => aim(el));
+  });
+  return aim;
 }
 
 /** Jump to location.hash once JS-rendered content exists (the browser tried before it did). */

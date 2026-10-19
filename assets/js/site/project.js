@@ -95,6 +95,7 @@ async function boot() {
   applyPageGrain();
   initShutter();
   R.put(document.querySelector('[data-render="colophon"]'), R.renderColophon(data, { replay: false }));
+  R.pruneReel(data);
   R.initChrome({ bindMotionToggle, solidAfter: () => -1 });
 
   const slug = new URLSearchParams(location.search).get('slug');

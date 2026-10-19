@@ -1,16 +1,17 @@
 # Prompts
 
 Every moving image on this site is a small program: each frame is a pure function of time,
-`seek(t)`. These are the prompts those programs were written from. There is one per piece, written
-for **Claude Opus 5.5**.
+`seek(t)`. There is one prompt per piece, for **Claude Opus 5.5**. Each is a cleaned-up, reusable
+version of how its piece was specified and built with Claude Opus 5.5, written alongside the code
+(not a verbatim transcript of the original instructions); running it again should produce a
+comparable piece.
 
-They are kept here so the work is honest about how it was made and so it can be repeated. A reviewer
-can read exactly what was asked for. The owner can reuse a prompt to make a new study in the same
-language.
+They are kept here so the site is open about how it was made and so the work can be repeated. The
+owner can reuse a prompt to make a new study in the same language.
 
 | Prompt | What it makes | Motion Prompt moves |
 |---|---|---|
-| [`title-sequence.md`](title-sequence.md) | The 7-second main title: an iris opens onto practicals and the name reveals. | #005 · #033 · #112 · #118 |
+| [`title-sequence.md`](title-sequence.md) | The 4.5-second main title: an iris opens onto practicals and the name reveals. | #005 · #033 · #112 · #118 |
 | [`focus-study.md`](focus-study.md) | The Focus study: depth of field and bokeh through a real lens. | #033 · #105 |
 | [`light-study.md`](light-study.md) | The Light study: a plaster bust under classic portrait set-ups. | #097 · #098 · #100 · #101 · #102 · #114 |
 | [`colour-study.md`](colour-study.md) | The Colour study: a LogC frame graded to finished looks, with scopes. | #087 · #115 · #117 · #118 |

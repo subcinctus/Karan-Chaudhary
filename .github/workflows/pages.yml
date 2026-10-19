@@ -9,10 +9,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# Least privilege: the check job (which runs repo scripts) can only read; only deploy can publish.
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 # One deployment at a time; let an in-progress deployment finish.
 concurrency:
@@ -24,8 +23,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Unit tests (core maths, tooling)
@@ -37,12 +36,16 @@ jobs:
     needs: check
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
+      - uses: actions/checkout@v7
+      - uses: actions/configure-pages@v6
       - name: Stage site
         shell: bash
         run: |
@@ -70,8 +73,8 @@ jobs:
           # Never ship editor or OS noise.
           find _site \( -name '.DS_Store' -o -name 'Thumbs.db' -o -name '*.swp' \) -delete
           echo "Staged $(find _site -type f | wc -l) files, $(du -sh _site | cut -f1)"
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

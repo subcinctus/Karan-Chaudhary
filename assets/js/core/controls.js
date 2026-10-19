@@ -21,10 +21,12 @@ const el = (tag, attrs = {}, ...kids) => {
  * Build controls into `container`.
  * @param {HTMLElement} container
  * @param {Array} schema meta.params
- * @param {{ values: object, onInput: (partial, opts) => void, describe?: (params) => string, live?: HTMLElement, debounceMs?: number }} o
+ * @param {{ values: object, onInput: (partial, opts) => void, describe?: (params) => string, summary?: (params, changedKey) => string, live?: HTMLElement, debounceMs?: number }} o
+ *   summary: a short spoken delta for the live region (e.g. "Near 2.70 m, far 2.83 m"); the full
+ *   describe() text stays on the canvas label and is never announced on every change.
  * @returns {{ update(values): void, announce(text): void, destroy(): void, root: HTMLElement }}
  */
-export function buildControls(container, schema = [], { values = {}, onInput, describe, live, debounceMs = 400 } = {}) {
+export function buildControls(container, schema = [], { values = {}, onInput, summary, live, debounceMs = 400 } = {}) {
   const id = `ctl${++uid}`;
   const root = el('form', { class: 'controls', 'data-controls-root': true, 'aria-label': 'Study controls' });
   root.addEventListener('submit', e => e.preventDefault());
@@ -55,10 +57,14 @@ export function buildControls(container, schema = [], { values = {}, onInput, de
     clearTimeout(timer);
     timer = setTimeout(() => { liveEl.textContent = text; }, debounceMs);
   };
+  // Keep announcements short: a slider already speaks its own aria-valuetext, so it adds only the
+  // piece's short summary; a radio, select or toggle says its new value, then the summary.
   const readout = changedKey => {
-    if (describe) return describe(current);
     const p = schema.find(q => q.key === changedKey);
-    return p ? `${p.label}: ${spokenValue(p, current[p.key], current)}` : '';
+    let short = '';
+    try { short = summary?.(current, changedKey) || ''; } catch { /* summary is optional */ }
+    if (p?.type === 'range') return short;
+    return [p ? `${p.label}: ${spokenValue(p, current[p.key], current)}` : '', short].filter(Boolean).join('. ');
   };
 
   function makeControl(p, cid) {

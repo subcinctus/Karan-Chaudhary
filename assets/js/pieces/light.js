@@ -383,6 +383,12 @@ export async function create(canvas, opts) {
     },
     script: tourParams,
     describe(params) { return describeLight(params); },
+    /** Short spoken delta for the controls' live region: the set-up and its ratio, nothing else. */
+    summary(params, key) {
+      if (key !== 'preset') return '';
+      const r = rigFromParams(params), fill = r.lights[1];
+      return fill.presence > 0.5 ? `Key to fill ${ratioLabel(Math.round(r.ratio * 10) / 10, { spoken: true })}.` : 'No fill.';
+    },
   };
 }
 

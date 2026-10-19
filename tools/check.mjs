@@ -230,7 +230,8 @@ async function checkBanned() {
 
 // ---------------------------------------------------------------- static: Motion Prompt licence lines
 const MP_ID = /#(0(?:0[1-9]|[1-9]\d)|1[01]\d|120)(?![\w])/g;   // #001–#120 (not #000 or hex colours like #0C0D10)
-const LICENCE = /Motion Prompt #(\d{3}) · MIT License \(c\) 2026 Shohei Ohtaki · https:\/\/showheyohtaki\.github\.io\/motion-prompt\/#(\d{3})/g;
+// A kit's own line covers a range: "Motion Prompt #025-048 · MIT License … /#025".
+const LICENCE = /Motion Prompt #(\d{3})(?:-(\d{3}))? · MIT License \(c\) 2026 Shohei Ohtaki · https:\/\/showheyohtaki\.github\.io\/motion-prompt\/#(\d{3})/g;
 const VENDORED = { 'assets/js/vendor/motion-prompt/camera.js': ['027', '030', '031', '032', '033', '043'], 'assets/js/vendor/motion-prompt/motion.js': ['005'] };
 async function checkLicences() {
   const files = [...walk('assets', f => /\.(m?js|css)$/.test(f)), ...walk('tools', f => /\.m?js$/.test(f) && !f.endsWith('tools/check.mjs'))];
@@ -241,8 +242,9 @@ async function checkLicences() {
     const cited = new Set([...comments.matchAll(MP_ID)].map(m => m[1]));
     const lic = new Set();
     for (const m of src.matchAll(LICENCE)) {
-      if (m[1] !== m[2]) { bad++; fail(`${f}: licence line for #${m[1]} links to #${m[2]}`); }
-      lic.add(m[1]);
+      if (m[1] !== m[3]) { bad++; fail(`${f}: licence line for #${m[1]} links to #${m[3]}`); }
+      const hi = m[2] ? Number(m[2]) : Number(m[1]);
+      for (let n = Number(m[1]); n <= hi; n++) lic.add(String(n).padStart(3, '0'));
     }
     const required = new Set([...(VENDORED[f] ?? [])]);
     for (const id of required) if (!lic.has(id)) { bad++; fail(`${f}: vendored element #${id} has no licence line`); }
@@ -342,6 +344,10 @@ async function checkData() {
   count(d, null);
   const todos = (read('data/portfolio.js').match(/TODO\(owner\)/g) ?? []).length;
   const repoTodos = deployedFiles(['.html', '.js', '.css']).filter(f => f !== 'data/portfolio.js').reduce((n, f) => n + (read(f).match(/TODO\(owner\)/g) ?? []).length, 0);
+  if (d.colophon?.confirmed !== true) warn('colophon: the AI-use disclosure is not confirmed by the owner yet (set colophon.confirmed: true once it matches how the work was made; until then the site tags it "To confirm")');
+  // Every study page is shareable on its own, so each must carry the AI-use disclosure itself.
+  const noDisclosure = walk('studies', f => f.endsWith('.html')).filter(f => !/written with Claude Opus/.test(read(f)));
+  if (noDisclosure.length) bad(`study pages without the AI-use disclosure line ("…written with Claude Opus…"): ${noDisclosure.join(', ')}`);
   info(`placeholders: ${ph} record(s) with placeholder:true (${[...where].map(([k, n]) => `${k} ${n}`).join(', ') || 'none'}); ${todos} TODO(owner) in data/portfolio.js${repoTodos ? `, ${repoTodos} elsewhere` : ''}`);
   if (ph && d.site?.showPlaceholderBadges === false) warn('site.showPlaceholderBadges is false while placeholder records remain: sample content would look real');
 }
@@ -899,10 +905,13 @@ async function checkKeyboard() {
       const o = await outline(slider);
       const probs = [];
       if (textMs == null) probs.push(`aria-valuetext did not change after ${key}`);
-      if (before.hasLive && (liveMs == null || liveMs > 600)) probs.push(`live region ${liveMs == null ? 'did not update' : `updated after ${liveMs} ms`} (limit 600 ms)`);
+      // A slider speaks its own aria-valuetext as it moves, so the panel's live region adds only a short
+      // summary when the piece has one (e.g. the Focus study's near/far limits); it must then be quick.
+      // No live update at all is fine once the valuetext changed (it would repeat what was just said).
+      if (before.hasLive && liveMs != null && liveMs > 600) probs.push(`live region updated after ${liveMs} ms (limit 600 ms)`);
       if (o.style === 'none' || o.width === '0px') probs.push(`focused slider has no outline (${o.style})`);
       if (probs.length) fail(`${p.name}: slider "${before.label}": ${probs.join('; ')}`);
-      else pass(`${p.name}: ${key} on "${before.label}": "${before.valuetext}" → "${after.valuetext}" in ${textMs} ms, live region in ${liveMs} ms ("${after.live.slice(0, 60)}"), outline ${o.style}`);
+      else pass(`${p.name}: ${key} on "${before.label}": "${before.valuetext}" → "${after.valuetext}" in ${textMs} ms, ${liveMs != null ? `live region in ${liveMs} ms ("${after.live.slice(0, 60)}")` : 'no extra live announcement (the valuetext is spoken)'}, outline ${o.style}`);
     } catch (e) {
       fail(`${p.name}: ${e.message.split('\n')[0]}`);
     } finally { await ctx.close(); }

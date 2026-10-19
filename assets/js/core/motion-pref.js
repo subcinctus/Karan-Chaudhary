@@ -47,7 +47,8 @@ export function onMotionChange(cb) {
 export function bindMotionToggle(button) {
   const render = () => {
     // Constant label + aria-pressed: "Motion off, pressed" reads correctly to screen readers.
-    button.setAttribute('aria-pressed', String(userOff));
+    // Under the OS setting motion is off whatever the toggle says: show it pressed, and say why.
+    button.setAttribute('aria-pressed', String(userOff || prefersReducedMotion()));
     if (!button.textContent.trim()) button.textContent = 'Motion off';
     button.title = prefersReducedMotion() ? 'Your system asks for reduced motion; animations stay still.' : 'Turn animations off or on';
   };

@@ -11,7 +11,7 @@
 
 html { scroll-padding-top: 72px; }
 [hidden] { display: none !important; }
-main:focus { outline: none; }
+main:focus, section[tabindex="-1"]:focus, footer[tabindex="-1"]:focus { outline: none; }
 .mono { font-family: var(--font-mono); }
 kbd {
   font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.06em;
@@ -119,6 +119,14 @@ html[data-motion="off"] .progress, html[data-motion="off"] .site-header__tc { di
 .site-header__motion::after { content: ""; position: absolute; inset: -4px; }   /* 44 px hit area */
 .site-header__motion:hover { color: var(--paper); border-color: var(--paper-3); }
 .site-header__motion[aria-pressed="true"] { color: var(--tungsten); border-color: var(--tungsten); }
+/* Pressed is also shown by shape, not colour alone: a filled dot before the label. */
+[data-motion-toggle][aria-pressed="true"]::before {
+  content: ""; display: inline-block; width: 7px; height: 7px; margin-right: var(--s2); border-radius: 50%;
+  background: currentColor; vertical-align: 0.05em;
+}
+@media (forced-colors: active) {
+  [data-motion-toggle][aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+}
 .site-header__menu {
   min-height: var(--target); padding: 0 var(--s4);
   border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: rgb(7 8 10 / 0.4);
@@ -136,7 +144,11 @@ html[data-motion="off"] .progress, html[data-motion="off"] .site-header__tc { di
 @media (max-width: 899px) {
   .site-header__tc { margin-left: auto; }
 }
-html:not(.js) .site-nav { display: block; margin-left: auto; overflow-x: auto; }
+/* Without JavaScript only the hero and the <noscript> note are real: hide the chrome that would do
+   nothing (nav to empty sections, the motion toggle, the timecode) and the sections JS would fill. */
+html:not(.js) .site-nav, html:not(.js) [data-motion-toggle], html:not(.js) .site-header__tc,
+html:not(.js) .hero__foot, html:not(.js) main > section:not(.hero):not(.noscript),
+html:not(.js) .site-footer { display: none; }
 
 /* During the title sequence the chrome waits (it is still reachable by keyboard). */
 html[data-intro="playing"] .site-header,
@@ -239,6 +251,7 @@ html[data-intro="playing"] .hero__cta:focus-visible { opacity: 1; }
 .section-head__title {
   font-size: clamp(2.6rem, 1.7rem + 3.6vw, 5.4rem);
   font-weight: 400; letter-spacing: -0.005em; line-height: 1.02;
+  text-wrap: balance;
 }
 .section-head__lede { max-width: 56ch; color: var(--paper-2); font-size: var(--step-0); }
 
@@ -366,11 +379,15 @@ html[data-intro="playing"] .hero__cta:focus-visible { opacity: 1; }
 @media (min-width: 1100px) { .work-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s9) var(--s6); } }
 .work-card { display: flex; min-width: 0; }
 .work-card__link { flex: 1; display: flex; flex-direction: column; gap: var(--s4); color: inherit; text-decoration: none; }
-.work-card__gate { flex: 1; display: flex; align-items: flex-end; }   /* frames sit on a common line */
+/* Every card sits in one common 2:1 gate; the delivered aspect shows as black mattes inside it. */
+.work-card__gate {
+  position: relative; aspect-ratio: 2 / 1; display: grid; place-items: center; overflow: hidden;
+  background: #030304; outline: 1px solid var(--line); outline-offset: -1px;
+  transition: outline-color var(--dur-2) var(--ease-out);
+}
 .work-card__frame {
-  aspect-ratio: var(--ar); background-color: var(--ink-0);
-  outline: 1px solid var(--line); outline-offset: -1px;
-  transition: outline-color var(--dur-2) var(--ease-out), filter var(--dur-3) var(--ease-out);
+  width: min(100%, calc(var(--ar) * 50%)); aspect-ratio: var(--ar); background-color: var(--ink-0);
+  transition: filter var(--dur-3) var(--ease-out);
   filter: brightness(0.92);
 }
 .work-card__frame > img, .work-card__frame > canvas { z-index: 0; }
@@ -378,14 +395,43 @@ html[data-intro="playing"] .hero__cta:focus-visible { opacity: 1; }
   content: ""; position: absolute; left: 8%; right: 8%; top: 62%; height: 1px; background: rgb(236 230 218 / 0.10);
 }
 .work-card__frame.has-piece::before { display: none; }
-.work-card__aspect {
-  position: absolute; left: var(--s2); top: var(--s2); z-index: 1;
+.work-card__aspect, .work-card__still-tag {
+  position: absolute; z-index: 2;
   padding: 1px 6px; background: rgb(7 8 10 / 0.6); border-radius: var(--radius-1);
   font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: var(--tracking-mono); color: var(--paper-2);
 }
-.work-card__link:hover .work-card__frame, .work-card__link:focus-visible .work-card__frame { outline-color: var(--paper-3); filter: none; }
+.work-card__aspect { left: var(--s2); top: var(--s2); }
+.work-card__still-tag { right: var(--s2); bottom: var(--s2); text-transform: uppercase; font-size: 0.58rem; color: var(--paper-3); }
+.work-card__link:hover .work-card__gate, .work-card__link:focus-visible .work-card__gate { outline-color: var(--paper-3); }
+.work-card__link:hover .work-card__frame, .work-card__link:focus-visible .work-card__frame { filter: none; }
 .work-card__link:focus-visible { outline: none; }
-.work-card__link:focus-visible .work-card__frame { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+.work-card__link:focus-visible .work-card__gate { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+@media (forced-colors: active) {
+  .work-card__gate { outline-color: transparent; }
+  .work-card__link:focus-visible .work-card__gate { outline: 3px solid Highlight; outline-offset: var(--focus-offset); }
+}
+
+/* A still with the film's camera move applied as a transform (ui/still-move.js). */
+.still-move { position: absolute; inset: 0; overflow: hidden; z-index: 0; }
+.still-move__img {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  transform-origin: 50% 50%; will-change: transform; backface-visibility: hidden;
+}
+.still-move__front, .still-move__sharp {   /* the subject held over the background, or the plane of focus */
+  --mask: radial-gradient(ellipse var(--mw, 22%) var(--mh, 34%) at var(--fx, 50%) var(--fy, 50%), #000 55%, transparent 100%);
+  -webkit-mask-image: var(--mask); mask-image: var(--mask);
+}
+.still-move__front { --mw: 26%; --mh: 50%; }
+.still-move__defs { position: absolute; width: 0; height: 0; }
+.still-move__brackets {
+  position: absolute; width: 18%; aspect-ratio: 1.25; transform: translate(-50%, -50%);
+  pointer-events: none; opacity: 0;
+}
+.still-move__brackets i { position: absolute; width: 22%; height: 22%; border: 0 solid var(--tungsten); }
+.still-move__brackets i:nth-child(1) { left: 0; top: 0; border-left-width: 1.5px; border-top-width: 1.5px; }
+.still-move__brackets i:nth-child(2) { right: 0; top: 0; border-right-width: 1.5px; border-top-width: 1.5px; }
+.still-move__brackets i:nth-child(3) { left: 0; bottom: 0; border-left-width: 1.5px; border-bottom-width: 1.5px; }
+.still-move__brackets i:nth-child(4) { right: 0; bottom: 0; border-right-width: 1.5px; border-bottom-width: 1.5px; }
 .work-card__text { display: grid; gap: var(--s2); }
 .work-card__slate { margin: 0; display: flex; gap: var(--s3); flex-wrap: wrap; }
 .work-card__slate span:first-child { color: var(--paper-2); }
@@ -416,7 +462,31 @@ html[data-intro="playing"] .hero__cta:focus-visible { opacity: 1; }
 .study-block__stage { min-width: 0; margin-inline: calc(-1 * var(--gutter)); }
 .study-block__stage .player__frame { border-block: 1px solid var(--line); }
 .study-block__panel { min-width: 0; }
-.study-block__panel:empty { display: none; }
+/* Space is reserved for what mounts later (the picture's aspect, the controls, the ruler and the
+   plan's notes), so the page does not grow under a visitor who jumps past the studies. The numbers
+   are the mounted sizes, measured at each layout. */
+.study-block--focus [data-study-host] { --ar: 2.39; }
+.study-block--light [data-study-host] { --ar: 0.8; }
+.study-block--colour [data-study-host] { --ar: 1.5; }
+@media (max-width: 639px) and (orientation: portrait) {
+  .study-block--focus [data-study-host] { --ar: 1.3333; }
+  .study-block--colour [data-study-host] { --ar: 0.68; }
+}
+.study-block__panel:empty { min-height: var(--panel-min, 0px); }
+.study-block--focus { --panel-min: 776px; --ruler-min: 430px; }
+.study-block--light { --panel-min: 808px; --plan-min: 659px; }
+.study-block--colour { --panel-min: 644px; }
+@media (min-width: 720px) {
+  .study-block--focus { --panel-min: 558px; --ruler-min: 274px; }
+  .study-block--light { --panel-min: 777px; --plan-min: 667px; }
+  .study-block--colour { --panel-min: 408px; }
+}
+@media (min-width: 1100px) {
+  .study-block--focus { --panel-min: 742px; --ruler-min: 275px; }
+  .study-block--light { --panel-min: 788px; --plan-min: 683px; }
+  .study-block--colour { --panel-min: 638px; }
+}
+.study-plan:has(.study-plan__note:empty) { min-height: var(--plan-min, 0px); }
 .study-block__foot { margin: var(--s5) 0 0; display: flex; flex-wrap: wrap; gap: var(--s3) var(--s5); justify-content: space-between; align-items: center; }
 .study-block__open {
   display: inline-flex; align-items: center; gap: var(--s2); min-height: var(--target);
@@ -436,7 +506,7 @@ html[data-intro="playing"] .hero__cta:focus-visible { opacity: 1; }
 .study-plan__note { font-family: var(--font-display); font-style: italic; font-size: var(--step-1); line-height: 1.3; text-wrap: balance; }
 .study-ruler { min-width: 0; display: grid; gap: var(--s4); }
 .study-ruler__frame { min-width: 0; }
-.study-ruler__frame:empty, .study-ruler:has(.study-ruler__frame:empty) { display: none; }
+.study-ruler:has(.study-ruler__frame:empty) { min-height: var(--ruler-min, 0px); }
 .study-block__panel .controls__item--range:has(.dof-ring) { padding-bottom: var(--s4); }
 /* Kelvin detents on the Light study sliders (2700–6500 K → 3200 K at 13.16 %, 5600 K at 76.32 %). */
 .study-block--light input[id$="-keyK"], .study-block--light input[id$="-fillK"] {
@@ -559,15 +629,17 @@ html[data-intro="playing"] .hero__cta:focus-visible { opacity: 1; }
 .kit__row:last-child { border-bottom: 1px solid var(--line); }
 .kit__row dt { margin: 0; font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--tracking-mono); text-transform: uppercase; color: var(--paper-3); padding-top: 0.2em; }
 .kit__row dd { margin: 0; color: var(--paper); }
-.kit__note { margin-top: var(--s5); }
+.kit__note, .approach__note { margin-top: var(--s5); }
 
 /* --- End credits ------------------------------------------------------------------------------ */
 
 .credits { position: relative; background: var(--ink-0); color: var(--paper); border-top: 1px solid var(--line); }
 .credits__mask { position: sticky; z-index: 1; height: 22vh; pointer-events: none; }
-.credits__mask--top { top: 0; margin-bottom: -22vh; background: linear-gradient(var(--ink-0) 20%, rgb(7 8 10 / 0)); }
+.credits__mask--top { top: 0; height: 12vh; margin-bottom: -12vh; background: linear-gradient(var(--ink-0) 20%, rgb(7 8 10 / 0)); }
 .credits__mask--bottom { bottom: 0; margin-top: -22vh; background: linear-gradient(rgb(7 8 10 / 0), var(--ink-0) 80%); }
-.credits__roll { padding: 34vh var(--gutter) 30vh; display: grid; justify-items: center; text-align: center; }
+/* The roll starts one section-pad down, so Kit → Filmography keeps the page's rhythm; the black
+   background, not empty space, does the "from black". */
+.credits__roll { padding: var(--section-pad) var(--gutter) 30vh; display: grid; justify-items: center; text-align: center; }
 .credits__heading { font-size: clamp(1rem, 0.8rem + 0.6vw, 1.35rem); font-weight: 500; letter-spacing: 0.32em; margin: 0 -0.32em var(--s9) 0; color: var(--paper-2); }
 .credits__list { margin: 0; padding: 0; list-style: none; display: grid; gap: clamp(40px, 6vh, 64px); width: min(100%, 860px); }
 .credits__row { display: grid; gap: var(--s2); justify-items: center; }
@@ -609,6 +681,8 @@ html[data-intro="playing"] .hero__cta:focus-visible { opacity: 1; }
 .colophon__text { display: grid; gap: var(--s4); max-width: 72ch; }
 .colophon__lead { color: var(--paper); font-size: var(--step-0); }
 .colophon__credits { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s2); color: var(--paper-3); font-size: 0.86rem; line-height: 1.55; }
+.colophon__credits a { color: var(--paper-2); }
+.colophon__flag { margin: 0; }
 .colophon__tools { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; align-content: start; }
 .colophon__mark { flex-basis: 100%; margin-top: var(--s3); }
 @media (min-width: 900px) {
@@ -675,7 +749,7 @@ html[data-intro="playing"] .hero__cta:focus-visible { opacity: 1; }
 .site-footer--slim .colophon { border-top: 0; padding-top: 0; }
 
 @media (forced-colors: active) {
-  .work-card__frame, .film__frame, .still .frame, .reel__frame { border: 1px solid CanvasText; }
+  .film__frame, .still .frame, .reel__frame { border: 1px solid CanvasText; }
   .progress__fill { background: Highlight; }
 }
 @media (prefers-reduced-motion: reduce) {

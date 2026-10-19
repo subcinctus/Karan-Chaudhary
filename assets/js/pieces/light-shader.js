@@ -20,16 +20,20 @@ export const BUST = [
   { id: 'cranium', label: 'Cranium', group: 'head', prim: 'ellipsoid', c: [0, 0.035, -0.015], r: [0.074, 0.088, 0.094], op: 'base', maquette: true },
   { id: 'face', label: 'Face / jaw', group: 'head', prim: 'ellipsoid', c: [0, -0.025, 0.02], r: [0.062, 0.075, 0.072], op: 'smin', k: 0.035, maquette: true },
   { id: 'chin', label: 'Chin', group: 'head', prim: 'ellipsoid', c: [0, -0.088, 0.058], r: [0.026, 0.02, 0.022], op: 'smin', k: 0.02, maquette: true },
-  { id: 'cheek', label: 'Cheekbones', group: 'head', prim: 'ellipsoid', mirror: true, c: [0.042, 0.002, 0.058], r: [0.024, 0.018, 0.02], op: 'smin', k: 0.02 },
+  { id: 'cheek', label: 'Cheekbones', group: 'head', prim: 'ellipsoid', mirror: true, c: [0.042, 0.004, 0.054], r: [0.018, 0.0135, 0.015], op: 'smin', k: 0.03 },
   { id: 'brow', label: 'Brow ridge', group: 'head', prim: 'capsule', mirror: true, a: [0, 0.04, 0.074], b: [0.046, 0.035, 0.054], r: 0.009, op: 'smin', k: 0.015, maquette: true },
-  { id: 'socket', label: 'Eye sockets', group: 'head', prim: 'ellipsoid', mirror: true, c: [0.03, 0.02, 0.083], r: [0.02, 0.012, 0.01], op: 'ssub', k: 0.012 },
-  { id: 'eye', label: 'Eyeballs', group: 'head', prim: 'sphere', mirror: true, c: [0.03, 0.017, 0.064], r: 0.012, op: 'smin', k: 0.006 },
+  // A cast's eyes are blank and raised: a shallow orbit, then a convex eyeball that fills it, and an
+  // upper-lid ridge, so no light falls into a pit (and no raymarch step falls into a hole).
+  { id: 'socket', label: 'Eye sockets', group: 'head', prim: 'ellipsoid', mirror: true, c: [0.03, 0.02, 0.088], r: [0.02, 0.012, 0.01], op: 'ssub', k: 0.014 },
+  { id: 'eye', label: 'Eyeballs', group: 'head', prim: 'ellipsoid', mirror: true, c: [0.03, 0.018, 0.067], r: [0.0155, 0.0105, 0.0125], op: 'smin', k: 0.008 },
+  { id: 'lid', label: 'Upper lids', group: 'head', prim: 'capsule', mirror: true, a: [0.019, 0.0255, 0.0775], b: [0.042, 0.0245, 0.0715], r: 0.0035, op: 'smin', k: 0.006 },
   { id: 'nose', label: 'Nose (bridge → tip)', group: 'head', prim: 'roundCone', a: [0, 0.028, 0.084], r1: 0.008, b: [0, -0.013, 0.107], r2: 0.0115, op: 'smin', k: 0.01, maquette: true },
   { id: 'alae', label: 'Nostril wings (alae)', group: 'head', prim: 'sphere', mirror: true, c: [0.0105, -0.016, 0.098], r: 0.0075, op: 'smin', k: 0.009 },
   { id: 'maxilla', label: 'Upper jaw (maxilla)', group: 'head', prim: 'ellipsoid', c: [0, -0.036, 0.068], r: [0.03, 0.024, 0.022], op: 'smin', k: 0.02 },
-  { id: 'lipU', label: 'Upper lip', group: 'head', prim: 'ellipsoid', c: [0, -0.04, 0.0905], r: [0.021, 0.006, 0.008], op: 'smin', k: 0.01 },
-  { id: 'lipL', label: 'Lower lip', group: 'head', prim: 'ellipsoid', c: [0, -0.0515, 0.0875], r: [0.018, 0.0065, 0.008], op: 'smin', k: 0.01 },
-  { id: 'mouth', label: 'Mouth line', group: 'head', prim: 'capsule', mirror: true, a: [0, -0.0458, 0.0955], b: [0.02, -0.0438, 0.0875], r: 0.0014, op: 'ssub', k: 0.004 },
+  // Mouth: two lips with a fine mouth line between them, set back under the nose.
+  { id: 'lipU', label: 'Upper lip', group: 'head', prim: 'ellipsoid', c: [0, -0.0402, 0.0888], r: [0.0205, 0.0058, 0.0072], op: 'smin', k: 0.009 },
+  { id: 'lipL', label: 'Lower lip', group: 'head', prim: 'ellipsoid', c: [0, -0.0518, 0.0872], r: [0.0175, 0.0062, 0.0072], op: 'smin', k: 0.009 },
+  { id: 'mouth', label: 'Mouth line', group: 'head', prim: 'ellipsoid', c: [0, -0.0462, 0.0955], r: [0.0185, 0.0019, 0.0036], op: 'ssub', k: 0.0045 },
   { id: 'ear', label: 'Ears', group: 'head', prim: 'ellipsoid', mirror: true, c: [0.071, 0.006, -0.012], r: [0.008, 0.027, 0.017], op: 'smin', k: 0.012 },
   // --- body (not rotated) ---
   { id: 'neck', label: 'Neck', group: 'body', prim: 'cylinderY', c: [0, 0, -0.012], y0: -0.17, y1: -0.06, r: 0.052, op: 'smin', k: 0.03, maquette: true },
@@ -38,7 +42,7 @@ export const BUST = [
   { id: 'plinth', label: 'Plinth', group: 'body', prim: 'roundBox', c: [0, -0.3, -0.01], b: [0.12, 0.03, 0.09], rr: 0.005, op: 'union', render: false },
 ];
 
-/** Primitive count, mirrored parts counted twice (bust 24 including the plinth, maquette 8). */
+/** Primitive count, mirrored parts counted twice (bust 25 including the plinth, maquette 8). */
 export const primitiveCount = (model = 'bust') =>
   BUST.filter(p => model === 'bust' || p.maquette).reduce((n, p) => n + (p.mirror ? 2 : 1), 0);
 
@@ -283,10 +287,12 @@ void main() {
   vec2 tb = sphereHit(ro, rd, BOUND_C, BOUND_R);
   if (tb.y > 0.0) {
     t = max(tb.x, 0.0);
-    for (int i = 0; i < 96; i++) {
+    for (int i = 0; i < 128; i++) {
       float d = map(ro + rd * t);
-      if (d < 4e-4 * t) { hit = true; break; }
-      t += 0.9 * d;
+      if (d < 2.5e-4 * t) { hit = true; break; }
+      // Shorter steps close to the surface: the lips, lids and mouth line are millimetre features, and
+      // a full step overshoots their smooth blends (ripples on the lip).
+      t += (d < 0.01 ? 0.7 : 0.9) * d;
       if (t > tb.y) break;
     }
   }

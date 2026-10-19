@@ -71,13 +71,14 @@
     <div class="study__head">
       <p class="cam-label">Study · Shot language</p>
       <h1 class="study__title">Shot language</h1>
-      <p class="shots__lede">Six camera moves, the grammar behind the cards in my selected work. Each one is drawn in the palette of a film and cropped to the aspect ratio it was delivered in, so the same move reads differently in a 2.76 coastline and a 4:3 documentary.</p>
+      <p class="shots__lede">Six camera moves, the grammar behind the cards in Selected work, drawn here as diagrams. Each one is drawn in the palette of a film and cropped to the aspect ratio it was delivered in, so the same move reads differently in a 2.76 coastline and a 4:3 documentary.</p>
       <p class="shots__how cam-label" data-how>Hover or focus a frame: the move plays once and holds. Move away and it returns.</p>
     </div>
 
     <ol class="shots__grid" role="list" data-shots></ol>
 
     <p class="study__credits cam-label">Camera moves: Motion Prompt #027 #030 #031 #032 #033 #043 by Shohei Ohtaki (MIT), run unchanged and repainted. Vignette and grain from the numbers of #112 and #118.</p>
+    <p class="study__credits study__disclosure cam-label">Rendered live in your browser from code written with Claude Opus 5.5 (Anthropic). <a href="../index.html#contact">How this site was made</a>.</p>
     <noscript><p>These cards are rendered live with JavaScript. Please enable it to see them.</p></noscript>
   </main>
 
@@ -93,7 +94,15 @@
     async function gallery() {
       applyPageGrain();
       bindMotionToggle(document.querySelector('[data-motion-toggle]'));
-      const [{ MOVES, MOVE_IDS, moveKey }, { mountShotCard }, { default: data }] = await Promise.all([load(), import('../assets/js/ui/shotcard-mount.js'), import('../data/portfolio.js')]);
+      let mods;
+      try { mods = await Promise.all([load(), import('../assets/js/ui/shotcard-mount.js'), import('../data/portfolio.js')]); }
+      catch (err) {
+        console.info('[shotcard] gallery unavailable', err?.message ?? err);
+        document.querySelector('[data-shots]').innerHTML = '<li class="shot"><img src="../media/studies/shotcard/poster.webp" alt="The six camera-move diagrams (a still: the live gallery could not load in this browser)." style="width:100%;height:auto"></li>';
+        window.READY = true;
+        return;
+      }
+      const [{ MOVES, MOVE_IDS, moveKey }, { mountShotCard }, { default: data }] = mods;
       const films = data.films ?? [];
       const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
       const ratio = a => (Math.abs(a - 1.33) < 0.01 ? '1.33:1 (4:3)' : Math.abs(a - 1.78) < 0.01 ? '1.78:1 (16:9)' : `${Number(a).toFixed(2)}:1`);

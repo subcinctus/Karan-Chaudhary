@@ -56,20 +56,25 @@
       <aside class="study__panel focus-panel" data-controls aria-label="Study controls"></aside>
     </div>
     <p class="study__credits cam-label" data-stage-credits></p>
+    <p class="study__credits study__disclosure cam-label">Rendered live in your browser from code written with Claude Opus 5.5 (Anthropic). <a href="../index.html#contact">How this site was made</a>.</p>
     <noscript><p>This study is rendered live with JavaScript. Please enable it to see the piece.</p></noscript>
   </main>
 
   <script type="module">
     import { runStage, parseStageQuery } from '../assets/js/core/stage.js';
-    import { bindDofRuler } from '../assets/js/ui/dof-ruler.js';
 
     const load = () => import('../assets/js/pieces/focus.js');
     if (parseStageQuery().record) runStage({ load });
     else {
-      bindDofRuler(document.querySelector('[data-stage-host]'), document.querySelector('[data-dof-ruler]'), {
-        readout: document.querySelector('[data-dof-readout]'),
-        controls: document.querySelector('[data-controls]'),
-      });
+      // The ruler binds first (it listens for the Player's params), through a guarded import: if it or
+      // the piece fails to load, the page still shows the poster and the player's fallback message.
+      try {
+        const { bindDofRuler } = await import('../assets/js/ui/dof-ruler.js');
+        bindDofRuler(document.querySelector('[data-stage-host]'), document.querySelector('[data-dof-ruler]'), {
+          readout: document.querySelector('[data-dof-readout]'),
+          controls: document.querySelector('[data-controls]'),
+        });
+      } catch (err) { console.info('[focus] DoF ruler unavailable', err?.message ?? err); document.querySelector('[data-dof-ruler]')?.closest('figure, section, div')?.setAttribute('hidden', ''); }
       runStage({ load, poster: '../media/studies/focus/poster.webp' });
     }
   </script>

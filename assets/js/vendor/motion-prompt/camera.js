@@ -43,9 +43,9 @@ const C = {
   grid: '#ECECEC', g1: '#F1F0EE', g2: '#E2E1DE', g3: '#CFCECB', g4: '#A9A8A5',
   vfMark: 'rgba(143,143,148,.55)', hudBg: 'rgba(255,255,255,.82)', hudInk: '#6E6E73', face: '#FFFFFF', glass: '#fff', vfLine: '#8F8F94', rec: '#7D7D82'   // [mod] added keys
 };
-let JP = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif';
-let EN = '"Helvetica Neue", "SF Pro Display", system-ui, sans-serif';
-let MONO = '"SF Mono", ui-monospace, Menlo, monospace';
+let JP = '"Hiragino Sans", "Hiragino Kaku Gothic ProN", sans-serif';   // [mod] const → let (setFonts)
+let EN = '"Helvetica Neue", "SF Pro Display", system-ui, sans-serif';   // [mod] const → let (setFonts)
+let MONO = '"SF Mono", ui-monospace, Menlo, monospace';   // [mod] const → let (setFonts)
 
 const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
 const lerp = (a, b, x) => a + (b - a) * x;

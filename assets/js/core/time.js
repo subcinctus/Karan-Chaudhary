@@ -1,3 +1,7 @@
+// Motion Prompt #001-024 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#001
+// Motion Prompt #025-048 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#025
+//   (kit helpers P, eIO, eIOs, eOut, eOut5, eIn, backIn, backOut: formulas copied from the motion and camera kits)
+//
 // Time helpers shared by every piece. Pure functions only: no clocks live here.
 // Easings match the Motion Prompt kits (camera/motion packs) so ported numbers keep their feel.
 

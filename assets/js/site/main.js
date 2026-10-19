@@ -16,7 +16,6 @@ import { initShutter, openShutter } from './shutter.js';
 import { initReveal } from './reveal.js';
 import { initProgress } from './progress.js';
 import { mountReel } from './reel.js';
-import { mountPrevis } from './previs.js';
 
 const root = document.documentElement;
 const site = data.site ?? {};
@@ -75,6 +74,14 @@ function renderSections() {
   if (role && p.role) role.textContent = p.role;
   if (slate && p.slate) slate.textContent = R.slateLine(p.slate);
   R.setJsonLd('ld-person', R.personLD(data));
+
+  // No reel yet: no "coming soon" block. The hero's call to action leads to the work instead.
+  R.pruneReel(data);
+  if (!R.hasReel(data)) {
+    const cta = document.querySelector('[data-watch-reel]');
+    if (cta) { cta.href = '#work'; cta.innerHTML = 'Selected work <span aria-hidden="true">↓</span>'; }
+    document.querySelector('.hero__down')?.remove();
+  }
 }
 
 // --- 2. Main title ------------------------------------------------------------------------
@@ -117,8 +124,8 @@ function initHero(lifted) {
     lifted.then(() => {
       if (state !== 'playing') return;
       player.play();
-      // Safety net: the sequence is 7 s; never hold the page longer than that plus loading.
-      setTimeout(() => { if (state === 'playing') player.skip(); }, 12000);
+      // Safety net: the sequence is 4.5 s; never hold the page longer than that plus loading.
+      setTimeout(() => { if (state === 'playing') player.skip(); }, 9000);
     });
   } else {
     setIntro('done');
@@ -152,6 +159,7 @@ function initHero(lifted) {
 // --- 3. Reel ----------------------------------------------------------------------------------
 
 function initReel() {
+  if (!R.hasReel(data)) return;
   const reel = mountReel(document.querySelector('[data-reel-frame]'), data);
   document.querySelector('[data-watch-reel]')?.addEventListener('click', () => {
     // The link scrolls to #reel; land keyboard focus on the player (or the slate) too.
@@ -159,47 +167,72 @@ function initReel() {
   });
 }
 
-// --- 4. Selected work: shot-language cards, or stills, or the palette frame ------------------
+// --- 4. Selected work: a frame grab with the film's camera move applied to it -------------------
+// Source order for each card: the film's featured real still → the procedural placeholder still for
+// stillKinds[0] (clearly tagged) → the vector shot-card illustration (last resort, only if stills fail)
+// → the palette frame already in the markup.
 
-async function initWork() {
+// Where the subject (and a second point, for rack focus) sits in each procedural composition, as
+// fractions of the frame. Real stills can say it per still: { src, focus: [[x, y], [x, y]] }.
+const KIND_FOCUS = {
+  'window-shaft': [[0.36, 0.56], [0.72, 0.36]],
+  'interior-practical': [[0.64, 0.55], [0.3, 0.62]],
+  'close-silhouette': [[0.27, 0.5], [0.72, 0.36]],
+  insert: [[0.36, 0.56], [0.7, 0.3]],
+  'night-street': [[0.38, 0.62], [0.35, 0.22]],
+  'wide-ext': [[0.68, 0.62], [0.3, 0.72]],
+};
+const THIRDS = [[0.667, 0.4], [0.333, 0.62]];
+
+function initWork() {
   const cards = [...document.querySelectorAll('.work-card')];
   if (!cards.length) return;
-  let shot = null, still = null;
-  try { shot = await import('../ui/shotcard-mount.js'); } catch (err) { console.info('[work] shot cards unavailable', err?.message ?? err); }
-  if (!shot?.mountShotCard) {
-    try { still = await import('../pieces/still.js'); } catch (err) { console.info('[work] stills unavailable; palette frames stay', err?.message ?? err); }
-  }
   const films = new Map((data.films ?? []).map(f => [f.slug, f]));
+  let mods = null;
+  const load = () => (mods ??= Promise.all([
+    import('../ui/still-move.js').catch(err => { console.info('[work] still moves unavailable', err?.message ?? err); return null; }),
+    import('../pieces/still.js').catch(err => { console.info('[work] procedural stills unavailable', err?.message ?? err); return null; }),
+  ]));
   for (const card of cards) {
     const link = card.querySelector('[data-film]');
     const frame = card.querySelector('[data-card-frame]');
     const film = films.get(link?.dataset.film);
     if (!film || !frame) continue;
-    if (shot?.mountShotCard) {
+    whenNear(frame, async () => {
+      const [move, still] = await load();
+      const reals = (film.stills ?? []).filter(s => R.safeUrl(s?.src));
+      const lead = reals.find(s => s.featured) ?? reals[0];
+      let srcA = null, srcB = null, focus = THIRDS, placeholder = false;
       try {
-        shot.mountShotCard(frame, film, { reducedMotion: isReducedMotion(), trigger: link });
+        if (lead) {
+          srcA = R.safeUrl(lead.src);
+          srcB = R.safeUrl(reals.find(s => s !== lead)?.src) ?? null;
+          if (Array.isArray(lead.focus)) focus = lead.focus;
+        } else if (still?.renderStill) {
+          const kinds = film.stillKinds?.length ? film.stillKinds : ['wide-ext'];
+          const o = { palette: R.cleanPalette(film.palette), aspect: Number(film.aspect) || 1.78, caption: false,
+            cssWidth: Math.round((frame.clientWidth || 400) * 1.15), dpr: Math.min(2, devicePixelRatio || 1) };
+          srcA = await still.renderStill({ ...o, seed: hashString(film.slug + 0), kind: kinds[0] });
+          if (film.move === '#043') srcB = still.renderStill({ ...o, seed: hashString(film.slug + 1), kind: kinds[1] ?? kinds[0] });
+          focus = KIND_FOCUS[kinds[0]] ?? THIRDS;
+          placeholder = true;
+        }
+      } catch (err) { console.warn('[work] still', film.slug, err); srcA = null; }
+
+      if (srcA) {
+        if (move?.mountStillMove) move.mountStillMove(frame, { move: film.move, srcA, srcB, focus, trigger: link });
+        else frame.insertAdjacentHTML('afterbegin', String(R.html`<img src="${srcA}" alt="" decoding="async">`));
+        if (placeholder) frame.insertAdjacentHTML('beforeend', '<span class="work-card__still-tag" aria-hidden="true">Placeholder still</span>');
         frame.classList.add('has-piece');
-        continue;
-      } catch (err) { console.warn('[work] shot card', film.slug, err); }
-    }
-    const real = (film.stills ?? []).find(s => s.featured && R.safeUrl(s.src)) ?? (film.stills ?? []).find(s => R.safeUrl(s.src));
-    if (real) {
-      frame.insertAdjacentHTML('afterbegin', String(R.html`<img src="${R.safeUrl(real.src)}" alt="" loading="lazy" decoding="async">`));
-      frame.classList.add('has-piece');
-    } else if (still?.renderStill) {
-      whenNear(frame, async () => {
-        try {
-          const url = await still.renderStill({
-            palette: R.cleanPalette(film.palette), aspect: Number(film.aspect) || 1.78, seed: hashString(film.slug + 0),
-            kind: film.stillKinds?.[0], width: Math.round(frame.clientWidth * Math.min(2, devicePixelRatio || 1)),
-          });
-          const img = new Image();
-          img.alt = ''; img.decoding = 'async'; img.src = url;
-          frame.prepend(img);
-          frame.classList.add('has-piece');
-        } catch (err) { console.warn('[work] still', film.slug, err); }
-      });
-    }
+        return;
+      }
+      // Last resort: the vector shot-card illustration of the move.
+      try {
+        const shot = await import('../ui/shotcard-mount.js');
+        shot.mountShotCard(frame, film, { reducedMotion: isReducedMotion(), trigger: link, caption: false });
+        frame.classList.add('has-piece');
+      } catch (err) { console.info('[work] shot cards unavailable; palette frame stays', err?.message ?? err); }
+    }, '800px 0px');
   }
 }
 
@@ -208,14 +241,17 @@ async function initWork() {
 const studyPlayers = new Map();
 
 function initStudies() {
+  const binders = [];
   for (const block of document.querySelectorAll('[data-study]')) {
     const id = block.dataset.study;
     const host = block.querySelector('[data-study-host]');
     const panel = block.querySelector('[data-controls]');
     if (!LOADERS[id] || !host) continue;
 
-    // Companion DOM binds before the Player mounts (it only listens to 'playerparams').
-    whenNear(block, async () => {
+    // Companion DOM binds before the Player starts (it only listens to 'playerparams'): its margin is
+    // wider than the Player's, and priming (below) binds it first.
+    let bound = null;
+    const bind = () => (bound ??= (async () => {
       if (id === 'light') {
         const svg = block.querySelector('[data-light-plan]');
         try {
@@ -229,11 +265,15 @@ function initStudies() {
           bindDofRuler(host, ruler, { readout: block.querySelector('[data-dof-readout]'), controls: panel });
         } catch (err) { console.info('[studies] DoF ruler unavailable', err?.message ?? err); block.querySelector('[data-study-ruler]')?.remove(); }
       }
-    }, '900px 0px');
+    })());
+    whenNear(block, bind, '1400px 0px');
+    binders.push(bind);
 
     // On touch screens the light tour starts resolved and paused (as on the study page).
+    // Start well ahead of the viewport: the controls are built when the piece starts, and a keyboard
+    // user tabbing out of Selected work must land in them, not skip past an empty panel.
     const player = mount(host, {
-      load: LOADERS[id], mode: 'loop', heavy: true, controls: panel ?? false,
+      load: LOADERS[id], mode: 'loop', heavy: true, controls: panel ?? false, lazyMargin: '1000px 0px',
       autoplay: !(id === 'light' && matchMedia('(hover: none)').matches),
       poster: POSTERS[id] ?? undefined, label: `${id} study`,
     });
@@ -247,6 +287,15 @@ function initStudies() {
       }
     });
   }
+
+  // Keyboard focus entering Selected work or Studies starts every study, so their controls exist
+  // by the time Tab reaches them.
+  const primeAll = e => {
+    if (!e.target?.closest?.('#work, #studies')) return;
+    document.removeEventListener('focusin', primeAll);
+    Promise.all(binders.map(b => b())).then(() => { for (const p of studyPlayers.values()) p.prime?.(); });
+  };
+  document.addEventListener('focusin', primeAll);
 
   // Approach links: jump to a study and set it up (e.g. the Light study on Rembrandt).
   document.addEventListener('click', e => {
@@ -268,7 +317,9 @@ function boot() {
   const lifted = runPreloader({ enabled: intro.preloader !== false, rise: hero ? [hero] : [] });
 
   renderSections();
-  R.initChrome({ bindMotionToggle, solidAfter: () => (hero ? hero.offsetHeight - 80 : 8) });
+  // The header turns solid before the hero's foot (the CTA row) slides up under it.
+  const foot = hero?.querySelector('.hero__foot'), header = document.querySelector('[data-header]');
+  R.initChrome({ bindMotionToggle, solidAfter: () => (hero ? hero.offsetHeight - (foot?.offsetHeight ?? 0) - (header?.offsetHeight ?? 72) - 16 : 8) });
   initHero(lifted);
   initReel();
   initStudies();
@@ -278,8 +329,23 @@ function boot() {
   openShutter();
 
   initWork();
+  const aim = R.initAnchorAim();
+
+  // Previs plans are static SVG from a small JSON file: mount them at once, so the section has its
+  // full height before anyone jumps past it. A failing module hides only this block.
   const grid = document.querySelector('[data-previs-grid]');
-  whenNear(grid?.closest('section'), () => mountPrevis(grid, data).then(ok => { if (ok) reveal.scan(grid); }), '1200px 0px');
+  if (grid) {
+    import('./previs.js')
+      .then(({ mountPrevis }) => mountPrevis(grid, data))
+      .then(ok => {
+        if (ok) reveal.scan(grid);
+        // An arrival on #about (etc.) aimed before the plans existed: aim again.
+        let target = null;
+        try { target = location.hash ? document.querySelector(decodeURIComponent(location.hash)) : null; } catch { /* bad hash */ }
+        if (target) aim(target);
+      })
+      .catch(err => { console.info('[previs] unavailable', err?.message ?? err); grid.hidden = true; });
+  }
 }
 
 boot();

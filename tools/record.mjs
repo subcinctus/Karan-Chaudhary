@@ -10,7 +10,7 @@
 //                                           aspect of the film in data/portfolio.js that uses it
 //   still:<slug>:<i>                        procedural still i of a film (studies/still.html)
 //   all                                     every studies/*.html except _template (default: posters)
-//   og                                      media/og/og-title.jpg: the title at t = 7.0, 1200×630, wide
+//   og                                      media/og/og-title.jpg: the title's last frame (meta.posterTime), 1200×630, wide
 //   icons                                   assets/icons/apple-touch-icon.png from favicon.svg at 180²
 //   path/to/page.html                       any page that follows Motion Prompt's make-your-own
 //                                           contract (READY / N_FRAMES / renderFrame(i) [/ prepareFrame(i)])
@@ -374,10 +374,12 @@ async function recordStage(browser, srv, job, opt) {
 
 async function recordOg(browser, srv, job, opt) {
   assertPage(job);
-  const w = 1200, h = 630, t = 7.0;
+  const w = 1200, h = 630;
+  let t = 4.5;   // the title's last frame; meta.posterTime overrides it once the page reports it
   const { page, ctx, errors, info } = await openStage(browser, srv, job, { w, h, fps: 24, seed: opt.seed ?? 1, layout: 'wide', t });
   try {
     assertFonts(info, job, opt);
+    if (Number.isFinite(info.meta?.posterTime)) t = info.meta.posterTime;
     const png = await grab(page, info, { t });
     assertNoErrors(errors, job.page);
     const out = path.join(REPO_ROOT, 'media/og/og-title.jpg');

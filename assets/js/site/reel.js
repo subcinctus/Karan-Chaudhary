@@ -1,5 +1,6 @@
 // Showreel: a click-to-load facade. Nothing from Vimeo or YouTube loads until the visitor asks for
-// it (privacy, speed). provider null → a "REEL — coming soon" slate with a SAMPLE tag.
+// it (privacy, speed). Without a playable reel the home page leaves the section out (render.js
+// pruneReel); the "REEL — coming soon" slate below is only a fallback if mountReel is called anyway.
 //
 //   import { mountReel } from './reel.js';
 //   const reel = mountReel(document.querySelector('[data-reel-frame]'), data);

@@ -1,8 +1,8 @@
 <!doctype html>
 <!--
-  Main title sequence (assets/js/pieces/title.js), 7.0 s, played once. seek(7.0) is the hero frame.
+  Main title sequence (assets/js/pieces/title.js), 4.5 s, played once. seek(4.5) is the hero frame.
   Normal mode: full-screen Player (no controls: the piece has no parameters).
-  Record mode: ?record&w=1920&h=1080&fps=24[&layout=wide|tall&t=7] exposes READY / N_FRAMES / renderFrame(i) / __seek(t) / __meta.
+  Record mode: ?record&w=1920&h=1080&fps=24[&layout=wide|tall&t=4.5] exposes READY / N_FRAMES / renderFrame(i) / __seek(t) / __meta.
   All URLs are relative: the site is served from /Karan-Chaudhary/.
 -->
 <html lang="en">
@@ -47,28 +47,29 @@
       <div data-stage-host></div>
       <!-- The title has no parameters, so the panel holds the shot breakdown instead of controls. -->
       <aside class="study__panel title-notes" aria-labelledby="title-notes-h">
-        <h2 class="cam-label" id="title-notes-h">Breakdown · 7.0 s · once</h2>
+        <h2 class="cam-label" id="title-notes-h">Breakdown · 4.5 s · once</h2>
         <p class="title-notes__lede">The first seconds of the site, written as a main title. The lights are already down; an iris opens on out-of-focus tungsten practicals, and focus pulls from the lamps to the name.</p>
         <dl class="title-notes__list">
-          <div><dt>0.3–1.6 s</dt><dd>Nine-blade iris opens. The bokeh grows and rounds off with the aperture.</dd></div>
-          <div><dt>0.4–1.4 s</dt><dd>Vignette fades in <span class="title-notes__id">#112</span></dd></div>
-          <div><dt>2.0–3.4 s</dt><dd>Name rises from behind a tungsten hairline <span class="title-notes__id">#005</span></dd></div>
-          <div><dt>2.4–4.0 s</dt><dd>Rack focus, lamps to name: each layer blurs on its own <span class="title-notes__id">#033</span></dd></div>
-          <div><dt>4.8–5.6 s</dt><dd>Letterbox settles from 1.85 to 2.39:1 (4:5 on a phone)</dd></div>
-          <div><dt>5.4–6.2 s</dt><dd>Camera report types on</dd></div>
-          <div><dt>0–7.0 s</dt><dd>Grain, re-seeded every frame at 24 fps <span class="title-notes__id">#118</span></dd></div>
+          <div><dt>0.1–1.0 s</dt><dd>Nine-blade iris opens. The bokeh grows and rounds off with the aperture.</dd></div>
+          <div><dt>0.1–0.9 s</dt><dd>Vignette fades in <span class="title-notes__id">#112</span></dd></div>
+          <div><dt>1.0–2.4 s</dt><dd>Name rises from behind a tungsten hairline <span class="title-notes__id">#005</span></dd></div>
+          <div><dt>1.5–2.6 s</dt><dd>Rack focus, lamps to name: each layer blurs on its own <span class="title-notes__id">#033</span></dd></div>
+          <div><dt>2.6–3.3 s</dt><dd>Letterbox settles from 1.85 to 2.39:1 (4:5 on a phone)</dd></div>
+          <div><dt>3.1–3.8 s</dt><dd>Camera report types on</dd></div>
+          <div><dt>0–4.5 s</dt><dd>Grain, re-seeded every frame at 24 fps <span class="title-notes__id">#118</span></dd></div>
         </dl>
         <p class="title-notes__foot cam-label">Lamps 2700–3200 K, seen by a camera balanced for 5600 K. Every frame is a pure function of time.</p>
       </aside>
     </div>
     <p class="study__credits cam-label" data-stage-credits></p>
+    <p class="study__credits study__disclosure cam-label">Rendered live in your browser from code written with Claude Opus 5.5 (Anthropic). <a href="../index.html#contact">How this site was made</a>.</p>
     <noscript><p>This study is rendered live with JavaScript. Please enable it to see the piece.</p></noscript>
   </main>
 
   <script type="module">
     import { runStage } from '../assets/js/core/stage.js';
     import { isReducedMotion } from '../assets/js/core/motion-pref.js';
-    // The poster is the landed title (t = 7 s): right for the static frame, but with motion the
+    // The poster is the landed title (t = 4.5 s): right for the static frame, but with motion the
     // sequence opens on black, so a poster would cross-fade the ending into the first frame.
     runStage({
       load: () => import('../assets/js/pieces/title.js'),

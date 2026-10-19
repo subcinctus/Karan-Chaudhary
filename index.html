@@ -46,7 +46,9 @@
 
   <!-- Before first paint: decide whether the film-leader preloader (#089, first visit per session) or
        the arriving half of the shutter transition (#092) covers the page. Never under reduced motion;
-       a safety timer uncovers the page even if the modules fail to load. -->
+       a safety timer uncovers the page even if the modules fail to load. The leader is off unless
+       <html> carries data-leader="on" (and data/portfolio.js site.intro.preloader is true): the main
+       title is the one intro, and a countdown in front of it would double it. -->
   <script>
     (function () {
       var d = document.documentElement; d.classList.add('js');
@@ -54,14 +56,14 @@
         var s = sessionStorage, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || localStorage.getItem('kc:motion') === 'off';
         d.dataset.motion = reduce ? 'off' : 'on';
         if (!reduce && s.getItem('kc:shutter')) d.classList.add('shutter-cover');
-        if (!reduce && !s.getItem('kc:leader') && !location.hash) d.classList.add('is-preloading');
+        if (!reduce && d.getAttribute('data-leader') === 'on' && !s.getItem('kc:leader') && !location.hash) d.classList.add('is-preloading');
         s.removeItem('kc:shutter');
       } catch (e) { /* storage blocked: no intro */ }
       setTimeout(function () { d.classList.remove('is-preloading', 'shutter-cover'); }, 4500);
     })();
   </script>
 
-  <script type="application/ld+json" id="ld-person">{"@context":"https://schema.org","@type":"Person","name":"Karan Chaudhary","jobTitle":"Cinematographer","hasOccupation":{"@type":"Occupation","name":"Director of Photography"},"url":"https://subcinctus.github.io/Karan-Chaudhary/","image":"https://subcinctus.github.io/Karan-Chaudhary/media/og/og-title.jpg","knowsAbout":["Cinematography","Lighting","Colour grading","Previsualization","Unreal Engine"],"sameAs":[]}</script>
+  <script type="application/ld+json" id="ld-person">{"@context":"https://schema.org","@type":"Person","name":"Karan Chaudhary","jobTitle":"Cinematographer","hasOccupation":{"@type":"Occupation","name":"Director of Photography"},"url":"https://subcinctus.github.io/Karan-Chaudhary/","image":"https://subcinctus.github.io/Karan-Chaudhary/media/og/og-title.jpg","knowsAbout":["Cinematography","Lighting","Colour grading","Previsualization"],"sameAs":[]}</script>
 </head>
 <body class="site site--home">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -111,13 +113,13 @@
     </div>
     <nav aria-label="Site menu">
       <ol class="menu__list" role="list">
-        <li><a href="#reel"><span class="cam-label">Sc. 01</span>Reel</a></li>
-        <li><a href="#work"><span class="cam-label">Sc. 02</span>Selected work</a></li>
-        <li><a href="#studies"><span class="cam-label">Sc. 03</span>Studies</a></li>
-        <li><a href="#previs"><span class="cam-label">Sc. 04</span>Previs</a></li>
-        <li><a href="#about"><span class="cam-label">Sc. 05</span>About</a></li>
-        <li><a href="#credits"><span class="cam-label">Sc. 06</span>Credits</a></li>
-        <li><a href="#contact"><span class="cam-label">Sc. 07</span>Contact</a></li>
+        <li><a href="#reel"><span class="cam-label" aria-hidden="true">Sc. 01</span>Reel</a></li>
+        <li><a href="#work"><span class="cam-label" aria-hidden="true">Sc. 02</span>Selected work</a></li>
+        <li><a href="#studies"><span class="cam-label" aria-hidden="true">Sc. 03</span>Studies</a></li>
+        <li><a href="#previs"><span class="cam-label" aria-hidden="true">Sc. 04</span>Previs</a></li>
+        <li><a href="#about"><span class="cam-label" aria-hidden="true">Sc. 05</span>About</a></li>
+        <li><a href="#credits"><span class="cam-label" aria-hidden="true">Sc. 06</span>Credits</a></li>
+        <li><a href="#contact"><span class="cam-label" aria-hidden="true">Sc. 07</span>Contact</a></li>
       </ol>
     </nav>
     <button class="btn btn--ghost menu__motion" type="button" data-motion-toggle>Motion off</button>

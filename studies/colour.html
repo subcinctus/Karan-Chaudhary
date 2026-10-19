@@ -62,6 +62,7 @@
     </section>
 
     <p class="study__credits cam-label" data-stage-credits></p>
+    <p class="study__credits study__disclosure cam-label">Rendered live in your browser from code written with Claude Opus 5.5 (Anthropic). <a href="../index.html#contact">How this site was made</a>.</p>
     <noscript><p>This study is rendered live with JavaScript. Please enable it to see the piece.</p></noscript>
   </main>
 
@@ -69,9 +70,8 @@
     import { runStage } from '../assets/js/core/stage.js';
     const load = () => import('../assets/js/pieces/colour.js');
     const player = await runStage({ load, poster: '../media/studies/colour/poster.webp' });
-    if (player?.canvas) {
-      const { bindWipeDrag } = await load();
-      bindWipeDrag(player);
+    if (player?.canvas && player.state !== 'error') {
+      try { (await load()).bindWipeDrag?.(player); } catch (err) { console.info('[colour] wipe drag unavailable', err?.message ?? err); }
     }
   </script>
 </body>

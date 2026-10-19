@@ -198,7 +198,7 @@
       "note": "Key 45° and high; a triangle of light closes on the shadow-side cheek.",
       "ratio": 4,
       "ratioStops": 2,
-      "cameraWB": 5600,
+      "cameraWB": 4300,
       "ambient": 0.02,
       "backgroundStops": -2,
       "lights": [

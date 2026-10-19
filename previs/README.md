@@ -81,7 +81,8 @@ You only need to do these once.
 
 > **Safety.** Don't run this session with `--dangerously-skip-permissions`. The Unreal plugin can
 > run arbitrary Python inside the editor, through `execute_tool_script`. The prompts below only ask
-> for it in step 4, and only after you say OK.
+> for it in step 4, and only after you say OK; steps 0–3 each open with a line forbidding it without
+> your OK (the plugin otherwise likes to batch tool calls into Python).
 
 In every prompt below, replace `<repo>` with the absolute path to this repo, for example
 `/Users/you/code/Karan-Chaudhary`. Paste the prompts one at a time, and check each result before
@@ -93,6 +94,8 @@ Nothing changes in this step. It finds the exact tool names on your engine versi
 between releases.
 
 ```text
+Never call execute_tool_script or run Python without first showing me the full script and waiting
+for my explicit OK.
 Use the unreal-mcp skill. First verify the connection with one read-only call (list the actors in
 the current level). Then list_toolsets, and describe_toolset for the Sequencer, actor/level,
 lighting, editor/screenshot and programmatic toolsets. Change nothing.
@@ -113,6 +116,8 @@ and tell me whether this project registers any skills that apply.
 ## Step 1 · Stage
 
 ```text
+Never call execute_tool_script or run Python without first showing me the full script and waiting
+for my explicit OK.
 Save all first. Create the level /Game/Previs/Maps/PV_Stage and open it.
 Read <repo>/previs/shotlist.json (the "stage" and "subject" blocks) and <repo>/previs/bust.md.
 Units are centimetres; Unreal axes; the subject is at the origin facing -X, head centre (0,0,150).
@@ -138,6 +143,8 @@ silhouette before you light anything.
 ## Step 2 · Lighting
 
 ```text
+Never call execute_tool_script or run Python without first showing me the full script and waiting
+for my explicit OK.
 Read the "lighting" block of <repo>/previs/shotlist.json. For every preset, create its lights
 exactly as listed: RectLight at "loc" with rotation "rot" (already aimed at the head),
 SourceWidth/SourceHeight from sourceWidth/sourceHeight, bUseTemperature = true,
@@ -159,6 +166,8 @@ the key's elevation and the bust's nose before going on.
 ## Step 3 · Sequence
 
 ```text
+Never call execute_tool_script or run Python without first showing me the full script and waiting
+for my explicit OK.
 Read the "shots", "filmback", "camera" and "sequence" blocks of <repo>/previs/shotlist.json.
 Create the master Level Sequence /Game/Previs/Seq/PV_Master at 24 fps. For each shot:
   1. Create the subsequence named in shot.sequence (24 fps, shot.frames long) and place it in the
