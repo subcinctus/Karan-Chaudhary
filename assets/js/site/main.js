@@ -16,6 +16,8 @@ import { initShutter, openShutter } from './shutter.js';
 import { initReveal } from './reveal.js';
 import { initProgress } from './progress.js';
 import { mountReel } from './reel.js';
+import { loadDesktopMotion } from './desktop.js';
+import { recall, reapply, remember } from './place.js';
 
 const root = document.documentElement;
 const site = data.site ?? {};
@@ -45,12 +47,15 @@ const store = {
   set(k, v) { try { sessionStorage.setItem(k, v); } catch { /* private mode */ } },
 };
 
-/** Run fn when el comes within `margin` of the viewport (once). */
+/** Run fn when el comes within `margin` of the viewport (once). Returns a function that runs it now. */
 function whenNear(el, fn, margin = '600px 0px') {
-  if (!el) return;
-  if (typeof IntersectionObserver === 'undefined') { fn(); return; }
-  const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); fn(); } }, { rootMargin: margin });
+  if (!el) return () => {};
+  let done = false, io = null;
+  const now = () => { if (done) return; done = true; io?.disconnect(); fn(); };
+  if (typeof IntersectionObserver === 'undefined') { now(); return now; }
+  io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) now(); }, { rootMargin: margin });
   io.observe(el);
+  return now;
 }
 
 // --- 1. Render ----------------------------------------------------------------------------
@@ -98,6 +103,7 @@ function initHero(lifted) {
     state = s;
     root.dataset.intro = s;
     if (skipBtn) skipBtn.hidden = s !== 'playing';
+    window.dispatchEvent(new CustomEvent('kc:intro', { detail: { state: s } }));   // the desktop layer's hand-off
   };
 
   const shouldPlay = intro.titleSequence !== false && !isReducedMotion() && !location.hash && scrollY < 24
@@ -193,12 +199,16 @@ function initWork() {
     import('../ui/still-move.js').catch(err => { console.info('[work] still moves unavailable', err?.message ?? err); return null; }),
     import('../pieces/still.js').catch(err => { console.info('[work] procedural stills unavailable', err?.message ?? err); return null; }),
   ]));
+  // The desktop film strip clips cards 4–6 until it carries them in, so it asks for every still ahead of
+  // time (kc:prime-work, motion/work.js): they paint before the strip travels, not during it.
+  const starts = [];
+  addEventListener('kc:prime-work', () => { for (const start of starts) start(); }, { once: true });
   for (const card of cards) {
     const link = card.querySelector('[data-film]');
     const frame = card.querySelector('[data-card-frame]');
     const film = films.get(link?.dataset.film);
     if (!film || !frame) continue;
-    whenNear(frame, async () => {
+    starts.push(whenNear(frame, async () => {
       const [move, still] = await load();
       const reals = (film.stills ?? []).filter(s => R.safeUrl(s?.src));
       const lead = reals.find(s => s.featured) ?? reals[0];
@@ -232,7 +242,7 @@ function initWork() {
         shot.mountShotCard(frame, film, { reducedMotion: isReducedMotion(), trigger: link, caption: false });
         frame.classList.add('has-piece');
       } catch (err) { console.info('[work] shot cards unavailable; palette frame stays', err?.message ?? err); }
-    }, '800px 0px');
+    }, '800px 0px'));
   }
 }
 
@@ -326,10 +336,15 @@ function boot() {
   const reveal = initReveal();
   initProgress({ runtime: site.timecodeRuntime ?? 180 });
   R.settleHash();
+  // A reload puts the visitor back where they were (when the desktop layer took over the browser's own
+  // scroll restoration); the place outranks the URL's hash, which may be long behind them.
+  const recalled = recall();
+  remember();
   openShutter();
 
   initWork();
   const aim = R.initAnchorAim();
+  loadDesktopMotion({ page: 'home', reveal, aim });
 
   // Previs plans are static SVG from a small JSON file: mount them at once, so the section has its
   // full height before anyone jumps past it. A failing module hides only this block.
@@ -338,11 +353,12 @@ function boot() {
     import('./previs.js')
       .then(({ mountPrevis }) => mountPrevis(grid, data))
       .then(ok => {
-        if (ok) reveal.scan(grid);
+        if (ok) { reveal.scan(grid); window.dispatchEvent(new CustomEvent('kc:content', { detail: { scope: grid } })); }
         // An arrival on #about (etc.) aimed before the plans existed: aim again.
         let target = null;
         try { target = location.hash ? document.querySelector(decodeURIComponent(location.hash)) : null; } catch { /* bad hash */ }
-        if (target) aim(target);
+        if (recalled) reapply();
+        else if (target) aim(target);
       })
       .catch(err => { console.info('[previs] unavailable', err?.message ?? err); grid.hidden = true; });
   }

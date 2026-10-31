@@ -75,6 +75,12 @@
   --dur-1: 150ms;
   --dur-2: 300ms;
   --dur-3: 700ms;
+  /* The sharp set (desktop motion layer, site/motion/*.js, mirrors these as GSAP eases):
+     expo out for entrances (fast start, long quiet settle), expo in-out for wipes and curtains,
+     and one UI curve for chrome (header, hovers). No overshoot anywhere. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-io-expo: cubic-bezier(0.77, 0, 0.175, 1);
+  --ease-ui: cubic-bezier(0.4, 0, 0.1, 1);
 
   /* Film grain overlay (static #118 tile; grain.js sets --grain to a data URL) */
   --grain: none;
@@ -93,3 +99,20 @@
   --z-overlay: 90;
   --z-skip: 100;
 }
+
+/* Large screens (desktop-first). 390 / 768 keep the scale above; from 1440 the layout stops being a
+   1440 px column: the gutter grows with the viewport (72 px at 1440, 96 at 1920, 128 at 2560), the
+   content runs to 2240 px, and the root size steps up so type, rem spacing and the study panels grow
+   together (Locomotive / A24 pattern). Body copy stays ≤ ~21 px and measures stay in ch. */
+@media (min-width: 1440px) {
+  :root {
+    --gutter: clamp(72px, 5vw, 160px);
+    --container: 2240px;
+    --section-pad: clamp(144px, 8vw, 224px);
+  }
+}
+/* Relative to the visitor's own default size (17, 18, 19 px at the usual 16 px), never fixed pixels. */
+@media (min-width: 1680px) { :root { font-size: 106.25%; } }
+@media (min-width: 2000px) { :root { font-size: 112.5%; } }
+@media (min-width: 2400px) { :root { font-size: 118.75%; } }
+

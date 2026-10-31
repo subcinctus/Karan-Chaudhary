@@ -1,0 +1,26 @@
+{
+  "note": "Vendored motion libraries (desktop layer). Files are byte-identical copies from the npm tarballs; check.mjs verifies the hashes and tools/vendor-motion.mjs re-fetches them.",
+  "packages": [
+    {
+      "name": "gsap", "version": "3.15.0", "licence": "GSAP Standard No Charge License (https://gsap.com/standard-license)",
+      "integrity": "sha512-dMW4CWBTUK1AEEDeZc1g4xpPGIrSf9fJF960qbTZmN/QwZIWY5wgliS6JWl9/25fpTGJrMRtSjGtOmPnfjZB+A==",
+      "dir": "assets/js/vendor/gsap",
+      "files": {
+        "dist/gsap.min.js": "92bb9a96476f983d212a2bc4f54c889039c1696dd4461d40a736860938570fbb",
+        "dist/ScrollTrigger.min.js": "b0b14d67b55b0c43c756ac0b106cfcb09d0879945f6ead64451065b0672916a2",
+        "dist/SplitText.min.js": "419f7027a5f086a12cb7988736d8fdd3a6ed2200229661de25b6628ca7ced344",
+        "dist/CustomEase.min.js": "466e426a5c60c21c94b15a30a3dffacac9bb39ce8f4e07d071d7d4bb1be43390"
+      }
+    },
+    {
+      "name": "lenis", "version": "1.3.27", "licence": "MIT",
+      "integrity": "sha512-QIHNH4LIfWyLfgH/5K0aTGZgyFJJ7GfHNcaH/AIgyKjb8gstLh5siNGvrVqz1w5ClLXzOvllBVk7vby8JzUVPQ==",
+      "dir": "assets/js/vendor/lenis",
+      "files": {
+        "dist/lenis.mjs": "4cdb25138c7233e7419f630d9536adb41d71fa51906c059f0a27a1268ddedacc",
+        "dist/lenis.mjs.map": "b4d0666eb2e85ab6b029e5fac1c88aea885f8f3736516b422270cae9397c307f",
+        "LICENSE": "7d1896b31f2eed9f286b05faca067c4e35b2f109ae7c4ed5105220e2d2820228"
+      }
+    }
+  ]
+}

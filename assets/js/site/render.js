@@ -296,7 +296,10 @@ export function renderContact(data) {
   const mail = c.email ? safeUrl(`mailto:${c.email}`, { allowMail: true }) : null;
   const socials = (c.socials ?? []).map(s => ({ ...s, href: safeUrl(s.url) })).filter(s => s.href);
   const cv = safeUrl(c.cv);
+  const p = data.person ?? {};
+  const band = [p.availability, p.role, p.name].filter(Boolean);
   return html`
+    ${band.length ? html`<div class="marquee" data-marquee aria-hidden="true"><div class="marquee__track"><span class="marquee__unit">${band.map(t => html`<span>${t}</span><i>·</i>`)}</span></div></div>` : ''}
     <div class="contact" data-reveal>
       <p class="cam-label">Sc. ${scNo(data, 7)} · Contact</p>
       <h2 class="contact__title" id="contact-title">${c.heading || 'Contact'}</h2>

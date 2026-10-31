@@ -10,6 +10,8 @@ import { hashString } from '../core/prng.js';
 import * as R from './render.js';
 import { initShutter, openShutter } from './shutter.js';
 import { initProgress } from './progress.js';
+import { loadDesktopMotion } from './desktop.js';
+import { recall, remember } from './place.js';
 
 const films = data.films ?? [];
 
@@ -34,6 +36,9 @@ function setMeta(film) {
   }
 }
 
+/** New frames are in the page: the desktop layer gives them their entrances (motion/frames.js). */
+const announce = scope => window.dispatchEvent(new CustomEvent('kc:content', { detail: { scope } }));
+
 /** Frames: real stills first; otherwise procedural placeholders (one per stillKinds entry). */
 async function renderFrames(film, list, hero) {
   const real = (film.stills ?? []).filter(s => R.safeUrl(s?.src));
@@ -45,6 +50,7 @@ async function renderFrames(film, list, hero) {
         <div class="frame" style="--ar:${Number(s.aspect) || Number(film.aspect) || 1.78}"><img src="${R.safeUrl(s.src)}" alt="${s.alt ?? ''}" loading="lazy" decoding="async"></div>
         ${s.caption ? R.html`<figcaption class="cam-label">${s.caption}</figcaption>` : ''}
       </figure></li>`)}`);
+    announce(list);
     return;
   }
 
@@ -58,6 +64,7 @@ async function renderFrames(film, list, hero) {
       ${cap(i, k)}
     </figure></li>`)}`);
   hero.insertAdjacentHTML('beforeend', String(R.html`<span class="film__frame-cap badge-sample">Placeholder still</span>`));
+  announce(list);
 
   let still = null;
   try { still = await import('../pieces/still.js'); } catch (err) { console.info('[project] procedural stills unavailable; palette frames stay', err?.message ?? err); }
@@ -114,6 +121,13 @@ async function boot() {
   R.put(main, R.renderProject(film, data, { prev: films.length > 1 ? prev : null, next: films.length > 1 ? next : null, index }));
   R.setJsonLd('ld-film', R.creativeWorkLD(film, data));
   initProgress({ runtime: data.site?.timecodeRuntime ?? 180 });
+  recall();
+  remember();
+  // On desktop the curtain waits a beat (≤ 0.25 s) for the motion layer, so the title's entrance can
+  // play as it lifts; it never holds the page longer than that, and elsewhere it opens at once. A layer
+  // that arms after the lift has begun treats the first screen as already seen.
+  const motion = loadDesktopMotion({ page: 'project' });
+  await Promise.race([motion, new Promise(r => setTimeout(r, 250))]);
   await openShutter();   // uncover first: painting stills must not hold the panel over the page
   await renderFrames(film, main.querySelector('[data-stills]'), main.querySelector('[data-film-hero]'));
 }

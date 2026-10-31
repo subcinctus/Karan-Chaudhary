@@ -81,12 +81,21 @@ or in other code. Each file that uses them carries the element's licence line as
 
 | ID | Element | Used in |
 |---|---|---|
+| #002 | Staggered entrance | `assets/js/site/motion/reveals.js` (the per-item stagger, 0.06 s, without the back-out overshoot) |
+| #005 | Mask reveal (page layer) | `assets/js/site/motion/text.js` (headings rise behind line masks, a rule grows, opacity never changes; re-timed). The vendored #005 cell itself runs only in the title piece. |
 | #033 | Rack focus | `assets/js/pieces/focus.js` (1.6 s pull, cubic in-out, travelling corner brackets), `assets/js/pieces/title.js` (the name's focus-pull timing) |
-| #074 | Fade-in on scroll | `assets/js/site/reveal.js`, `assets/css/site.css` |
+| #073 | Parallax layers | `assets/js/site/motion/work.js`, `assets/css/motion.css` (one layer, at the strip's edges only: a picture crossing the window's edge is pushed in ≤ 1.04× and drifts ≤ 1.8 %; on screen it is shown whole) |
+| #074 | Fade-in on scroll | `assets/js/site/reveal.js`, `assets/css/site.css` (sharpened: 20 px, expo ease-out, once), `assets/js/site/motion/reveals.js` (desktop) |
+| #075 | Sticky header hide/show | `assets/js/site/motion/nav.js`, `assets/css/motion.css` |
+| #077 | Pinned horizontal strip | `assets/js/site/motion/work.js`, `assets/css/motion.css` (Selected work as a film strip on desktop) |
 | #079 | Scroll progress (timecode) | `assets/js/site/progress.js`, `assets/css/site.css` |
 | #087 | Before/after wipe | `assets/js/pieces/colour.js` |
 | #089 | Film-leader preloader | `assets/js/site/preloader.js`, `assets/css/site.css` |
-| #092 | Shutter page transition | `assets/js/site/shutter.js`, `assets/css/site.css` |
+| #083 | Cursor follower | `assets/js/site/motion/cursor.js`, `assets/css/motion.css` (a viewfinder over pictures; the system cursor stays) |
+| #084 | Magnetic button | `assets/js/site/motion/magnetic.js` (damped: 0.3, ≤ 12 px, no elastic) |
+| #086 | Underline wipe | `assets/css/motion.css`, `assets/css/site.css` (in from the left, out to the right) |
+| #092 | Shutter page transition | `assets/js/site/shutter.js`, `assets/css/site.css` (re-cut as a clip-path curtain with an intertitle) |
+| #094 | Marquee band | `assets/js/site/motion/credits.js`, `assets/css/motion.css` (56 px/s, paused on hover and off screen) |
 | #097 | Backlight | `assets/js/core/presets.js`, `assets/js/pieces/light.js`, `assets/js/pieces/light-shader.js` (the backlight veil, rebuilt as a lit haze), `tools/previs-bust.mjs` (its Unreal haze note) |
 | #098 | Rim light | `assets/js/core/presets.js`, `assets/js/pieces/light.js` |
 | #100 | Split light | `assets/js/core/presets.js`, `assets/js/pieces/light.js` |
@@ -102,6 +111,47 @@ or in other code. Each file that uses them carries the element's licence line as
 The lighting presets (#097 #098 #100 #101 #102 #114) also reach `previs/shotlist.json` through
 `assets/js/core/presets.js`. The remaining pieces' text and prompts (`prompts/*.md`) cite Motion
 Prompt IDs by name only. No other Motion Prompt element is used.
+
+## Motion libraries (desktop layer)
+
+Vendored as files (no CDN at runtime) and loaded only on fine-pointer screens ≥ 1024 px with motion
+on, by `assets/js/site/motion/lib.js`. Hashes: `tools/vendor-manifest.json` (checked by
+`npm run check`); provenance: `assets/js/vendor/gsap/README.md`, `assets/js/vendor/lenis/README.md`.
+
+### GSAP 3.15.0 — GSAP Standard "No Charge" License
+
+`assets/js/vendor/gsap/{gsap,ScrollTrigger,SplitText,CustomEase}.min.js`, byte-identical from the
+`gsap@3.15.0` npm package, each with GreenSock's `@license` header intact.
+Copyright 2026, GreenSock (Webflow). Subject to the terms at <https://gsap.com/standard-license>:
+free to use, including commercially; the notices must stay in the files; the licence restricts only
+tools that compete with Webflow's visual animation builder, which this site is not.
+
+### Lenis 1.3.27 — MIT
+
+`assets/js/vendor/lenis/lenis.mjs` (+ source map), byte-identical from the `lenis@1.3.27` npm
+package; its licence file ships beside it (`assets/js/vendor/lenis/LICENSE`). Its stylesheet rules
+are copied into `assets/css/motion.css`.
+
+```
+The MIT License
+
+Copyright (c) 2024 darkroom.engineering
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the “Software”), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so,
+subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial
+portions of the Software.
+
+THE SOFTWARE IS PROVIDED “AS IS”, WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT
+LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
 
 ## Fonts (SIL Open Font License 1.1)
 

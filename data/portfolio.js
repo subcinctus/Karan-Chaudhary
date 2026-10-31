@@ -294,11 +294,12 @@ export default {
     text: 'The main title, the studies, the film-card moves and the previs plans on this page are rendered live in your browser from code written with Claude Opus 5.5. Concept, shot design, lens and lighting choices by Karan Chaudhary.',
     // Each credit is plain text, or { text, links: [{ label, href }] } (relative or https links).
     credits: [
-      { text: 'Camera moves and the title reveal ported from Motion Prompt (MIT) by Shohei Ohtaki: #005 #027 #030 #031 #032 #033 #043. Lighting, lens, colour, grain and web-behaviour numbers rebuilt (no code copied) from #074 #079 #087 #089 #092 #097 #098 #100 #101 #102 #105 #112 #114 #115 #117 #118.',
+      { text: 'Camera moves and the title reveal ported from Motion Prompt (MIT) by Shohei Ohtaki: #005 #027 #030 #031 #032 #033 #043. Lighting, lens, colour, grain and web-behaviour numbers rebuilt (no code copied) from #002 #073 #074 #075 #077 #079 #083 #084 #086 #087 #089 #092 #094 #097 #098 #100 #101 #102 #105 #112 #114 #115 #117 #118.',
         links: [{ label: 'Third-party notices', href: 'THIRD-PARTY-NOTICES.md' }, { label: 'Motion Prompt', href: 'https://showheyohtaki.github.io/motion-prompt/' }] },
       { text: 'Inspired by the Awesome Opus 5.5 Videos collection. No media from the collection is used on this site.',
         links: [{ label: 'The collection', href: 'https://github.com/yihui-dev/awesome-opus5-5-videos' }] },
       'Type: Cormorant Garamond, Inter Tight and IBM Plex Mono (SIL Open Font License), served by Google Fonts.',
+      'Page motion on desktop: GSAP 3.15.0 (GSAP Standard No Charge License) and Lenis 1.3.27 (MIT), served from this site.',
       'Previs: Epic Games’ Unreal Engine with the Unreal Engine Skills plugin for Claude Code, referenced by the previs workflow, not included in this site.',
     ],
   },

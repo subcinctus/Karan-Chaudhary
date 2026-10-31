@@ -9,9 +9,10 @@
 //   --media                 always run the ffprobe checks (fail if ffprobe is missing)
 //   --allow-offline-fonts   Google Fonts failures are warnings, not failures
 //   --only <text>           browser: only pages whose name contains <text> (comma list allowed)
-//   --viewports 390x844,…   browser: viewports (default 390x844,768x1024,1440x900)
-//   --skip <section,…>      skip sections (urls,links,banned,licences,data,shotlist,seo,sitemap,
-//                           contrast,assets,vectors,screens,determinism,reduced,keyboard,crawl,media)
+//   --viewports 390x844,…   browser: viewports, WxH or WxH@dpr (default 390x844,768x1024,1440x900,1920x1080)
+//   --desktop               browser: the desktop preset instead (1440x900,1512x982@2,1728x1117@2,1920x1080,2560x1440)
+//   --skip <section,…>      skip sections (urls,links,banned,licences,vendor,data,shotlist,seo,sitemap,
+//                           contrast,assets,vectors,screens,determinism,reduced,keyboard,motion,crawl,media)
 //   --json <file>           also write the full report as JSON
 //   --gpu                   use the host GPU instead of SwiftShader
 //
@@ -33,7 +34,8 @@ const OPT = {
   media: has('--media'),
   offlineFonts: has('--allow-offline-fonts'),
   only: val('--only', null)?.split(',').filter(Boolean) ?? null,
-  viewports: val('--viewports', '390x844,768x1024,1440x900').split(',').map(s => s.split('x').map(Number)),
+  viewports: val('--viewports', has('--desktop') ? '1440x900,1512x982@2,1728x1117@2,1920x1080,2560x1440' : '390x844,768x1024,1440x900,1920x1080')
+    .split(',').map(s => s.split(/[x@]/).map(Number)).map(([w, h, dpr = 1]) => [w, h, dpr]),
   skip: new Set(val('--skip', '').split(',').filter(Boolean)),
   json: val('--json', null),
   gpu: has('--gpu'),
@@ -209,7 +211,9 @@ const BANNED = [
 async function checkBanned() {
   // Every .js under pieces/ (colour*.js, scopes.js and other helpers included, not only <id>.js).
   const pieces = walk('assets/js/pieces', f => f.endsWith('.js'));
-  const files = [...pieces, ...PURE_CORE.filter(exists), ...walk('assets/js/vendor', f => f.endsWith('.js'))];
+  // Vendored Motion Prompt cells only: the motion libraries in vendor/gsap and vendor/lenis are real-time
+  // page-motion code (the desktop layer, site/motion/), never a piece, and are checked by hash instead.
+  const files = [...pieces, ...PURE_CORE.filter(exists), ...walk('assets/js/vendor/motion-prompt', f => f.endsWith('.js'))];
   if (!files.length) return skip('skipped: no piece or core files found');
   let bad = 0;
   for (const f of files) {
@@ -258,6 +262,38 @@ async function checkLicences() {
   else if (!/MIT License/i.test(read('THIRD-PARTY-NOTICES.md'))) { bad++; fail('THIRD-PARTY-NOTICES.md does not contain the MIT licence text'); }
   info('data/portfolio.js is content (it names moves for the cards) and is not required to carry licence lines');
   if (!bad) pass(`licence lines present: ${citing} code files cite Motion Prompt IDs, all carry the MIT line; vendored #005 #027 #030 #031 #032 #033 #043 covered`);
+}
+
+// ---------------------------------------------------------------- static: vendored motion libraries
+async function checkVendor() {
+  if (!exists('tools/vendor-manifest.json')) return skip('skipped: no tools/vendor-manifest.json');
+  const man = JSON.parse(read('tools/vendor-manifest.json'));
+  let bad = 0, n = 0;
+  for (const pkg of man.packages ?? []) {
+    for (const [rel, want] of Object.entries(pkg.files ?? {})) {
+      const f = path.posix.join(pkg.dir, path.posix.basename(rel));
+      if (!exists(f)) { bad++; fail(`${f} is missing (node tools/vendor-motion.mjs restores it)`); continue; }
+      const got = crypto.createHash('sha256').update(fs.readFileSync(R(f))).digest('hex');
+      if (got !== want) { bad++; fail(`${f}: sha256 ${got.slice(0, 12)}… ≠ manifest ${want.slice(0, 12)}… (vendored files must stay byte-identical)`); continue; }
+      n++;
+      if (pkg.name === 'gsap' && f.endsWith('.js')) {
+        const head = read(f).slice(0, 400);
+        if (!/@license/.test(head) || !/gsap\.com\/standard-license/.test(head) || !head.includes(pkg.version)) { bad++; fail(`${f}: GreenSock licence header (version ${pkg.version}, standard-license) missing`); }
+      }
+    }
+  }
+  if (exists('assets/js/vendor/lenis/LICENSE') && !/MIT License/i.test(read('assets/js/vendor/lenis/LICENSE'))) { bad++; fail('assets/js/vendor/lenis/LICENSE is not the MIT licence'); }
+  const notices = exists('THIRD-PARTY-NOTICES.md') ? read('THIRD-PARTY-NOTICES.md') : '';
+  for (const pkg of man.packages ?? []) {
+    const label = pkg.name === 'gsap' ? 'GSAP' : 'Lenis';
+    if (!notices.includes(`${label} ${pkg.version}`)) { bad++; fail(`THIRD-PARTY-NOTICES.md does not name ${label} ${pkg.version}`); }
+  }
+  // Only the desktop layer may load them (never a static <script>/<link> on a page, never a CDN).
+  for (const f of deployedFiles(['.html'])) {
+    if (/vendor\/(gsap|lenis)\//.test(read(f))) { bad++; fail(`${f} references vendor/gsap or vendor/lenis directly: phones would download them (load them only through site/motion/lib.js)`); }
+    if (/(cdn\.jsdelivr|unpkg\.com|cdnjs|gsap\.com\/[^"]*\.js)/.test(read(f))) { bad++; fail(`${f} loads a motion library from a CDN`); }
+  }
+  if (!bad) pass(`${n} vendored motion files match tools/vendor-manifest.json (GSAP ${man.packages?.[0]?.version}, Lenis ${man.packages?.[1]?.version}); licence headers, LICENSE and notices present; no page loads them directly`);
 }
 
 // ---------------------------------------------------------------- static: data/portfolio.js
@@ -620,8 +656,17 @@ async function settle(page, p, { reduced }) {
   await page.evaluate(() => document.fonts?.ready).catch(() => {});
   if (p.study) await page.waitForFunction(() => window.READY === true || window.STAGE_ERROR != null || document.querySelector('[data-stage-host]')?.dataset.state === 'error', null, { timeout: 45000 }).catch(() => {});
   if (p.path.startsWith('index')) await page.waitForFunction(() => !document.documentElement.classList.contains('is-preloading'), null, { timeout: 6000 }).catch(() => {});
+  // The desktop motion layer (fine pointer, ≥ 1024 px, motion on) loads after the page: wait for it
+  // to arm before screenshots, so they show the page as a visitor sees it, not mid-import.
+  if (!p.study && !p.is404) {
+    await page.waitForFunction(DESKTOP_WAIT, null, { timeout: 6000 }).catch(() => {});
+    await page.evaluate(() => Promise.race([window.__motion?.idle, new Promise(r => setTimeout(r, 4000))])).catch(() => {});
+  }
   await page.waitForTimeout(reduced ? 400 : 900);
 }
+
+const DESKTOP_QUERY = '(hover: hover) and (pointer: fine) and (min-width: 1024px)';
+const DESKTOP_WAIT = `!matchMedia(${JSON.stringify(DESKTOP_QUERY)}).matches || document.documentElement.dataset.motion === 'off' || Boolean(window.__motion)`;
 
 async function scrollThrough(page) {
   await page.evaluate(async () => {
@@ -666,12 +711,12 @@ async function checkScreens() {
   const fontNotes = new Set();
   let errPages = 0, overflowPages = 0;
   for (const p of pages) {
-    for (const [w, h] of OPT.viewports) {
-      const tag = `${p.name}--${w}x${h}`;
+    for (const [w, h, dpr] of OPT.viewports) {
+      const tag = `${p.name}--${w}x${h}${dpr > 1 ? `@${dpr}` : ''}`;
       const tPage = Date.now();
       // Pass 1: normal motion. Errors, overflow, above-the-fold screenshot.
       {
-        const ctx = await browser.newContext(contextOptions({ w, h }));
+        const ctx = await browser.newContext(contextOptions({ w, h, dpr }));
         const page = await ctx.newPage();
         const url = srv.url + p.path;
         const { errors, fontIssues } = watch(page, srv, { expect404: p.is404 ? url : null });
@@ -698,7 +743,7 @@ async function checkScreens() {
       // Pass 2: reduced motion. Full-page screenshot after scrolling through (lazy players init),
       // plus the reduced-motion assertions.
       if (!OPT.skip.has('reduced')) {
-        const ctx = await browser.newContext(contextOptions({ w, h, reducedMotion: 'reduce' }));
+        const ctx = await browser.newContext(contextOptions({ w, h, dpr, reducedMotion: 'reduce' }));
         const page = await ctx.newPage();
         const url = srv.url + p.path;
         const { errors, fontIssues } = watch(page, srv, { expect404: p.is404 ? url : null });
@@ -918,6 +963,253 @@ async function checkKeyboard() {
   }
 }
 
+/**
+ * The desktop motion layer: arms on a fine pointer ≥ 1024 px; anchors land and move focus; keyboard
+ * focus inside the pinned work strip stays on screen; wheel-scrolling to the end leaves everything
+ * opaque; "Motion off" at runtime reverts it all; phones never download GSAP or Lenis; layout shift
+ * stays small.
+ */
+/** While pinned, the strip's box (heading, frames, HUD, note) fits the window, with < 10 vh left under it. */
+async function stripFits(page, tag) {
+  const r = await page.evaluate(async () => {
+    const s = window.__motion.ScrollTrigger.getById('work-rail');
+    if (!s) return null;
+    window.__motion.lenis.scrollTo(s.start + (s.end - s.start) * 0.1, { immediate: true, force: true });
+    window.__motion.ScrollTrigger.update();
+    await new Promise(res => setTimeout(res, 1400));   // let the note's and HUD's entrances finish
+    const box = document.querySelector('.work-rail__box');
+    const kids = [...box.children].map(k => k.getBoundingClientRect()).filter(b => b.height);
+    return { cls: box.className, disp: getComputedStyle(box).display, top: Math.round(Math.min(...kids.map(b => b.top))), bottom: Math.round(Math.max(...kids.map(b => b.bottom))), vh: innerHeight };
+  });
+  if (!r) return;
+  const gap = r.vh - r.bottom;
+  if (r.disp !== 'flex' || r.top < 0 || gap < 0 || gap > r.vh * 0.1) fail(`${tag}: pinned strip box (${r.disp}) spans ${r.top}…${r.bottom} px in a ${r.vh} px window (${gap} px left under it; want 0…${Math.round(r.vh * 0.1)})`);
+  else pass(`${tag}: pinned strip fits the window (${r.top}…${r.bottom} of ${r.vh} px)`);
+}
+
+async function checkMotion() {
+  const { srv, browser, contextOptions } = PW;
+  if (!exists('assets/js/site/motion/index.js')) return skip('skipped: no desktop motion layer');
+  const sizes = [[1440, 900], [1920, 1080]];
+  for (const [w, h] of sizes) {
+    const tag = `motion ${w}×${h}`;
+    const ctx = await browser.newContext(contextOptions({ w, h }));
+    // The title sequence is a separate concern (checked by screens); skip it here.
+    await ctx.addInitScript(() => {
+      try { sessionStorage.setItem('kc:titles', '1'); } catch { /* storage blocked */ }
+      window.__cls = 0; window.__long = [];
+      try {
+        new PerformanceObserver(l => { for (const e of l.getEntries()) if (!e.hadRecentInput) window.__cls += e.value; }).observe({ type: 'layout-shift', buffered: true });
+        new PerformanceObserver(l => { for (const e of l.getEntries()) if (e.duration > 200) window.__long.push(Math.round(e.duration)); }).observe({ type: 'longtask', buffered: true });
+      } catch { /* no observers */ }
+    });
+    const page = await ctx.newPage();
+    const { errors } = watch(page, srv);
+    try {
+      await page.goto(srv.url + 'index.html', { waitUntil: 'load', timeout: 45000 });
+      const armed = await page.waitForFunction(() => window.__motion?.armed === true, null, { timeout: 15000 }).then(() => true, () => false);
+      if (!armed) { fail(`${tag}: the desktop layer did not arm within 15 s`); continue; }
+      const st = await page.evaluate(() => ({ lenis: document.documentElement.classList.contains('lenis'), triggers: window.__motion.ScrollTrigger.getAll().length, rail: document.documentElement.classList.contains('work-rail') }));
+      if (!st.lenis) fail(`${tag}: armed but html.lenis is missing`);
+      else pass(`${tag}: armed (Lenis on the GSAP ticker, ${st.triggers} ScrollTriggers, work strip ${st.rail ? 'pinned' : 'off'})`);
+      await page.waitForTimeout(600);
+
+      // 1. Header anchor: lands at scroll-padding-top (±6 px) and focus moves to the section.
+      for (const id of ['studies', 'about']) {
+        const link = page.locator(`.site-nav a[href="#${id}"]`);
+        if (!(await link.count())) continue;
+        await page.evaluate(() => { document.documentElement.classList.remove('header-away'); });
+        await link.click();
+        await page.waitForFunction(() => !window.__motion.lenis?.isScrolling, null, { timeout: 6000 }).catch(() => {});
+        await page.waitForTimeout(900);
+        const r = await page.evaluate(id => {
+          const el = document.getElementById(id);
+          const pad = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+          return { off: Math.round(el.getBoundingClientRect().top - pad), focused: document.activeElement === el, hash: location.hash };
+        }, id);
+        if (Math.abs(r.off) > 6 || !r.focused) fail(`${tag}: nav "#${id}" landed ${r.off} px off (limit 6) and focus ${r.focused ? 'moved' : 'did not move'} to the section`);
+        else pass(`${tag}: nav "#${id}" lands within ${Math.abs(r.off)} px of the header line and moves focus there (${r.hash})`);
+      }
+
+      // 2. Keyboard through the pinned strip: each focused card is fully on screen.
+      if (st.rail) {
+        await page.evaluate(() => window.__motion.lenis.scrollTo(0, { immediate: true, force: true }));
+        await page.waitForTimeout(300);
+        await page.evaluate(() => document.querySelector('.work-card__link').focus());
+        const off = [];
+        const n = await page.locator('.work-card__link').count();
+        for (let i = 0; i < n; i++) {
+          if (i) await page.keyboard.press('Tab');
+          await page.waitForTimeout(250);
+          const r = await page.evaluate(() => {
+            const a = document.activeElement, card = a?.closest('.work-card');
+            const b = (card ?? a).querySelector('.work-card__gate')?.getBoundingClientRect() ?? a.getBoundingClientRect();
+            return { inCard: Boolean(card), l: Math.round(b.left), r: Math.round(b.right), t: Math.round(b.top), b: Math.round(b.bottom), vw: innerWidth, vh: innerHeight };
+          });
+          if (!r.inCard || r.l < -1 || r.r > r.vw + 1 || r.t < -1 || r.b > r.vh + 1) off.push(`card ${i + 1} at x ${r.l}…${r.r}, y ${r.t}…${r.b}`);
+        }
+        if (off.length) fail(`${tag}: keyboard focus in the work strip left a card off screen: ${off.join('; ')}`);
+        else pass(`${tag}: Tab through the pinned work strip keeps all ${n} focused frames fully on screen`);
+
+        // The HUD counter names the first card at rest and the last at the end; the pinned frame fits.
+        const hudAt = p => page.evaluate(p => {
+          const s = window.__motion.ScrollTrigger.getById('work-rail');
+          window.__motion.lenis.scrollTo(s.start + (s.end - s.start) * p, { immediate: true, force: true });
+          window.__motion.ScrollTrigger.update();
+        }, p).then(() => page.waitForTimeout(250)).then(() => page.evaluate(() => document.querySelector('.work-rail__num')?.textContent));
+        const c0 = await hudAt(0), c1 = await hudAt(1);
+        if (c0 !== '01' || c1 !== String(n).padStart(2, '0')) fail(`${tag}: strip counter reads ${c0} at the start and ${c1} at the end (want 01 and ${String(n).padStart(2, '0')})`);
+        else pass(`${tag}: strip counter reads ${c0} at the start and ${c1} at the end`);
+        await stripFits(page, tag);
+
+        // A sideways trackpad swipe over the strip moves it, and never scrolls above the strip's start.
+        await hudAt(0.05);
+        const sw = await page.evaluate(() => { const r = document.querySelector('.work-rail__view').getBoundingClientRect(); return { x: r.left + r.width * 0.6, y: r.top + r.height * 0.5, y0: scrollY, start: window.__motion.ScrollTrigger.getById('work-rail').start }; });
+        await page.mouse.move(sw.x, sw.y);
+        for (let i = 0; i < 8; i++) { await page.mouse.wheel(200, 0); await page.waitForTimeout(30); }
+        await page.waitForTimeout(700);
+        const y1 = await page.evaluate(() => scrollY);
+        for (let i = 0; i < 30; i++) { await page.mouse.wheel(-200, 0); await page.waitForTimeout(25); }
+        await page.waitForTimeout(700);
+        const y2 = await page.evaluate(() => scrollY);
+        const ob = await page.evaluate(() => getComputedStyle(document.documentElement).overscrollBehaviorX);
+        if (y1 - sw.y0 < 400 || y2 < sw.start - 2 || ob !== 'none') fail(`${tag}: sideways swipe on the strip: ${Math.round(sw.y0)} → ${Math.round(y1)} → ${Math.round(y2)} (start ${Math.round(sw.start)}), overscroll-behavior-x ${ob}`);
+        else pass(`${tag}: a sideways swipe moves the strip (${Math.round(y1 - sw.y0)} px) and stops at its start; overscroll-behavior-x none (no swipe-back)`);
+      }
+
+      // 3. Wheel to the end: every reveal has played and nothing is left hidden.
+      await page.evaluate(() => window.__motion.lenis.scrollTo(0, { immediate: true, force: true }));
+      await page.mouse.move(w * 0.9, h * 0.5);
+      let last = -1;
+      for (let i = 0; i < 400; i++) {
+        await page.mouse.wheel(0, 600);
+        if (i % 10 === 9) {
+          await page.waitForTimeout(200);
+          const y = await page.evaluate(() => Math.round(scrollY));
+          if (y === last) break;
+          last = y;
+        }
+      }
+      await page.waitForTimeout(1500);
+      const dim = await page.evaluate(() => {
+        const eff = el => { let o = 1; for (let e = el; e && e !== document; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.visibility === 'hidden') return 0; o *= Number(cs.opacity); } return o; };
+        return [...document.querySelectorAll('[data-reveal], .kc-line, .section-head__title, .work-card')].filter(e => getComputedStyle(e).display !== 'none' && eff(e) < 0.99)
+          .map(e => `${e.tagName.toLowerCase()}.${String(e.className).split(' ')[0]} ${eff(e).toFixed(2)}`);
+      });
+      if (dim.length) fail(`${tag}: after wheel-scrolling to the end, ${dim.length} element(s) are still not opaque: ${dim.slice(0, 4).join(', ')}`);
+      else pass(`${tag}: wheel-scrolled to the end (y ${last}): every reveal played, all content opaque`);
+      // Credits between the masks (22–78 vh) are at full opacity: dimming only happens under the masks.
+      const roll = await page.evaluate(async () => {
+        const rows = [...document.querySelectorAll('.credits__row')];
+        if (!rows.length) return null;
+        const bad = [];
+        for (const k of [0.25, 0.5, 0.75]) {
+          const r = rows[Math.floor((rows.length - 1) * k)];
+          window.__motion.lenis.scrollTo(r, { immediate: true, force: true, offset: -innerHeight * 0.45 });
+          window.__motion.ScrollTrigger.update();
+          await new Promise(res => requestAnimationFrame(() => requestAnimationFrame(res)));
+          for (const row of rows) {
+            const b = row.getBoundingClientRect();
+            if (b.top >= innerHeight * 0.22 && b.bottom <= innerHeight * 0.78 && Number(getComputedStyle(row).opacity) < 0.99) bad.push(`${row.textContent.trim().slice(0, 24)} ${getComputedStyle(row).opacity}`);
+          }
+        }
+        return bad;
+      });
+      if (roll?.length) fail(`${tag}: ${roll.length} credit(s) dimmed between the masks: ${roll.slice(0, 3).join(', ')}`);
+      else if (roll) pass(`${tag}: credits between the masks (22–78 vh) are fully opaque`);
+
+      const perf = await page.evaluate(() => ({ cls: window.__cls, long: window.__long }));
+      if (perf.cls > 0.1) fail(`${tag}: cumulative layout shift ${perf.cls.toFixed(3)} (limit 0.1)`);
+      else pass(`${tag}: layout shift ${perf.cls.toFixed(3)} (< 0.1)`);
+      if (perf.long.length) warn(`${tag}: ${perf.long.length} long task(s) over 200 ms: ${perf.long.slice(0, 5).join(', ')} ms (SwiftShader; compare on a real GPU)`);
+
+      // 4. "Motion off" at runtime reverts everything; back on re-arms cleanly.
+      await page.evaluate(() => document.querySelector('[data-motion-toggle]').click());
+      await page.waitForTimeout(500);
+      const off = await page.evaluate(() => {
+        const root = document.documentElement;
+        const eff = el => { let o = 1; for (let e = el; e && e !== document; e = e.parentElement) { const cs = getComputedStyle(e); if (cs.visibility === 'hidden') return 0; o *= Number(cs.opacity); } return o; };
+        return {
+          classes: ['lenis', 'motion-ready', 'work-rail', 'header-away'].filter(c => root.classList.contains(c)),
+          triggers: window.__motion.ScrollTrigger.getAll().length,
+          splits: document.querySelectorAll('.kc-line, .kc-char, .kc-roll').length,
+          spacer: document.querySelectorAll('.pin-spacer').length,
+          cursor: document.querySelectorAll('.kc-cursor').length,
+          anims: document.getAnimations().filter(a => a.playState === 'running').length,
+          dim: [...document.querySelectorAll('[data-reveal], .work-card')].filter(e => getComputedStyle(e).display !== 'none' && eff(e) < 0.99).length,
+          // Inline styles the layer animates, left on what it touched (players' own canvases excluded).
+          inline: [...document.querySelectorAll('main [style], header [style]')].filter(e => !e.closest('[data-study-host], .still-move, .player, canvas, .previs-slot__plan, svg'))
+            .filter(e => /(^|;)\s*(transform|translate|rotate|scale|clip-path|opacity|visibility|--p[sxy])\s*:/.test(e.getAttribute('style')))
+            .map(e => `${e.tagName.toLowerCase()}.${String(e.className).split(' ')[0]}`),
+        };
+      });
+      const leftovers = [off.classes.length && `classes ${off.classes.join(' ')}`, off.triggers && `${off.triggers} ScrollTriggers`, off.splits && `${off.splits} split/roll spans`,
+        off.spacer && `${off.spacer} pin spacers`, off.cursor && 'cursor element', off.anims && `${off.anims} running animations`, off.dim && `${off.dim} hidden blocks`,
+        off.inline.length && `inline motion styles on ${[...new Set(off.inline)].slice(0, 4).join(', ')}`].filter(Boolean);
+      if (leftovers.length) fail(`${tag}: "Motion off" at runtime left ${leftovers.join(', ')}`);
+      else pass(`${tag}: "Motion off" at runtime reverts the layer (no Lenis, 0 ScrollTriggers, no split text, strip unpinned, nothing hidden, no running animations)`);
+      await page.evaluate(() => document.querySelector('[data-motion-toggle]').click());
+      const again = await page.waitForFunction(() => window.__motion?.armed === true, null, { timeout: 8000 }).then(() => true, () => false);
+      if (!again) fail(`${tag}: switching motion back on did not re-arm the layer`);
+      else pass(`${tag}: switching motion back on re-arms it`);
+
+      // 5. The visitor keeps their place: at #about, crossing 1024 px and back, and Motion off and on,
+      // leave the same block under the header (the pin spacer comes and goes above it).
+      if (again) {
+        const under = () => page.evaluate(() => {
+          const el = [...document.querySelectorAll('main h2, main h3, main p')].find(e => { const r = e.getBoundingClientRect(); return r.height && r.top >= 60; });
+          return el ? { t: el.textContent.trim().replace(/\s+/g, ' ').slice(0, 32), top: Math.round(el.getBoundingClientRect().top) } : null;
+        });
+        await page.evaluate(() => { const m = window.__motion; m.lenis.resize(); m.lenis.scrollTo(document.getElementById('about'), { immediate: true, force: true, offset: 300 }); });
+        await page.mouse.move(w * 0.9, h * 0.5); await page.mouse.wheel(0, 100); await page.waitForTimeout(1000);
+        const a = await under();
+        const trail = [];
+        await page.setViewportSize({ width: 1000, height: h }); await page.waitForTimeout(1200); trail.push(['1000 px', await under()]);
+        await page.setViewportSize({ width: w, height: h });
+        await page.waitForFunction(() => window.__motion?.armed === true, null, { timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(1000); trail.push([`${w} px`, await under()]);
+        await page.evaluate(() => document.querySelector('[data-motion-toggle]').click()); await page.waitForTimeout(700); trail.push(['Motion off', await under()]);
+        await page.evaluate(() => document.querySelector('[data-motion-toggle]').click());
+        await page.waitForFunction(() => window.__motion?.armed === true, null, { timeout: 8000 }).catch(() => {});
+        await page.waitForTimeout(700); trail.push(['Motion on', await under()]);
+        const lost = trail.filter(([, u]) => !u || u.t !== a?.t || Math.abs(u.top - a.top) > 120);
+        if (!a || lost.length) fail(`${tag}: lost the visitor's place (from "${a?.t}" at ${a?.top} px): ${lost.map(([k, u]) => `${k} → "${u?.t}" at ${u?.top} px`).join('; ')}`);
+        else pass(`${tag}: keeps the visitor's place across 1024 px and Motion off/on ("${a.t}" stays under the header, ±${Math.max(...trail.map(([, u]) => Math.abs(u.top - a.top)))} px)`);
+      }
+    } catch (e) { fail(`${tag}: ${e.message.split('\n')[0]}`); }
+    if (errors.length) fail(`${tag}: ${errors.length} error(s): ${[...new Set(errors)].slice(0, 3).join(' | ')}`);
+    await ctx.close();
+  }
+
+  // The pinned strip's frame fits short and tall screens.
+  for (const [w, h] of [[1366, 768], [2560, 1440]]) {
+    const ctx = await browser.newContext(contextOptions({ w, h }));
+    await ctx.addInitScript(() => { try { sessionStorage.setItem('kc:titles', '1'); } catch { /* storage blocked */ } });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(srv.url + 'index.html', { waitUntil: 'load', timeout: 45000 });
+      const armed = await page.waitForFunction(() => window.__motion?.armed === true, null, { timeout: 15000 }).then(() => true, () => false);
+      if (armed) await stripFits(page, `motion ${w}×${h}`);
+      else fail(`motion ${w}×${h}: the desktop layer did not arm within 15 s`);
+    } catch (e) { fail(`motion ${w}×${h}: ${e.message.split('\n')[0]}`); }
+    await ctx.close();
+  }
+
+  // Phones and tablets: native scroll, and the libraries are never requested.
+  for (const [w, h, touch] of [[390, 844, true], [768, 1024, true]]) {
+    const ctx = await browser.newContext({ ...contextOptions({ w, h }), hasTouch: touch, isMobile: touch });
+    const page = await ctx.newPage();
+    const asked = [];
+    page.on('request', r => { if (/vendor\/(gsap|lenis)\//.test(r.url())) asked.push(r.url().split('/').pop()); });
+    await page.goto(srv.url + 'index.html', { waitUntil: 'load', timeout: 45000 });
+    await page.waitForTimeout(1500);
+    const lenis = await page.evaluate(() => document.documentElement.classList.contains('lenis'));
+    if (asked.length || lenis) fail(`motion ${w}×${h} (touch): ${asked.length ? `requested ${asked.join(', ')}` : ''}${lenis ? ' smooth scroll is on' : ''}`);
+    else pass(`motion ${w}×${h} (touch): native scroll; GSAP and Lenis never requested`);
+    await ctx.close();
+  }
+}
+
 async function checkCrawl() {
   const { srv } = PW;
   if (!CRAWL.size) return skip('skipped: no links collected (screens section skipped or no pages)');
@@ -982,6 +1274,7 @@ await section('urls', 'Relative URLs', checkUrls);
 await section('links', 'Local references in HTML', checkStaticLinks);
 await section('banned', 'Determinism grep (pieces, vendored cells, pure core)', checkBanned);
 await section('licences', 'Motion Prompt licence lines', checkLicences);
+await section('vendor', 'Vendored motion libraries (hashes, licences)', checkVendor);
 await section('data', 'data/portfolio.js schema and placeholders', checkData);
 await section('shotlist', 'Previs shot list in sync', checkShotlist);
 await section('seo', 'SEO tags and JSON-LD', checkSeo);
@@ -998,9 +1291,10 @@ if (OPT.browser) {
   });
   if (ready) {
     try {
-      await section('screens', `Pages × viewports (${OPT.viewports.map(v => v.join('×')).join(', ')}): errors, overflow, reduced motion, screenshots`, checkScreens);
+      await section('screens', `Pages × viewports (${OPT.viewports.map(([w, h, d]) => `${w}×${h}${d > 1 ? `@${d}` : ''}`).join(', ')}): errors, overflow, reduced motion, screenshots`, checkScreens);
       await section('determinism', 'Determinism in record mode (sha256 of the canvas)', checkDeterminism);
       await section('keyboard', 'Keyboard: skip link, slider valuetext and live region, focus ring', checkKeyboard);
+      await section('motion', 'Desktop motion layer: anchors, keyboard in the strip, reveals, Motion off, phones', checkMotion);
       await section('crawl', 'Internal link crawl', checkCrawl);
     } finally {
       await PW.browser.close().catch(() => {});

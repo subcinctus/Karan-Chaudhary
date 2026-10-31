@@ -42,6 +42,7 @@
   <link rel="stylesheet" href="assets/css/player.css">
   <link rel="stylesheet" href="assets/css/study-focus.css">
   <link rel="stylesheet" href="assets/css/site.css">
+  <link rel="stylesheet" href="assets/css/motion.css">
   <link rel="modulepreload" href="assets/js/site/main.js">
 
   <!-- Before first paint: decide whether the film-leader preloader (#089, first visit per session) or
@@ -55,11 +56,17 @@
       try {
         var s = sessionStorage, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || localStorage.getItem('kc:motion') === 'off';
         d.dataset.motion = reduce ? 'off' : 'on';
-        if (!reduce && s.getItem('kc:shutter')) d.classList.add('shutter-cover');
+        var sh = s.getItem('kc:shutter');
+        if (!reduce && sh) {
+          d.classList.add('shutter-cover');
+          // The intertitle the leaving page showed (a film's title), so the curtain reads as one cut.
+          var t = sh.charAt(0) === '{' ? (JSON.parse(sh).title || '') : '';
+          if (t) { d.style.setProperty('--shutter-title', '"' + String(t).slice(0, 80).replace(/[\\"]/g, '\\$&').replace(/[\n\r\f]/g, ' ') + '"'); d.classList.add('shutter-titled'); }
+        }
         if (!reduce && d.getAttribute('data-leader') === 'on' && !s.getItem('kc:leader') && !location.hash) d.classList.add('is-preloading');
         s.removeItem('kc:shutter');
       } catch (e) { /* storage blocked: no intro */ }
-      setTimeout(function () { d.classList.remove('is-preloading', 'shutter-cover'); }, 4500);
+      setTimeout(function () { d.classList.remove('is-preloading', 'shutter-cover', 'shutter-titled'); }, 4500);
     })();
   </script>
 
@@ -83,7 +90,7 @@
   </div>
 
   <!-- #092 shutter panel for page transitions. -->
-  <div class="shutter" aria-hidden="true" data-shutter><span class="shutter__mark">K<span>·</span>C</span></div>
+  <div class="shutter" aria-hidden="true" data-shutter><span class="shutter__mark">K<span>·</span>C</span><span class="shutter__title"></span></div>
 
   <!-- #079 timecode scroll progress. -->
   <div class="progress" aria-hidden="true"><span class="progress__fill" data-progress></span></div>

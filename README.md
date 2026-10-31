@@ -109,13 +109,31 @@ npm run check:static   # links and paths, licences, data, SEO, previs sync, cont
 npm run check          # all of the above plus Chromium
 ```
 
-The full `npm run check` adds these Chromium checks, with screenshots at 390, 768 and 1440 px in
-`.artifacts/screens/`:
+The full `npm run check` adds these Chromium checks, with screenshots at 390, 768, 1440 and
+1920 px in `.artifacts/screens/` (`--desktop` swaps in 1440, 1512@2x, 1728@2x, 1920 and 2560):
 
 - zero console errors;
 - frame determinism;
 - reduced motion;
-- keyboard access.
+- keyboard access;
+- the desktop motion layer: anchors land and move focus, keyboard focus stays on screen in the
+  pinned work strip, the strip counter reads 01…06, a sideways swipe moves the strip, the pinned
+  strip fits 1366×768 to 2560×1440, credits between the masks are fully opaque, every reveal plays,
+  "Motion off" reverts it all (no inline styles left), the visitor keeps their place across
+  1024 px and Motion off/on, phones never load it.
+
+## Desktop motion
+
+On a desktop browser (mouse or trackpad, window ≥ 1024 px, motion on) the page adds a motion layer
+in `assets/js/site/motion/`: smooth wheel scrolling (Lenis), headings that rise line by line behind
+masks, frames that open like a gate, Selected work as a pinned film strip, a viewfinder cursor over
+pictures, and a clip-path curtain between pages. It uses **GSAP 3.15.0** and **Lenis 1.3.27**,
+vendored in `assets/js/vendor/` (see their READMEs; `node tools/vendor-motion.mjs` re-fetches and
+verifies them). Phones, tablets, reduced motion and the site's **Motion off** toggle get native
+scroll and simple one-shot reveals, and never download either library. Pictures are never
+cropped by the motion: at rest every frame shows its whole composition. Switching the layer on or
+off, resizing across 1024 px or reloading keeps the visitor on the same content
+(`assets/js/site/place.js`).
 
 ## Previs (Unreal Engine)
 
@@ -170,6 +188,8 @@ This repo is set up to keep building with [Claude Code](https://claude.com/claud
   collection is used on the site.
 - **Fonts.** Cormorant Garamond, Inter Tight and IBM Plex Mono (SIL Open Font License), via Google
   Fonts.
+- **Page motion (desktop).** GSAP 3.15.0 (GSAP Standard No Charge License) and Lenis 1.3.27 (MIT),
+  served from this site.
 - **Full list.** See [`THIRD-PARTY-NOTICES.md`](THIRD-PARTY-NOTICES.md).
 
 **For admissions and applications.** Many schools ask how AI was used, so say it plainly. The site
