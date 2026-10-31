@@ -1,0 +1,112 @@
+/* Print: the home page as a clean filmography. The name and role, the index table with every column
+   (one row never split across pages), About, the Filmography credits in two columns and Contact, in
+   black on white, with each external link's address printed after it. Everything that moves, plays or
+   needs a pointer stays off the page: the hero's title piece and buttons, the header, the frames strip
+   and its HUD, the toggle and the preview pane, the studies, the previs plans, the kit, the band above
+   Contact, the colophon, the viewfinder and the grain. Whatever state the desktop motion layer left
+   behind (a pinned strip, a heading still waiting for its entrance) is undone here.
+   Linked with media="print" on index.html; requires tokens.css, base.css, site.css, work.css. */
+
+@page { margin: 14mm 12mm; }
+
+:root {
+  color-scheme: light;
+  --ink-0: #fff; --ink-1: #fff; --ink-2: #f2f2f2; --ink-3: #e6e6e6;
+  --line: #c4c4c4; --line-strong: #8c8c8c;
+  --paper: #000; --paper-2: #2b2b2b; --paper-3: #555;
+  --tungsten: #7a4310; --sample: #7a4310;
+  --grain: none;
+}
+html, body { background: #fff !important; color: #000; }
+body { font-size: 10pt; line-height: 1.45; }
+body::after { display: none !important; }
+
+/* --- Off the page ------------------------------------------------------------------------------------ */
+.skip-link, .preloader, .shutter, .progress, .site-header, .menu, .kc-cursor, .marquee, .colophon,
+.hero__stage, .hero__foot, .hero__shade, noscript,
+#reel, #photographs, #studies, #previs, #kit,
+.work-grid, .work-rail__hud, .work-view, .work-index__preview, .work-note, #work .section-head__lede,
+.credits__mask, .approach__link, [data-motion-toggle], [data-replay-titles] { display: none !important; }
+
+/* --- Whatever the motion layer was doing: in place, opaque, unclipped --------------------------------- */
+[data-reveal], .kc-line, .kc-char, .section-head *, .work-index__row > *, .credits__row, .credits__roll *,
+.hero__fallback, .hero__fallback :is(.hero__picture, .hero__title, .hero__slate) {
+  opacity: 1 !important; visibility: visible !important; transform: none !important; filter: none !important; clip-path: none !important;
+  animation: none !important; transition: none !important;
+}
+.pin-spacer { padding: 0 !important; width: auto !important; height: auto !important; max-width: none !important; max-height: none !important; }
+.work-rail__box {
+  position: static !important; display: block !important; inset: auto !important; padding: 0 !important;
+  width: auto !important; height: auto !important; min-height: 0 !important; max-width: none !important; max-height: none !important;
+}
+html, body { height: auto !important; min-height: 0 !important; }
+.work-rail__view { width: auto !important; margin: 0 !important; overflow: visible !important; }
+
+/* --- Layout ---------------------------------------------------------------------------------------- */
+.container { width: 100%; margin: 0; }
+.section { padding-block: 0 8mm; }
+.section + .section { border-top: 0; }
+.section-head { margin-bottom: 4mm; gap: 2mm; }
+.section-head__title { font-size: 20pt; line-height: 1.1; }
+h2, h3, h4, .section-head { break-after: avoid; }
+p { orphans: 3; widows: 3; }
+a { color: inherit; text-decoration: none; }
+
+/* The name and role head the first page. */
+.hero { height: auto !important; min-height: 0; overflow: visible; background: none; padding-bottom: 8mm; }
+.hero__fallback, .hero__picture { position: static !important; inset: auto; }
+.hero__picture { display: grid; justify-items: start; place-content: start; gap: 2mm; padding: 0; background: none; text-align: left; }
+.hero__title { justify-items: start; gap: 1mm; }
+.hero__name { font-size: 26pt; letter-spacing: 0.12em; margin-right: 0; }
+.hero__role { font-size: 13pt; }
+
+/* The index table, every column. */
+.work-index { display: block !important; }
+.work-index__list { margin: 0; overflow: visible; }
+.work-index__table { font-size: 7.5pt; }
+.work-index__table :is(th, td) { display: table-cell !important; padding: 2.4mm 1.6mm; }
+.work-index__table thead { display: table-header-group; }
+.work-index__table thead th { font-size: 6.5pt; padding-block: 0 2mm; }
+.work-index__table td { font-size: 7pt; }
+.work-index__table tr { break-inside: avoid; }
+.work-index__row { background: none !important; }
+.work-index__title { font-size: 13pt; background: none; }
+.work-index__line { min-width: 0; }
+.work-index__link::after { content: none; }
+.work-index__film .badge-sample { margin-top: 1mm; }
+
+/* About: the bio and the approach, straight down the page. */
+.about__lead { position: static; }
+.about__short { font-size: 13pt; }
+.approach-title { margin: 6mm 0 3mm; font-size: 14pt; }
+.approach { gap: 3mm; }
+.approach__item { gap: 1mm; padding-top: 2mm; break-inside: avoid; }
+.approach__head { font-size: 12pt; }
+
+/* Filmography: two columns, a credit never split. */
+.credits { border-top: 0; }
+.credits__roll { padding: 0 0 8mm; justify-items: start; text-align: left; }
+.credits__heading { margin: 0 0 4mm; font-size: 12pt; letter-spacing: 0.2em; color: #000; }
+.credits__list { display: block; columns: 2; column-gap: 10mm; width: 100%; }
+.credits__row { display: grid; gap: 1mm; justify-items: start; text-align: left; margin-bottom: 4mm; break-inside: avoid; }
+.credits__row > .credits__role { text-align: left; }
+.credits__name { justify-items: start; }
+.credits__film { font-size: 12pt; }
+.credits__meta { font-size: 9pt; }
+.credits__end { margin-top: 4mm; justify-items: start; gap: 1mm; break-inside: avoid; }
+.credits__signature { font-size: 14pt; margin-right: 0; }
+
+/* Contact. */
+.site-footer { padding: 0; break-inside: avoid; }
+.contact { justify-items: start; text-align: left; gap: 2mm; padding: 4mm 0 0; border-top: 1px solid var(--line); }
+.contact__title { font-size: 20pt; }
+.contact__mail a { font-size: 14pt; min-height: 0; background: none; padding: 0; }
+.contact__links { justify-content: flex-start; }
+.contact__links a { min-height: 0; }
+
+/* External links carry their address on paper. */
+main a[href^="http"]::after, .site-footer a[href^="http"]::after {
+  content: " (" attr(href) ")";
+  font-family: var(--font-mono); font-size: 7pt; font-style: normal; letter-spacing: 0; text-transform: none;
+  overflow-wrap: anywhere;
+}

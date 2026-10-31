@@ -15,6 +15,9 @@
     "check": "node tools/check.mjs",
     "check:static": "node tools/check.mjs --no-browser",
     "test": "node --test tools/test/",
+    "prerender": "node tools/prerender.mjs",
+    "tour": "node tools/tour.mjs",
+    "vendor": "node tools/vendor-motion.mjs",
     "previs:shotlist": "node tools/previs-shotlist.mjs",
     "previs:encode": "node tools/encode-previs.mjs"
   }

@@ -1,5 +1,7 @@
 // Static dev server that mounts the repo at /Karan-Chaudhary/, exactly like GitHub Pages serves the
 // project site. Any root-relative URL ("/assets/…") therefore 404s locally, as it would in production.
+// Like GitHub Pages it answers byte ranges (206, or 416 for a range it cannot serve): browsers fetch
+// media in ranges, and a video served only whole cannot be sought.
 
 import http from 'node:http';
 import fs from 'node:fs';
@@ -27,6 +29,7 @@ export const MIME = {
   '.woff': 'font/woff',
   '.mp4': 'video/mp4',
   '.webm': 'video/webm',
+  '.vtt': 'text/vtt; charset=utf-8',
   '.webmanifest': 'application/manifest+json',
   '.xml': 'application/xml; charset=utf-8',
   '.txt': 'text/plain; charset=utf-8',
@@ -43,6 +46,31 @@ export function resolveSafe(root, urlPath) {
   const rootAbs = path.resolve(root);
   if (abs !== rootAbs && !abs.startsWith(rootAbs + path.sep)) return null;
   return abs;
+}
+
+/**
+ * A Range header against a file of `size` bytes: { start, end } (inclusive) to send, null to ignore it
+ * (no header, or a unit other than bytes: the whole file goes), or false when it cannot be served
+ * (malformed, more than one range, or past the end of the file): 416. One byte range is all a browser
+ * asks for when it plays or seeks a video.
+ */
+export function parseRange(header, size) {
+  const m = /^\s*([\w-]+)\s*=(.*)$/.exec(header ?? '');
+  if (!m || m[1].toLowerCase() !== 'bytes') return null;
+  const spec = /^\s*(\d*)\s*-\s*(\d*)\s*$/.exec(m[2]);
+  if (!spec || (spec[1] === '' && spec[2] === '')) return false;
+  let start, end;
+  if (spec[1] === '') {   // "-500": the last 500 bytes
+    if (Number(spec[2]) === 0) return false;
+    start = Math.max(0, size - Number(spec[2]));
+    end = size - 1;
+  } else {
+    start = Number(spec[1]);
+    end = spec[2] === '' ? size - 1 : Number(spec[2]);
+    if (end < start) return false;
+    end = Math.min(end, size - 1);
+  }
+  return start < size ? { start, end } : false;
 }
 
 function send(res, status, headers, body) {
@@ -80,9 +108,15 @@ export function startServer({ root = REPO_ROOT, port = 0, host = '127.0.0.1', ba
       fs.stat(file, (err2, st2) => {
         if (err2 || !st2.isFile()) return notFound(root, res, req.method);
         const type = MIME[path.extname(file).toLowerCase()] ?? 'application/octet-stream';
-        res.writeHead(200, { 'Content-Type': type, 'Content-Length': st2.size, 'Cache-Control': 'no-store' });
+        const range = parseRange(req.headers.range, st2.size);
+        if (range === false) return send(res, 416, { 'Content-Range': `bytes */${st2.size}`, 'Accept-Ranges': 'bytes' }, undefined);
+        res.writeHead(range ? 206 : 200, {
+          'Content-Type': type, 'Content-Length': range ? range.end - range.start + 1 : st2.size,
+          'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store',
+          ...(range ? { 'Content-Range': `bytes ${range.start}-${range.end}/${st2.size}` } : {}),
+        });
         if (req.method === 'HEAD') return res.end();
-        fs.createReadStream(file).pipe(res);
+        fs.createReadStream(file, range ?? undefined).pipe(res);
       });
     });
   });

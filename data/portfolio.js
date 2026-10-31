@@ -8,6 +8,83 @@
 //   Example: 'media/films/untitled-short-01/still-01.jpg'.
 // - Never add awards, festivals or names that are not real and confirmed.
 // - Text is plain text (it is escaped when rendered). Bios are written in the first person.
+// - null or [] means "not filled in yet": that row or block does not show on the site.
+// - A sample block inside a film (its lightingPlot, a sequence) has its own `placeholder: true` and
+//   "Sample" tag. When the film becomes real, replace those blocks or delete them: `npm run check`
+//   fails while a sample block sits inside a film that is not a placeholder.
+//
+// A film with every field filled in. This is a worked example of the format only: the names, events
+// and numbers are made up, so never copy them in.
+//
+//   {
+//     placeholder: false,
+//     slug: 'the-long-evening',                  // lowercase-kebab: the page is project.html?slug=the-long-evening
+//     title: 'The Long Evening',
+//     year: 2026,
+//     kind: 'fiction',                           // 'fiction' | 'documentary' | 'music-video' | 'commercial' | 'experimental' | 'exercise'
+//     format: 'Short fiction',
+//     runtime: '12 min',
+//     role: 'Director of Photography',
+//     director: 'Name Surname',
+//     production: 'Production company or school',
+//     madeAt: { type: 'school', name: 'School name', note: 'second-year film' },   // type 'school' | 'independent' | 'commissioned' (AFI asks)
+//     aiUse: 'none',                             // 'none', or your own plain words about what AI did on this film (AFI asks)
+//     operated: true,                            // you operated the camera (NFTS asks to see it)
+//     lit: true,                                 // you designed the lighting (NFTS asks to see it)
+//     crew: [                                    // real names only; a row whose name is null never shows
+//       { role: 'Gaffer', name: 'Name Surname' },
+//       { role: 'Colourist', name: 'Name Surname' },
+//       { role: 'Production designer', name: 'Name Surname' },
+//     ],
+//     premiere: { event: 'Festival name', year: 2026, url: 'https://…' },          // real and confirmed only
+//     awards: [{ title: 'Award name', event: 'Festival name', year: 2026, url: 'https://…' }],   // real and confirmed only
+//     references: [{ title: 'Film title', year: 1970, dp: 'Name Surname', note: 'what you took from it' }],   // text only, never images
+//     logline: 'One sentence about the film.',
+//     aspect: 2.39, frameRate: 24,
+//     camera: { body: 'Camera', mode: 'Recording mode', codec: 'Codec' },
+//     lenses: { set: 'Lens set', range: '25–75mm', anamorphic: false, filtration: 'Filter' },
+//     lighting: 'A sentence or two on the lighting plan.',
+//     palette: ['#0E1A24', '#1F3B4D', '#C77B3B', '#E8C49A', '#F2EDE4'],        // five colours, darkest → lightest
+//     move: '#027',
+//     stills: [{                                 // real frames, 2800 px wide, plus a 1400 px copy
+//       src: 'media/films/the-long-evening/still-01.jpg',
+//       srcset: ['media/films/the-long-evening/still-01-1400.jpg 1400w', 'media/films/the-long-evening/still-01.jpg 2800w'],
+//       alt: 'What the frame shows',
+//       aspect: 2.39,
+//       line: 'Sc.04 · 40 mm · T2.0 · EI 800 · 2.39:1 · INT. NIGHT',         // the camera line under the frame
+//       palette: ['#0E1A24', '#1F3B4D', '#C77B3B', '#E8C49A', '#F2EDE4'],    // optional: this frame's own colours
+//       caption: 'Optional caption',
+//       featured: true,                          // the lead frame (and the work card)
+//       focus: [[0.36, 0.56], [0.72, 0.36]],    // optional: subject and second point, as fractions of the frame
+//     }],
+//     lightingPlot: {                            // a top view of one set-up, shown beside its frame
+//       placeholder: false,
+//       scene: 'Sc. 03 · EXT. BUS STOP · NIGHT',
+//       frame: 0,                                // which frame (stills[0]) sits beside the plot
+//       motivation: 'Why the light comes from where it does, in one sentence.',
+//       camera: { x: 0.4, y: 4.5, focal: 35, label: 'A-CAM · 35MM' },        // metres; the subject is at 0, 0 and the camera toward +y
+//       subject: { facing: 'camera' },           // or an angle in degrees
+//       lights: [                                // az: degrees round the subject (+ = camera-left); el: degrees up; dist: metres
+//         { role: 'key', az: 40, el: 55, dist: 3.5, kelvin: 2000, label: 'SODIUM STREETLIGHT', modifier: 'existing' },
+//       ],
+//       props: [{ x: -1.6, y: -0.8, label: 'SHELTER', detail: 'glass' }],    // a practical lamp adds kelvin: 2700
+//     },
+//     sequences: [{                              // one scene in 3–8 frames, in edit order
+//       placeholder: false,
+//       title: 'Scene 4 in five frames',
+//       scene: 'Sc. 04 · INT. WORKSHOP · DUSK',
+//       frames: [{ src: 'media/films/the-long-evening/seq-01.jpg', alt: 'What the frame shows', intent: 'One line: lens, move, why.' }],
+//       hindsight: 'What I would change, in one sentence.',
+//     }],
+//     grade: { log: { src: '…', alt: '…' }, final: { src: '…', alt: '…' }, colourist: 'Name Surname', note: '…' },   // later: real frames only
+//     previsCompare: { previs: { src: '…', alt: '…' }, final: { src: '…', alt: '…' } },                          // later
+//     preview: { src: 'media/films/the-long-evening/preview.mp4', poster: '…' },   // later: 800 px H.264, 4–6 s, ≤ 2 MB
+//     bts: [{ src: 'media/films/the-long-evening/bts-01.jpg', alt: '…', caption: 'Who is doing what', aspect: 1.5 }],
+//     watch: 'https://vimeo.com/…',
+//     featured: true,
+//   }
+//
+// The reel's, the photographs' and person.tenFilms' formats are explained where they are.
 // =============================================================================
 
 export default {
@@ -62,6 +139,9 @@ export default {
     // Skills for search engines (JSON-LD). 'Unreal Engine' is only published once a previs render exists.
     knowsAbout: ['Cinematography', 'Lighting', 'Colour grading', 'Previsualization', 'Unreal Engine'],   // TODO(owner)
     sameAs: [],   // profile URLs for JSON-LD, e.g. 'https://vimeo.com/…', 'https://www.imdb.com/name/…'. TODO(owner)
+    // Your own list of films (FAMU asks for ten), text only; About shows it once it has one:
+    //   [{ title: 'Film title', year: 1970, dp: 'Name Surname', note: 'what you took from it' }, …]   (at most 10)
+    tenFilms: [],   // TODO(owner)
   },
 
   // --- Showreel -------------------------------------------------------------------
@@ -72,9 +152,18 @@ export default {
     title: 'Showreel',
     provider: null,   // TODO(owner)
     id: null,         // Vimeo / YouTube id
+    hash: null,       // an unlisted Vimeo link's hash: vimeo.com/123456789/abcdef1234 → 'abcdef1234'
     src: null,        // for provider 'file': e.g. 'media/reel/reel.mp4'
     poster: null,     // e.g. 'media/reel/poster.jpg'
-    runtime: '1:30',
+    runtime: '1:30',  // 1:00–2:30 reads best; 3:00 at most
+    updated: null,    // TODO(owner) 'YYYY-MM' of the last cut: "Reel 2026 · updated October 2026"
+    uploadDate: null, // 'YYYY-MM-DD', for search engines (with a poster)
+    dialogue: null,   // false adds the note "No dialogue — instrumental"
+    captions: null,   // { lang: 'en', label: 'English', src: 'media/reel/reel.en.vtt' }; src for provider 'file' only
+    // The shot index under the player, in reel order; each one plays the reel from its time. thumb: your
+    // own frame from that shot (else the film's real featured still).
+    //   [{ t: '0:12', film: 'untitled-short-01', title: 'Untitled Short I', lens: '40 mm', note: 'one line', thumb: 'media/reel/shots/012.jpg' }]
+    shots: [],
   },
 
   // --- Selected work ------------------------------------------------------------------
@@ -82,9 +171,12 @@ export default {
   //   '#027' dolly in · '#030' orbit · '#031' crane up · '#032' dolly zoom · '#033' rack focus · '#043' whip pan
   // aspect: the delivery aspect ratio; the card and stills are cropped to it.
   // palette: five hex colours, darkest → lightest (cards and placeholder stills are drawn from it).
-  // stills: [{ src, alt, caption, aspect, featured }]. Empty → procedural "PLACEHOLDER STILL" frames.
+  // stills: [{ src, srcset, alt, aspect, line, caption, featured }]. Empty → procedural "PLACEHOLDER STILL" frames.
   // stillKinds: compositions for the procedural stills
   //   ('wide-ext' | 'interior-practical' | 'close-silhouette' | 'insert' | 'night-street' | 'window-shaft').
+  // The fields for credits, awards, the lighting plot and the scene sequence are explained in the worked
+  // example at the top of this file. The first two films carry a sample lighting plot, the first a
+  // sample sequence: they show the format, and are tagged "Sample" on the site.
   films: [
     {
       placeholder: true,
@@ -96,6 +188,13 @@ export default {
       role: 'Director of Photography',
       director: 'Director Name',              // TODO(owner)
       production: 'Production / School',     // TODO(owner)
+      kind: 'fiction',
+      madeAt: null,                // TODO(owner) { type: 'school' | 'independent' | 'commissioned', name, note } (AFI asks)
+      aiUse: null,                 // TODO(owner) 'none', or your own plain words about what AI did on this film (AFI asks)
+      operated: null, lit: null,   // TODO(owner) true / false: you operated the camera, you designed the lighting (NFTS asks)
+      crew: [{ role: 'Gaffer', name: null }, { role: 'Colourist', name: null }, { role: 'Production designer', name: null }],   // TODO(owner) real names only
+      premiere: null,              // real and confirmed only
+      references: [],              // text only, never images
       logline: 'Sample logline. Two siblings clear out their late father’s workshop over one long evening, and the light goes with the day.',
       aspect: 2.39,
       frameRate: 24,
@@ -106,6 +205,36 @@ export default {
       move: '#027',
       stillKinds: ['window-shaft', 'interior-practical', 'close-silhouette'],
       stills: [], bts: [], awards: [], watch: null,
+      // SAMPLE lighting plot and sequence (each tagged "Sample" on the site): replace them with your own
+      // set-up and scene, or set lightingPlot: null and sequences: [].
+      lightingPlot: {
+        placeholder: true,
+        scene: 'Sc. 04 · INT. WORKSHOP · DUSK',
+        frame: 0,
+        motivation: 'The window is the key all evening; as the day goes, the practicals take over the room.',
+        camera: { x: -0.4, y: 3.2, focal: 25, label: 'A-CAM · 25MM' },
+        subject: { facing: -30 },
+        lights: [
+          { role: 'key', az: -120, el: 35, dist: 4, kelvin: 5600, label: 'WINDOW', modifier: 'large source outside' },
+        ],
+        props: [
+          { x: -1.4, y: 0.4, label: 'PRACTICAL', detail: 'table lamp', kelvin: 2700 },
+          { x: 1.6, y: -1.8, label: 'PRACTICAL', detail: 'work lamp', kelvin: 3200 },
+        ],
+      },
+      sequences: [{
+        placeholder: true,
+        title: 'Scene 6 in five frames',
+        scene: 'Sc. 06 · INT. WORKSHOP · EVENING',
+        frames: [
+          { kind: 'window-shaft', alt: 'Placeholder frame: a shaft of window light across the workshop floor, a figure facing it.', intent: 'Wide on 25 mm, locked off: the window is the only key and the room is left to fall away.' },
+          { kind: 'interior-practical', alt: 'Placeholder frame: a table lamp glowing against a dark window.', intent: 'The first practical goes on: 40 mm at eye height, the warm lamp against the blue window.' },
+          { kind: 'close-silhouette', alt: 'Placeholder frame: a face in silhouette, close, against the light.', intent: 'Close on 75 mm with the lamp behind: the face stays in shadow while the line lands.' },
+          { kind: 'insert', alt: 'Placeholder frame: a close insert of an object under one lamp.', intent: 'An insert of the tools on 50 mm, lit by the lamp alone: the object the scene is about.' },
+          { kind: 'window-shaft', alt: 'Placeholder frame: the window shaft again, later in the evening.', intent: 'Back to the wide, held longer: the window has gone blue and the lamp now carries the room.' },
+        ],
+        hindsight: 'Sample note. I would hold the last wide two seconds longer, so the change in the light reads before the cut.',
+      }],
       featured: true,
     },
     {
@@ -118,6 +247,10 @@ export default {
       role: 'Director of Photography',
       director: 'Director Name',
       production: 'Production / School',
+      kind: 'fiction',
+      madeAt: null, aiUse: null, operated: null, lit: null,   // TODO(owner)
+      crew: [{ role: 'Gaffer', name: null }, { role: 'Colourist', name: null }, { role: 'Production designer', name: null }],   // TODO(owner)
+      premiere: null, references: [],
       logline: 'Sample logline. A night-shift cashier and a stranger wait out the last bus under one sodium streetlight.',
       aspect: 1.85,
       frameRate: 24,
@@ -128,6 +261,21 @@ export default {
       move: '#033',
       stillKinds: ['night-street', 'close-silhouette', 'insert'],
       stills: [], bts: [], awards: [], watch: null,
+      // SAMPLE lighting plot (tagged "Sample plot" on the site): replace it with your own, or set it to null.
+      lightingPlot: {
+        placeholder: true,
+        scene: 'Sc. 03 · EXT. BUS STOP · NIGHT',
+        frame: 0,
+        motivation: 'The streetlight is the one source the audience can see, so it stays the key; a bounce under the lens holds the eyes.',
+        camera: { x: 0.4, y: 4.5, focal: 35, label: 'A-CAM · 35MM' },
+        subject: { facing: 'camera' },
+        lights: [
+          { role: 'key', az: 40, el: 55, dist: 3.5, kelvin: 2000, label: 'SODIUM STREETLIGHT', modifier: 'existing' },
+          { role: 'fill', az: -15, el: -15, dist: 1.2, kelvin: 2000, label: 'BOUNCE', modifier: 'white board' },
+        ],
+        props: [{ x: -1.6, y: -0.8, label: 'SHELTER', detail: 'glass' }],
+      },
+      sequences: [],
     },
     {
       placeholder: true,
@@ -139,6 +287,10 @@ export default {
       role: 'Director of Photography',
       director: 'Director Name',
       production: 'Artist / Label',          // TODO(owner)
+      kind: 'music-video',
+      madeAt: null, aiUse: null, operated: null, lit: null,   // TODO(owner)
+      crew: [{ role: 'Gaffer', name: null }, { role: 'Colourist', name: null }, { role: 'Production designer', name: null }],   // TODO(owner)
+      premiere: null, references: [],
       logline: 'Sample logline. One performer, one room, one continuous orbit as the song builds.',
       aspect: 2.39,
       frameRate: 25,
@@ -149,6 +301,7 @@ export default {
       move: '#030',
       stillKinds: ['close-silhouette', 'interior-practical', 'insert'],
       stills: [], bts: [], awards: [], watch: null,
+      lightingPlot: null, sequences: [],
     },
     {
       placeholder: true,
@@ -160,6 +313,10 @@ export default {
       role: 'Cinematographer',
       director: 'Director Name',
       production: 'Production / School',
+      kind: 'documentary',
+      madeAt: null, aiUse: null, operated: null, lit: null,   // TODO(owner)
+      crew: [{ role: 'Gaffer', name: null }, { role: 'Colourist', name: null }, { role: 'Production designer', name: null }],   // TODO(owner)
+      premiere: null, references: [],
       logline: 'Sample logline. A portrait of a family bakery in the week before it closes.',
       aspect: 1.33,
       frameRate: 24,
@@ -170,6 +327,7 @@ export default {
       move: '#032',
       stillKinds: ['interior-practical', 'insert', 'window-shaft'],
       stills: [], bts: [], awards: [], watch: null,
+      lightingPlot: null, sequences: [],
     },
     {
       placeholder: true,
@@ -181,6 +339,10 @@ export default {
       role: 'Director of Photography',
       director: 'Director Name',
       production: 'Production / School',
+      kind: 'experimental',
+      madeAt: null, aiUse: null, operated: null, lit: null,   // TODO(owner)
+      crew: [{ role: 'Gaffer', name: null }, { role: 'Colourist', name: null }, { role: 'Production designer', name: null }],   // TODO(owner)
+      premiere: null, references: [],
       logline: 'Sample logline. A shoreline over one tide, framed very wide and very still until it is not.',
       aspect: 2.76,
       frameRate: 24,
@@ -191,6 +353,7 @@ export default {
       move: '#031',
       stillKinds: ['wide-ext', 'wide-ext', 'close-silhouette'],
       stills: [], bts: [], awards: [], watch: null,
+      lightingPlot: null, sequences: [],
     },
     {
       placeholder: true,
@@ -202,6 +365,10 @@ export default {
       role: 'Director of Photography',
       director: 'Director Name',
       production: 'Agency / Client',         // TODO(owner)
+      kind: 'commercial',
+      madeAt: null, aiUse: null, operated: null, lit: null,   // TODO(owner)
+      crew: [{ role: 'Gaffer', name: null }, { role: 'Colourist', name: null }, { role: 'Production designer', name: null }],   // TODO(owner)
+      premiere: null, references: [],
       logline: 'Sample logline. Two rooms, one product, joined by a whip pan.',
       aspect: 1.78,
       frameRate: 25,
@@ -212,11 +379,25 @@ export default {
       move: '#043',
       stillKinds: ['insert', 'interior-practical', 'wide-ext'],
       stills: [], bts: [], awards: [], watch: null,
+      lightingPlot: null, sequences: [],
     },
   ],
 
   // Extra frames not tied to a film: [{ src, alt, caption, aspect }].
   stills: [],
+
+  // --- Photographs (your own still photography, never frames from a film) -------------------------
+  // The section, its menu link and photographs.html stay hidden until a series has photos. Each school
+  // asks for its own set (count, portraits, colour / black-and-white): tag each photo with the sets it
+  // belongs to, then print photographs.html?set=afi (and so on) to PDF.
+  //   series: [{ title: 'Series title', year: 2026, kind: 'colour' | 'bw', note: 'one line',
+  //     photos: [{ src: 'media/photographs/series/01.jpg', alt: 'What the photograph shows', w: 2400, h: 1600,   // w, h: pixels
+  //                portrait: true,   // a portrait of a person (AFI asks for a few)
+  //                caption: 'optional', sets: ['afi', 'nyu', 'famu', 'lodz', 'bfa'] }] }]
+  photographs: {
+    captions: false,   // true shows each photo's caption on the photographs page
+    series: [],        // TODO(owner)
+  },
 
   // --- Studies (each is also a shareable page under studies/) -----------------------
   studies: [

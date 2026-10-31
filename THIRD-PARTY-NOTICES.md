@@ -155,13 +155,42 @@ SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 ## Fonts (SIL Open Font License 1.1)
 
-Served by Google Fonts; not redistributed in this repository.
+Self-hosted: the pages load their type from this site (`assets/css/fonts.css`, files under
+`assets/fonts/`), never from a font service. The files are byte-identical, **unmodified** copies of WOFF2
+files from the npm packages below: only the latin and latin-ext files of the faces the site uses. Each
+folder keeps its package's `LICENSE` (the copyright line below, then the full SIL Open Font License 1.1
+text), and it is deployed with the fonts. Hashes: `tools/vendor-manifest.json` (checked by `npm run
+check`); `tools/vendor-motion.mjs` re-fetches the packages and verifies them.
 
-- Cormorant Garamond — Christian Thalmann (Catharsis Fonts)
-- Inter Tight — Rasmus Andersson and contributors
-- IBM Plex Mono — IBM
+### Cormorant Garamond — @fontsource/cormorant-garamond 5.3.0 (OFL-1.1)
 
-Licence text: <https://openfontlicense.org/>
+`assets/fonts/cormorant-garamond/`: 400, 500, 600 and 400 italic. The copyright line of its `LICENSE`, verbatim:
+
+```
+Copyright 2015 The Cormorant Project Authors (github.com/CatharsisFonts/Cormorant) CormorantGaramond-Italic[wght].ttf: Copyright 2015 The Cormorant Project Authors (github.com/CatharsisFonts/Cormorant)
+```
+
+### Inter Tight — @fontsource/inter-tight 5.3.0 (OFL-1.1)
+
+`assets/fonts/inter-tight/`: 400, 500 and 600. The copyright line of its `LICENSE`, verbatim:
+
+```
+Copyright 2022 The Inter Project Authors (https://github.com/rsms/inter-tight) InterTight-Italic[wght].ttf: Copyright 2022 The Inter Project Authors (https://github.com/rsms/inter-tight)
+```
+
+### IBM Plex Mono — @fontsource/ibm-plex-mono 5.3.0 (OFL-1.1)
+
+`assets/fonts/ibm-plex-mono/`: 400 and 500. The copyright line of its `LICENSE`, verbatim:
+
+```
+Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-ThinItalic.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-ExtraLight.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-ExtraLightItalic.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-Light.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-LightItalic.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-Regular.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-Italic.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-Medium.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-MediumItalic.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-SemiBold.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-SemiBoldItalic.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-Bold.ttf: Copyright 2017 IBM Corp. All rights reserved. IBMPlexMono-BoldItalic.ttf: Copyright 2017 IBM Corp. All rights reserved.
+```
+
+IBM's own licence for IBM Plex (<https://github.com/IBM/plex/blob/master/LICENSE.txt>) opens with
+`Copyright © 2017 IBM Corp. with Reserved Font Name "Plex"`: "Plex" is a Reserved Font Name. The files
+here are unmodified and keep their names, and no modified version of them is made or distributed.
+
+Licence text: each folder's `LICENSE`, and <https://openfontlicense.org/>
 
 ## Inspiration: Awesome Opus 5.5 Videos
 

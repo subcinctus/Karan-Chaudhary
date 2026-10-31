@@ -14,6 +14,8 @@
    end of this file and tokens.css). */
 
 html { scroll-padding-top: 72px; }
+/* A modal (the frame lightbox) holds the page still under it; smooth scroll stops too (motion/smooth.js). */
+html.modal-open { overflow: hidden; }
 [hidden] { display: none !important; }
 main:focus, section[tabindex="-1"]:focus, footer[tabindex="-1"]:focus { outline: none; }
 .mono { font-family: var(--font-mono); }
@@ -108,11 +110,26 @@ html[data-motion="off"] .progress, html[data-motion="off"] .site-header__tc { di
   transition: color var(--dur-2), background-size 450ms var(--ease-io-expo);
 }
 .site-nav a:hover, .site-nav a[aria-current] { color: var(--paper); background-size: 100% 1px; background-position-x: left; }
+/* Contact, one click away on every page: a pill after the nav (on phones the header reads mark ·
+   Contact · Menu). 36 px tall with a 44 px hit area, like the motion toggle. */
+.site-header__contact {
+  position: relative; display: inline-flex; align-items: center; margin-left: auto;
+  min-height: 36px; padding: 0 var(--s4);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: var(--tracking-mono); text-transform: uppercase;
+  color: var(--paper); text-decoration: none; white-space: nowrap;
+  transition: border-color var(--dur-2) var(--ease-ui);
+}
+.site-header__contact::after { content: ""; position: absolute; inset: -4px; }   /* 44 px hit area */
+.site-header__contact:hover { border-color: var(--tungsten); }
+/* The timecode is decoration: progress.js writes it to data-tc, so it is never page text. */
 .site-header__tc {
-  margin: 0 0 0 auto;
+  margin: 0;
   font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.06em; color: var(--paper-3);
   font-variant-numeric: tabular-nums; white-space: nowrap;
 }
+.site-header__tc::after { content: attr(data-tc); }
+@media (max-width: 1279px) { .site-header__tc { display: none; } }   /* the header never overflows at 1024–1279 px */
 .site-header__motion {
   display: none;
   min-height: 36px; padding: 0 var(--s3);
@@ -141,27 +158,27 @@ html[data-motion="off"] .progress, html[data-motion="off"] .site-header__tc { di
 @media (min-width: 900px) {
   .site-header { height: 72px; }
   .site-nav { display: block; }
+  .site-header__contact { margin-left: 0; }
   .site-header__tc { margin-left: var(--s4); }
   .site-header__motion { display: inline-flex; align-items: center; }
   .site-header__menu { display: none; }
 }
-@media (max-width: 899px) {
-  .site-header__tc { margin-left: auto; }
-}
-/* Without JavaScript only the hero and the <noscript> note are real: hide the chrome that would do
-   nothing (nav to empty sections, the motion toggle, the timecode) and the sections JS would fill. */
-html:not(.js) .site-nav, html:not(.js) [data-motion-toggle], html:not(.js) .site-header__tc,
-html:not(.js) .hero__foot, html:not(.js) main > section:not(.hero):not(.noscript),
-html:not(.js) .site-footer { display: none; }
+/* Without JavaScript the page is the HTML tools/prerender.mjs wrote: the work, about, kit, credits and
+   contact read as text. What needs scripts stays out of the way: the reel's player, the live studies
+   and the previs plans (and their nav links), the motion toggle, the timecode, the hero's buttons, and
+   any section the prerender has not filled. */
+html:not(.js) [data-motion-toggle], html:not(.js) .site-header__tc, html:not(.js) .hero__foot,
+html:not(.js) :is(#reel, #studies, #previs),
+html:not(.js) .site-nav li:has(> a:is([href$="#reel"], [href$="#studies"], [href$="#previs"])),
+html:not(.js) [data-render]:empty, html:not(.js) main > section:has(> [data-render]:empty),
+html:not(.js) .site-footer:not(:has([data-render]:not(:empty))) { display: none; }
 
-/* During the title sequence the chrome waits (it is still reachable by keyboard). */
-html[data-intro="playing"] .site-header,
-html[data-intro="playing"] .progress,
-html[data-intro="playing"] .hero__cta,
-html[data-intro="playing"] .hero__down { opacity: 0; }
-html[data-intro="playing"] .site-header:focus-within,
-html[data-intro="playing"] .hero__cta:focus-visible { opacity: 1; }
-.hero__cta, .hero__down, .progress { transition: opacity 900ms var(--ease-out); }
+/* During the title sequence the header stays, so the work and the contact are a click away from the
+   first second; only the call to action waits for the name, fading in at 1.2 s (keyboard focus shows
+   it at once). */
+html[data-intro="playing"] .hero__cta { animation: hero-cta-in 600ms var(--ease-out) 1.2s both; }
+html[data-intro="playing"] .hero__cta:focus-visible { animation: none; }
+@keyframes hero-cta-in { from { opacity: 0; } }
 
 /* --- Menu sheet (phones) ---------------------------------------------------------------------- */
 
@@ -213,6 +230,10 @@ html[data-intro="playing"] .hero__cta:focus-visible { opacity: 1; }
   font-family: var(--font-display); font-weight: 500; font-size: clamp(5rem, 22vw, 8.5rem); line-height: 1;
   color: var(--paper); font-variant-numeric: tabular-nums;
 }
+/* The leader's numerals and label are decoration: they live in data-* attributes (preloader.js writes
+   them), so a text reader of the page never meets "Reel 1 000 8". */
+.leader__num::after { content: attr(data-n); }
+.preloader__label [data-t]::after { content: attr(data-t); }
 .preloader__bar { width: 180px; height: 4px; background: rgb(236 230 218 / 0.12); border-radius: 2px; overflow: hidden; }
 .preloader__bar span { display: block; height: 100%; background: var(--tungsten); transform: scaleX(0); transform-origin: 0 50%; }
 .preloader__label {
@@ -255,6 +276,8 @@ html[data-intro="playing"] .hero__cta:focus-visible { opacity: 1; }
 .section-head__rule { flex: 1 1 40px; height: 1px; background: var(--line); min-width: 24px; }
 .section-head__aside { color: var(--paper-3); }
 .section-head__aside::before { content: "·"; margin-right: var(--s3); color: var(--line-strong); }
+/* Tools in the slate row (the Selected work view toggle) sit at its end: the head is no taller. */
+.section-head__tools { margin-left: auto; display: flex; align-items: center; }
 @media (max-width: 639px) {
   .section-head__aside { flex-basis: 100%; }
   .section-head__aside::before { content: none; }
@@ -333,9 +356,12 @@ html.js .hero__fallback :is(.hero__title, .hero__slate) { animation: hero-fallba
 @media (max-width: 639px) {
   .hero__down { display: none; }
   .hero__foot { justify-content: center; }
-  .hero__skip { right: var(--gutter); }
+  /* The call to action shows while the title plays, so Skip shares the row with it: no Esc hint here. */
+  .hero__skip { right: var(--gutter); padding-inline: var(--s4); }
+  .hero__skip kbd { display: none; }
   html[data-intro="playing"] .hero__foot { justify-content: flex-start; }
 }
+@media (max-width: 359px) { .hero__foot .btn { padding-inline: var(--s3); } }
 
 /* --- Reel --------------------------------------------------------------------------------------- */
 
@@ -477,6 +503,7 @@ html.js .hero__fallback :is(.hero__title, .hero__slate) { animation: hero-fallba
 .study-block__head { display: grid; gap: var(--s3); margin-bottom: var(--s6); max-width: 62ch; }
 .study-block__head .cam-label { color: var(--tungsten); }
 .study-block__title { font-size: clamp(2.2rem, 1.2rem + 3.2vw, 6rem); font-weight: 400; }
+.study-block__kind { justify-self: start; }
 .study-block__lede { color: var(--paper-2); }
 .study-block__body { display: grid; gap: var(--s6); align-items: start; grid-template-columns: minmax(0, 1fr); }
 .study-block__stage { min-width: 0; margin-inline: calc(-1 * var(--gutter)); }
@@ -604,8 +631,8 @@ html.js .hero__fallback :is(.hero__title, .hero__slate) { animation: hero-fallba
 .about__lead .badge-sample { justify-self: start; }
 .about__body { display: grid; gap: var(--s5); align-content: start; color: var(--paper-2); max-width: 60ch; }
 .about__body > p:first-child { color: var(--paper); }
-.about__edu ul { margin: var(--s3) 0 0; padding: 0; list-style: none; display: grid; gap: var(--s2); }
-.about__school { color: var(--paper); }
+.about__edu ul, .about__films ul { margin: var(--s3) 0 0; padding: 0; list-style: none; display: grid; gap: var(--s2); }
+.about__school, .about__film { color: var(--paper); }
 .about__prog { color: var(--paper-3); }
 @media (min-width: 1000px) {
   .about { grid-template-columns: minmax(0, 6fr) minmax(0, 5fr); column-gap: clamp(48px, 7vw, 128px); }
@@ -725,6 +752,7 @@ html.js .hero__fallback :is(.hero__title, .hero__slate) { animation: hero-fallba
 .film__frame-cap { position: absolute; left: var(--s3); bottom: var(--s3); z-index: 1; }
 .film__body { display: grid; gap: var(--s7); padding-block: clamp(48px, 6vw, 96px); }
 @media (min-width: 900px) { .film__body { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: clamp(48px, 6vw, 112px); } }
+.film__facts { display: grid; gap: var(--s7); align-content: start; }   /* the camera report, then the credits */
 .film__h { margin: 0 0 var(--s4); font-family: var(--font-mono); font-size: var(--step--1); font-weight: 400; color: var(--tungsten); }
 .film__notes { display: grid; align-content: start; }
 .film__notes .film__h:not(:first-child) { margin-top: var(--s7); }
@@ -761,10 +789,14 @@ html.js .hero__fallback :is(.hero__title, .hero__slate) { animation: hero-fallba
 .film-missing__text { color: var(--paper-2); max-width: 56ch; }
 .film-missing__list { margin: var(--s3) 0 var(--s5); padding: 0; list-style: none; display: grid; gap: var(--s2); }
 .film-missing__list a { font-family: var(--font-display); font-size: var(--step-1); margin-right: var(--s3); }
+/* project.html's static filmography (tools/prerender.mjs), for crawlers and visitors without
+   JavaScript; project.js renders the film in its place. */
+.film-static { padding-block: clamp(96px, 14vw, 200px) clamp(48px, 6vw, 96px); display: grid; gap: var(--s5); }
+html.js .film-static, .film-static:empty { display: none; }
 
 /* --- Misc ----------------------------------------------------------------------------------- */
 
-.noscript { padding-top: 96px; display: grid; gap: var(--s4); }
+.noscript { padding-block: var(--s7); }
 .site-footer--slim { padding-block: var(--s7); border-top: 1px solid var(--line); }
 .site-footer--slim .colophon { border-top: 0; padding-top: 0; }
 

@@ -28,7 +28,7 @@ Each shot is a Motion Prompt camera move, rebuilt in Unreal units.
 |---|---|---|---|---|
 | PV-010 | #027 Dolly in | 24 mm T2.8 | Push 5.8 m toward the head (8 → 2.2 m); focus follows. | Rembrandt #101 |
 | PV-020 | #033 Rack focus | 24 mm T1.4 | Locked off; focus pulls from a practical at 2 m to the head at 9 m. | Low-key #114 |
-| PV-030 | #030 Orbit | 24 mm T2.8 | 109° arc at 6 m. **The camera is parented to a pivot at the head, and the pivot's yaw is keyed.** | Split #100 |
+| PV-030 | #030 Orbit | 24 mm T2.8 | 109° arc at 6 m. **The camera is parented to a pivot at the head, and the pivot's yaw is keyed.** | Split #100, its key raised to 35° and moved back to 3.5 m for this shot (`lightsOverride`), so it never enters the frame |
 | PV-040 | #032 Dolly zoom | 9.6 → 24 mm T4 | Pull back 3.2 → 8 m while zooming, with f = 24·d/8, so the head keeps its size. | Butterfly #102 |
 | PV-050 | #031 Crane up | 24 mm T2.8 | Rise 1.4 → 9 m, tilting down to −44°. Keys baked every 3 frames. | Backlight #097 |
 | PV-060 | #043 Whip pan | 24 mm T2.8 | Camera A whips 26° right, cuts to camera B (profile) on frame 50, B settles. | Rim #098 |
@@ -154,7 +154,9 @@ Z = 150 + d·sin(el), d in cm, az positive = camera-left.
 Pick one base intensity for a key of 1 so that, with camera exposure on Manual, the lit cheek of
 the Rembrandt preset sits around 70 %, and use that same base for every preset. Scale the cyc's
 light by 2^backgroundStops. Put each preset in Outliner folder Previs/Lights/<preset> and turn every
-preset off except rembrandt. Show the LookdevCard for these stills only. Save, then screenshot the
+preset off except rembrandt. Then create the lights of every shot that has a "lightsOverride" the
+same way (same base intensity, times their own "intensity") in folder Previs/Lights/<shot id>, and
+leave them off. Show the LookdevCard for these stills only. Save, then screenshot the
 bust from (-200, 0, 150) under rembrandt, butterfly and split, switching presets in turn. Hide the
 LookdevCard again afterwards.
 ```
@@ -187,7 +189,8 @@ Create the master Level Sequence /Game/Previs/Seq/PV_Master at 24 fps. For each 
      3 mm per metre (shot.constraint).
   6. PV-060: add the second camera from shot.cameraB with its own keys, and a camera-cut track that
      follows shot.cuts (camera A from frame 0, camera B from frame 50).
-  7. Turn on only the lights of shot.lighting inside this subsequence; set the others to 0.
+  7. Turn on only the lights of shot.lighting inside this subsequence; set the others to 0. A shot
+     with "lightsOverride" (PV-030) uses those lights instead of its preset's.
 Add a camera-cut track to the master that plays the shots back to back. Save, then show me three
 stills per shot (first frame, middle frame, last frame) through the shot camera.
 ```
@@ -240,3 +243,11 @@ The shots are defined in `tools/previs-shotlist.mjs`, and the lighting in
 1. Edit one of those files.
 2. Run `npm run previs:shotlist`, then `npm run check`.
 3. In Unreal, ask Claude to update only the shots that changed.
+
+A light on a stand in the picture would make a shot useless on a real stage, so the generator checks
+every orbit: it follows the camera around the arc and refuses to write the file while any light (its
+centre or a corner of the source) falls inside the frame. That is why PV-030 has its own key: the split
+preset's key, level at 1.5 m, hangs just behind the head when the camera swings to the far side. Raised
+to 35° and moved back to 3.5 m it stays above the top of the frame from every point of the arc, and its
+intensity is scaled by the inverse square (× 5.44), so the face gets the same light. The shot carries
+the result as `framing` (a clearance above 1 means the source never enters the picture).

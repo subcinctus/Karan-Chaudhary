@@ -6,7 +6,8 @@
 // or Lenis. Everything here is reversible: gsap.matchMedia() records every tween, ScrollTrigger and
 // SplitText made while arming, so leaving the desktop query (resizing), the OS reduced-motion setting
 // or the site's "Motion off" toggle reverts the page to its plain layout, fully visible, with native
-// scroll; turning motion back on re-arms it without hiding what is already on screen.
+// scroll; turning motion back on re-arms it without hiding what is already on screen. Switching the
+// Selected work view (kc:relayout, from site/work-index.js) re-arms it the same way.
 //
 // Curves (the same numbers as tokens.css): kc.out = expo out (.16, 1, .3, 1) for entrances, kc.io =
 // expo in-out (.77, 0, .175, 1) for wipes and curtains, kc.ui = (.4, 0, .1, 1) for chrome. Durations
@@ -82,11 +83,17 @@ const hold = () => {
 if (typeof matchMedia === 'function') {
   for (const q of [DESKTOP_Q, '(prefers-reduced-motion: reduce)']) matchMedia(q).addEventListener?.('change', hold);
 }
-/** A pinned element's rect does not say where the page is: map the strip's box onto its trigger. */
-function railPlace(el, rail) {
+/**
+ * A pinned element's rect does not say where the page is: map the strip's box onto its trigger. A place
+ * inside the strip's travel keeps its progress (rail); one taken above it (the box in the flow, e.g. the
+ * Selected work toggle) keeps its offset in the box, short of the pin.
+ */
+function railPlace(el, rail, off = 0) {
   const st = ScrollTrigger.getById('work-rail');
-  if (!st || !el.closest('.work-rail__box')) return null;
-  return st.start + (rail ?? 0) * (st.end - st.start);
+  const box = el.closest('.work-rail__box');
+  if (!st || !box) return null;
+  if (rail != null) return st.start + rail * (st.end - st.start);
+  return Math.min(st.start, st.start + el.getBoundingClientRect().top - box.getBoundingClientRect().top - off);
 }
 const toSmooth = y => {
   // Lenis caches the page height (its resize observer runs later): re-measure first, or the pin
@@ -122,7 +129,7 @@ function arm() {
     const settle = () => {
       if (moved() !== movesAtArm) return;   // the visitor scrolled meanwhile: leave them be
       if (aimHash) reaim();
-      else restore(place, { to: toSmooth, rail: el => railPlace(el, place.rail) });
+      else restore(place, { to: toSmooth, rail: el => railPlace(el, place.rail, place.off) });
     };
     // Whatever the visitor can already see is never hidden to be re-revealed (no blink when motion is
     // switched back on, or when the layer arms after a jump into the page). The exception is a page that
@@ -251,8 +258,33 @@ export async function initMotion(o = {}) {
     Promise.all([document.fonts.load('400 1em "Cormorant Garamond"'), document.fonts.load('400 1em "IBM Plex Mono"')]),
   ]).catch(() => {}) : Promise.resolve();
   await Promise.race([fonts, new Promise(r => setTimeout(r, 1500))]);
+  // A refresh re-measures the pinned strip by lifting its box out of the pin spacer and back, and an
+  // element moved in the DOM loses focus (a card link, the Selected work toggle): give it back.
+  let focused = null;
+  ScrollTrigger.addEventListener('refreshInit', () => { focused = document.activeElement; });
+  ScrollTrigger.addEventListener('refresh', () => {
+    const a = focused, now = document.activeElement;
+    focused = null;
+    if (a && a !== document.body && a.isConnected && (!now || now === document.body)) a.focus({ preventScroll: true });
+  });
   arm();
   onMotionChange(() => { idle = freshIdle(); arm(); });
+  // The Selected work view changed (work-index.js): re-arm for its layout (the index has no pinned strip),
+  // with the toggle put back where it was on screen.
+  addEventListener('kc:relayout', e => {
+    if (!root.classList.contains('motion-ready')) return;   // not armed: the plain layout follows by itself
+    railMemo = null;
+    const keep = e.detail?.keep?.el ? e.detail.keep : null, moves = moved();
+    if (keep) pending = keep;
+    idle = freshIdle();
+    arm();
+    // Once armed, again (a late refresh may have shifted the page), unless the visitor has scrolled since.
+    if (keep) {
+      idle.then(() => {
+        if (moved() === moves && keep.el.isConnected && Math.abs(keep.el.getBoundingClientRect().top - keep.off) > 2) restore(keep, { to: toSmooth, rail: el => railPlace(el, null, keep.off) });
+      });
+    }
+  });
   addEventListener('kc:content', onContent);
   return idle;
 }

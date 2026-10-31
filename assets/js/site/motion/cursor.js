@@ -5,10 +5,12 @@
 //
 // A viewfinder that appears only over pictures: corner brackets and a centre cross around the pointer,
 // with a label under them that says what the picture does: "View — (the card's move)" on a work card,
-// "Drag — wipe" on the Colour study, "Live — lens maths" on the Focus study, a shot id on a previs plan.
+// "View — (the film)" on the work index's preview, "Drag — wipe" on the Colour study, "Live — lens
+// maths" on the Focus study, a shot id on a previs plan; on a film page the frame's number, a sequence
+// frame's scene and place ("Sc. 06 · 02/05"), and "Plan — lighting" on the lighting plot.
 // The system cursor always stays visible (this is an addition, not a replacement); over the study
-// controls, buttons and inputs the viewfinder is hidden; it is aria-hidden, never focusable, and off in
-// forced-colours mode. Transforms and opacity only.
+// controls, buttons (other than the frames, which open the lightbox) and inputs the viewfinder is
+// hidden; it is aria-hidden, never focusable, and off in forced-colours mode. Transforms and opacity only.
 // The label keeps clear of what it would cover: it flips above the brackets near the bottom of the
 // window and is held inside it sideways; over a study it sits above the brackets (below them only near
 // the picture's top edge), so it never lands on the camera readouts drawn in the picture's corners; and
@@ -17,15 +19,19 @@
 
 const TARGETS = [
   ['.work-card__link', el => `View — ${el.querySelector('.work-card__foot span')?.textContent?.trim() || 'film'}`],
+  ['.work-index__preview [data-preview-frame]', el => `View — ${el.dataset.title || 'film'}`],
   ['.study-block--colour [data-study-host]', () => 'Drag — wipe'],
   ['.study-block--focus [data-study-host]', () => 'Live — lens maths'],
   ['.study-block--light [data-study-host]', () => 'Live — key and fill'],
   ['.previs-slot__frame', el => `Plan — ${el.closest('.previs-slot')?.dataset.shot ?? 'shot'}`],
   ['.film__frame, .still .frame', el => (el.closest('.still') ? `Frame ${String([...el.closest('.stills').children].indexOf(el.closest('.still')) + 1).padStart(2, '0')}` : 'Lead frame')],
+  ['.sequence .frame', el => el.dataset.label || 'Sequence'],
+  ['.film-plot__frame', el => el.dataset.label || 'Lit as planned'],
+  ['.film-plot__svg', () => 'Plan — lighting'],
   ['.film__pager-link', el => el.querySelector('.cam-label')?.textContent?.trim() ?? 'Next'],
 ];
 const SELECTOR = TARGETS.map(t => t[0]).join(', ');
-const QUIET = 'button, input, select, textarea, label, [data-controls], .player__chrome';
+const QUIET = 'button:not(.still__open), input, select, textarea, label, [data-controls], .player__chrome';
 
 export function initCursor(env) {
   const { gsap, state } = env;

@@ -11,7 +11,8 @@
 //     travelling, then focus moves to the target;
 //   · keys: a keyboard scroll (Tab, Page, arrows, Space, Home, End) cancels any smooth scroll still in
 //     flight, so the browser's focus scroll is never overridden;
-//   · stopped while the film leader, the phone menu or a page transition covers the page.
+//   · stopped while the film leader, the phone menu, a page transition or a modal (the frame lightbox:
+//     html.modal-open) covers the page.
 // The skip link stays native (instant jump, focus to <main>).
 
 const NAV_KEYS = new Set(['Tab', 'PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', ' ', 'Home', 'End']);
@@ -30,7 +31,8 @@ export function initSmooth(env) {
   gsap.ticker.lagSmoothing(0);
 
   // Covered or modal states stop it.
-  const hold = () => root.classList.contains('is-preloading') || root.classList.contains('menu-open') || root.classList.contains('shutter-leaving');
+  const hold = () => root.classList.contains('is-preloading') || root.classList.contains('menu-open') || root.classList.contains('shutter-leaving')
+    || root.classList.contains('modal-open');
   let held = null;
   const sync = () => {
     const h = hold();

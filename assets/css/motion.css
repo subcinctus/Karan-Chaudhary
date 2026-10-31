@@ -35,8 +35,7 @@ html.lenis { scroll-behavior: auto; }
 .lenis [data-lenis-prevent] { overscroll-behavior: contain; }
 .lenis.lenis-smooth iframe { pointer-events: none; }
 
-/* --- Hand-off: GSAP owns the chrome's entrance, so the CSS fades step aside ------------------------ */
-.motion-ready .hero__cta, .motion-ready .hero__down, .motion-ready .progress { transition: none; }
+/* --- Header: slides away on the way down past the hero, back on the way up (nav.js) ----------------- */
 .motion-ready .site-header {
   transition: background-color 300ms var(--ease-ui), border-color 300ms var(--ease-ui), transform 450ms var(--ease-ui);
 }
@@ -93,7 +92,7 @@ html.lenis { scroll-behavior: auto; }
 }
 .work-rail .work-card { flex: 0 0 auto; width: var(--rail-card, min(40vw, calc((100svh - 480px) * 2))); }
 /* Full frame while the card is on screen; pushed in a little only as it crosses an edge (work.js). */
-.work-rail .work-card__frame > .still-move, .work-rail .work-card__frame > img { transform: translate3d(var(--px, 0%), 0, 0) scale(var(--ps, 1)); }
+.work-rail .work-card__frame > :is(.still-move, img, video) { transform: translate3d(var(--px, 0%), 0, 0) scale(var(--ps, 1)); }
 .work-rail .work-card__title { font-size: var(--step-3); }
 .work-rail .work-note { margin-top: var(--s5); }
 .work-rail__hud {

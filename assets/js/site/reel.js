@@ -1,23 +1,22 @@
-// Showreel: a click-to-load facade. Nothing from Vimeo or YouTube loads until the visitor asks for
-// it (privacy, speed). Without a playable reel the home page leaves the section out (render.js
-// pruneReel); the "REEL — coming soon" slate below is only a fallback if mountReel is called anyway.
+// Showreel: a click-to-load facade. Nothing from Vimeo or YouTube loads until the visitor asks for it
+// (privacy, speed), and a video file waits for the same click. Without a playable reel the home page
+// leaves the section out (render.js pruneSections); the "REEL — coming soon" slate below is only a
+// fallback if mountReel is called anyway.
 //
 //   import { mountReel } from './reel.js';
 //   const reel = mountReel(document.querySelector('[data-reel-frame]'), data);
-//   reel.focus();   // "Watch reel" CTA: move focus to the play button (or the slate)
+//   reel.focus();        // "Watch reel" CTA: move focus to the play button (or the slate)
+//   reel.playFrom(62);   // the shot index: play from 1:02 and focus the player (a file seeks; an embed reloads there)
 //
-// data.reel: { provider: 'vimeo' | 'youtube' | 'file' | null, id, src, poster, title, runtime, placeholder }
+// A ?t= in the page's URL (the reel's key moments in search results link to index.html?t=62#reel)
+// labels the facade "Play from 1:02"; it never starts playback by itself.
+//
+// data.reel: { provider: 'vimeo' | 'youtube' | 'file' | null, id, hash, src, poster, title, runtime,
+//              captions: { lang, label, src? (a .vtt, for a file) }, placeholder }
 
-import { html, put, safeUrl, badge, slateLine } from './render.js';
+import { html, put, safeUrl, badge, slateLine } from './html.js';
+import { embedUrl, parseTime, formatTime } from './reel-data.js';
 
-const VALID = {
-  vimeo: id => /^\d{4,12}$/.test(String(id)),
-  youtube: id => /^[\w-]{6,20}$/.test(String(id)),
-};
-const EMBED = {
-  vimeo: id => `https://player.vimeo.com/video/${id}?autoplay=1&dnt=1&title=0&byline=0&portrait=0`,
-  youtube: id => `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0&modestbranding=1&playsinline=1`,
-};
 const NAME = { vimeo: 'Vimeo', youtube: 'YouTube' };
 
 function slate(frame, data) {
@@ -32,40 +31,60 @@ function slate(frame, data) {
     </div>`);
 }
 
+/** The reel's own captions, for a video file: <track kind="captions" default>. */
+function captionTrack(r) {
+  const c = r.captions ?? {}, src = safeUrl(c.src);
+  return src ? html`<track kind="captions" src="${src}" srclang="${c.lang ?? ''}" label="${c.label ?? c.lang ?? 'Captions'}" default>` : '';
+}
+
 export function mountReel(frame, data) {
   const r = data?.reel ?? {};
-  const api = { focus() { frame?.querySelector('[data-reel-focus]')?.focus({ preventScroll: true }); } };
-  if (!frame) return api;
-  const provider = r.provider;
-  const poster = safeUrl(r.poster);
-
-  if (provider === 'file') {
-    const src = safeUrl(r.src);
-    if (!src) { slate(frame, data); return api; }
-    put(frame, html`<video class="reel__video" controls playsinline preload="none" ${poster ? html`poster="${poster}"` : ''} data-reel-focus><source src="${src}">Your browser cannot play this video. <a href="${src}">Download the reel</a>.</video>`);
-    return api;
+  const focus = () => frame?.querySelector('[data-reel-focus]')?.focus({ preventScroll: true });
+  if (!frame || !embedUrl(r)) {
+    if (frame) slate(frame, data);
+    return { focus, playFrom() {} };
   }
 
-  if (!VALID[provider]?.(r.id)) { slate(frame, data); return api; }
+  const host = NAME[r.provider], poster = safeUrl(r.poster), runtime = parseTime(r.runtime);
+  // A deep link into the reel: labelled, never played by itself. A time past the runtime is ignored.
+  const asked = parseTime(new URLSearchParams(location.search).get('t'));
+  const from = asked >= 1 && (runtime == null || asked < runtime) ? Math.floor(asked) : 0;
+  let player = null;   // the <video> or <iframe>, once asked for
 
-  const label = `Play showreel (${NAME[provider]}, loads external player)`;
+  function play(s = 0) {
+    const at = Math.floor(parseTime(s) ?? 0);
+    if (r.provider === 'file') {
+      if (!player) {
+        const src = embedUrl(r);
+        put(frame, html`<video class="reel__video" controls playsinline preload="none" ${poster ? html`poster="${poster}"` : ''} data-reel-focus><source src="${src}">${captionTrack(r)}Your browser cannot play this video. <a href="${src}">Download the reel</a>.</video>`);
+        player = frame.querySelector('video');
+      }
+      player.currentTime = at;   // before the metadata has loaded, this is where playback starts
+      player.play()?.catch(() => { /* refused or interrupted: the controls are there */ });
+    } else {
+      // An embed cannot be sought from outside without its script API: a new player starts at that time.
+      const iframe = document.createElement('iframe');
+      iframe.className = 'reel__iframe';
+      iframe.src = embedUrl(r, { start: at });
+      iframe.title = `${r.title || 'Showreel'}: ${data.person?.name ?? ''}`;
+      iframe.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
+      iframe.allowFullscreen = true;
+      iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+      iframe.setAttribute('data-reel-focus', '');
+      frame.replaceChildren(iframe);
+      player = iframe;
+    }
+    player.focus();
+  }
+
+  const label = `Play showreel${from ? ` from ${formatTime(from)}` : ''}${host ? ` (${host}, loads external player)` : ''}`;
+  const shown = from ? `Play from ${formatTime(from)}` : `Play reel${runtime != null ? ` · ${formatTime(runtime)}` : ''}`;
   put(frame, html`
     <button class="reel-facade" type="button" aria-label="${label}" data-reel-focus>
       ${poster ? html`<img class="reel-facade__poster" src="${poster}" alt="" loading="lazy" decoding="async">` : html`<span class="reel-facade__poster reel-facade__poster--none" aria-hidden="true"></span>`}
       <span class="reel-facade__play" aria-hidden="true"><span></span></span>
-      <span class="reel-facade__label cam-label" aria-hidden="true">Play reel${r.runtime ? ` · ${r.runtime}` : ''} · ${NAME[provider]}</span>
+      <span class="reel-facade__label cam-label" aria-hidden="true">${shown}${host ? ` · ${host}` : ''}</span>
     </button>`);
-  frame.querySelector('.reel-facade').addEventListener('click', () => {
-    const iframe = document.createElement('iframe');
-    iframe.className = 'reel__iframe';
-    iframe.src = EMBED[provider](encodeURIComponent(r.id));
-    iframe.title = `${r.title || 'Showreel'}: ${data.person?.name ?? ''}`;
-    iframe.allow = 'autoplay; fullscreen; picture-in-picture; encrypted-media';
-    iframe.allowFullscreen = true;
-    iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-    iframe.setAttribute('data-reel-focus', '');
-    frame.replaceChildren(iframe);
-    iframe.focus();
-  }, { once: true });
-  return api;
+  frame.querySelector('.reel-facade').addEventListener('click', () => play(from), { once: true });
+  return { focus, playFrom: play };
 }

@@ -1,0 +1,126 @@
+/* Photographs: photographs.html (the owner's still photography in series, and its print view) and the home
+   page's teaser in #photographs. Requires tokens.css, base.css, site.css.
+   Every photograph shows whole at its own aspect: its width and height attributes reserve the box, the
+   column sets the width, nothing is cropped. Screen: one column on phones, two from 900 px (CSS columns,
+   so the photographs keep their own heights). Print: one photograph to a page, contained in the page's
+   area inside 12 mm margins, and nothing else on the paper but the optional cover page (?cover=1), so
+   "Save as PDF" makes the file the schools ask for (APPLYING.md). The print rules belong to
+   photographs.html: link this file on another page with media="screen". */
+
+/* --- Page ------------------------------------------------------------------------------------------ */
+
+.site--photographs main { padding-top: 72px; }
+/* The header is solid from the top, as on the film pages: the page starts right under it. */
+.site--photographs .site-header {
+  background: rgb(7 8 10 / 0.86);
+  border-bottom-color: var(--line);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+}
+
+.photos-head { padding-block: clamp(56px, 8vw, 120px) clamp(40px, 5vw, 80px); display: grid; gap: var(--s5); justify-items: start; }
+.photos-head__slate { margin: 0; display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; }
+.photos-head__slate a { color: var(--paper-2); text-decoration: none; min-height: var(--target); display: inline-flex; align-items: center; }
+.photos-head__slate a:hover { color: var(--tungsten); }
+.photos-head__title { font-size: clamp(2.6rem, 1.2rem + 4.4vw, 7rem); font-weight: 400; line-height: 1; letter-spacing: -0.01em; }
+.photos-head__note, .photos-empty { max-width: 56ch; color: var(--paper-2); }
+.photos-empty { font-family: var(--font-display); font-style: italic; font-size: var(--step-2); line-height: 1.3; }
+.photos-head__tools { display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; }
+.photos-head__status:empty { display: none; }
+[data-print][aria-busy="true"] { cursor: progress; border-color: var(--tungsten); color: var(--tungsten); }
+/* Printing from the button needs JavaScript (it loads every photograph first). */
+html:not(.js) [data-print] { display: none; }
+
+.photos { padding-bottom: var(--section-pad); }
+.photo-series { display: grid; gap: var(--s6); }
+.photo-series + .photo-series { margin-top: clamp(40px, 5vw, 88px); padding-top: clamp(48px, 6vw, 104px); border-top: 1px solid var(--line); }
+.photo-series__head { display: grid; gap: var(--s3); max-width: 62ch; }
+.photo-series__title { font-size: var(--step-3); font-weight: 400; }
+.photo-series__meta { margin: 0; display: flex; flex-wrap: wrap; gap: var(--s3); align-items: center; }
+.photo-series__note { color: var(--paper-2); }
+
+/* Columns, not a grid: a grid lines photographs up in rows, which would crop them or leave gaps. */
+.photo-grid { margin: 0; padding: 0; list-style: none; columns: 1; column-gap: clamp(20px, 2.4vw, 56px); }
+@media (min-width: 900px) { .photo-grid { columns: 2; } }
+.photo { break-inside: avoid; padding-bottom: clamp(20px, 2.4vw, 56px); }
+.photo__figure { margin: 0; display: grid; gap: var(--s3); }
+.photo__img { width: 100%; height: auto; background: var(--ink-0); }
+.photo__caption { color: var(--paper-2); font-size: 0.92rem; }
+
+/* The cover page (?cover=1): on screen, a sheet above the photographs; in print, the first page. */
+.photos-cover {
+  display: grid; gap: var(--s4); align-content: center; justify-items: start;
+  margin-bottom: clamp(48px, 6vw, 96px); padding: clamp(32px, 5vw, 80px);
+  border: 1px solid var(--line);
+}
+.photos-cover__kicker { color: var(--tungsten); }
+.photos-cover__name { font-family: var(--font-display); font-size: clamp(2.2rem, 1.2rem + 3.2vw, 5rem); letter-spacing: var(--tracking-display); text-transform: uppercase; line-height: 1.05; }
+.photos-cover__role { font-family: var(--font-display); font-style: italic; font-size: var(--step-2); color: var(--paper-2); }
+.photos-cover__contact { margin: var(--s3) 0 0; padding: 0; list-style: none; display: grid; gap: var(--s1); font-family: var(--font-mono); font-size: var(--step--1); letter-spacing: var(--tracking-mono); }
+.photos-cover__series { margin: var(--s5) 0 0; padding: 0; list-style: none; display: grid; gap: var(--s2); }
+.photos-cover__title { font-family: var(--font-display); font-size: var(--step-1); margin-right: var(--s3); }
+
+/* --- The home page's teaser (#photographs on index.html) ------------------------------------------ */
+
+.photo-teaser { display: grid; gap: var(--s6); }
+.photo-teaser__series { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: var(--s3) var(--s7); align-items: baseline; }
+.photo-teaser__series a {
+  font-family: var(--font-display); font-size: var(--step-2); line-height: 1.2; text-decoration: none; margin-right: var(--s2);
+  background: linear-gradient(var(--tungsten), var(--tungsten)) 100% 100% / 0 1px no-repeat;
+  transition: background-size 450ms var(--ease-io-expo);
+}
+.photo-teaser__series a:hover, .photo-teaser__series a:focus-visible { background-size: 100% 1px; background-position-x: 0; }
+/* A contact sheet: columns keep each photograph whole at its own aspect. */
+.photo-teaser__strip { margin: 0; padding: 0; list-style: none; columns: 2; column-gap: var(--s3); }
+@media (min-width: 720px) { .photo-teaser__strip { columns: 3; column-gap: var(--s5); } }
+.photo-teaser__item { break-inside: avoid; padding-bottom: var(--s3); }
+@media (min-width: 720px) { .photo-teaser__item { padding-bottom: var(--s5); } }
+.photo-teaser__img { width: 100%; height: auto; background: var(--ink-0); }
+.photo-teaser__more { margin: 0; }
+
+@media (forced-colors: active) {
+  .photo__img, .photo-teaser__img { border: 1px solid CanvasText; }
+}
+
+/* --- Print: one photograph to a page --------------------------------------------------------------- */
+
+@page { size: auto; margin: 12mm; }
+
+@media print {
+  /* Black on white. The rules below are the photographs page's own (body.site--photographs), so the file
+     can never reshape another page's print; @page is the one rule that cannot be scoped. */
+  .site--photographs {
+    color-scheme: light;
+    --ink-0: #fff; --ink-1: #fff; --ink-2: #f2f2f2; --ink-3: #e6e6e6;
+    --line: #c4c4c4; --line-strong: #8c8c8c;
+    --paper: #000; --paper-2: #2b2b2b; --paper-3: #555;
+    --tungsten: #7a4310; --sample: #7a4310;
+    --grain: none;
+    background: #fff !important; color: #000;
+  }
+  :root:has(> .site--photographs) { background: #fff !important; }
+  .site--photographs::after { display: none !important; }
+
+  /* Only the photographs (and the cover page) reach the paper: nothing outside <main>, whatever else is in
+     the document (a browser extension's element after the last photograph would start a blank page). */
+  :root:has(> .site--photographs) > :not(head, body), .site--photographs > :not(main),
+  .site--photographs :is(.photos-head, .photo-series__head) { display: none !important; }
+  .site--photographs :is(main, .photos, .photo-series) { display: block; padding: 0; margin: 0; border: 0; }
+  .site--photographs .container { width: 100%; margin: 0; }
+  .site--photographs .photo-grid { columns: auto; }
+  .site--photographs .photo { padding: 0; }
+
+  /* Each photograph fills the page's area and is contained in it. In paged media 100vh is the page area
+     (the sheet less its 12 mm margins), whatever the paper; 1 px under it, a rounding error can never
+     push a photograph onto a second page. */
+  .site--photographs .photo__figure {
+    break-after: page; break-inside: avoid;
+    height: calc(100vh - 1px);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3mm;
+  }
+  .site--photographs .photo__img { flex: 1 1 0; min-height: 0; width: 100%; height: 100%; object-fit: contain; background: none; }
+  .site--photographs .photo__caption { flex: none; font-size: 9pt; color: #2b2b2b; text-align: center; }
+
+  .site--photographs .photos-cover { break-after: page; height: calc(100vh - 1px); margin: 0; padding: 0; border: 0; align-content: center; }
+  .site--photographs .photos-cover a { color: inherit; text-decoration: none; }
+}

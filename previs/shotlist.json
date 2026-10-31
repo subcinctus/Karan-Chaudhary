@@ -534,13 +534,36 @@
         "cameraLocalRot": {"pitch":-4.01,"yaw":0,"roll":0},
         "how": "Spawn an empty actor at the head as the pivot; attach the CineCamera to it at the local offset and rotation; key only the pivot Yaw."
       },
+      "lightsOverride": {
+        "why": "The preset's key (90°, level, 1.5 m) would be in the picture for most of the arc. Raised to 35° and moved back to 3.5 m it stays above the top of the frame from every point of it; intensity × (3.5 / 1.5)² keeps the light on the face.",
+        "lights": [
+          {
+            "name": "LGT_PV030_Key",
+            "role": "key",
+            "type": "RectLight",
+            "az": 90,
+            "el": 35,
+            "dist": 350,
+            "loc": [0,-286.7,350.8],
+            "rot": {"pitch":-35,"yaw":90,"roll":0},
+            "sourceWidth": 60,
+            "sourceHeight": 60,
+            "kelvin": 3200,
+            "intensity": 5.4444
+          }
+        ]
+      },
       "keys": [
         {"t":0.5,"frame":12,"pivotYaw":54.43,"focal":24,"focus":599.9,"dof":{"near":347.5,"far":2190.4}},
         {"t":3.6,"frame":86.4,"pivotYaw":-54.43,"focal":24,"focus":599.9,"dof":{"near":347.5,"far":2190.4}}
       ],
       "motionBlur": {"shutterAngle":180,"motionBlurAmount":0.5,"temporalSamples":8},
       "props": [],
-      "notes": "A 109° arc at 6 m. The camera is parented to a pivot at the head and the pivot yaw is keyed (+54.4° → −54.4°), so the path is a true arc. Under split light the move carries the face from its lit half to its shadow half."
+      "notes": "A 109° arc at 6 m. The camera is parented to a pivot at the head and the pivot yaw is keyed (+54.4° → −54.4°), so the path is a true arc. Under split light the move carries the face from its lit half to its shadow half; for this shot the key is raised to 35° and moved back to 3.5 m, so it never enters the frame.",
+      "framing": {
+        "lights": [{"name":"LGT_PV030_Key","clearance":1.171,"pivotYaw":-54.4}],
+        "note": "Clearance: the least max(|x|, |y|) of each source (centre and corners) over the arc, in half-frames; above 1 it never enters the picture."
+      }
     },
     {
       "id": "PV-040",

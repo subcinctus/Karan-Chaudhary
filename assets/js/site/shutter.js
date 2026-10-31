@@ -11,13 +11,16 @@
 // (sessionStorage flag read by the inline <head> script, which also restores the intertitle) and calls
 // openShutter() once its content is rendered. bfcache-safe: a page restored from the back/forward
 // cache is uncovered at once. WAAPI only (no GSAP), so phones get it and it never depends on the
-// desktop layer. Reduced motion / Motion off: ordinary navigation, never covered.
+// desktop layer. Reduced motion / Motion off: ordinary navigation, never covered. Where cross-document
+// view transitions run, the match cut (match-cut.js, transitions.css) is the cut and the curtain steps
+// aside; it stays the fallback for Firefox and older browsers.
 //
 //   import { initShutter, openShutter } from './shutter.js';
 //   initShutter();          // start intercepting links
 //   openShutter();          // after the first render (no-op unless the page arrived covered)
 
 import { isReducedMotion } from '../core/motion-pref.js';
+import { supportsMatchCut } from './match-cut.js';
 
 const KEY = 'kc:shutter';
 const EASE_IO = 'cubic-bezier(.77, 0, .175, 1)';
@@ -52,9 +55,9 @@ function target(e) {
   return { url, title: titleOf(a) };
 }
 
-/** The film a link leads to, for the intertitle (work cards and the project pager name one). */
+/** The film a link leads to, for the intertitle (work cards, Index rows and the project pager name one). */
 function titleOf(a) {
-  const t = a.querySelector('.work-card__title, .film__pager-title')?.textContent?.trim();
+  const t = a.querySelector('.work-card__title, .work-index__title, .film__pager-title')?.textContent?.trim();
   return t && t.length <= 80 ? t : '';
 }
 
@@ -62,7 +65,7 @@ function titleOf(a) {
 const cssString = s => `"${String(s).replace(/[\\"]/g, '\\$&').replace(/[\n\r\f]/g, ' ')}"`;
 
 function onClick(e) {
-  if (leaving || isReducedMotion()) return;
+  if (leaving || isReducedMotion() || supportsMatchCut()) return;
   const hit = target(e);
   if (!hit || !panel) return;
   e.preventDefault();

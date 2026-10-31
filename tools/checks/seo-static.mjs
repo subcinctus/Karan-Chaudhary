@@ -1,0 +1,225 @@
+// Check plugin: what crawlers and visitors without JavaScript get (tools/prerender.mjs).
+//   static "seo-static"
+//     - The prerender markers are present and balanced in index.html and project.html (photographs.html
+//       too once it exists), and tools/prerender.mjs generate() succeeds (FAIL otherwise). Committed files
+//       that differ from its output are stale: a WARN naming npm run prerender, never a FAIL, because an
+//       edit made in GitHub's web editor cannot run it and CI regenerates the files into _site anyway.
+//     - The index that ships (generate()'s output) reads as text: its stripped text holds the name, the
+//       role, every film title, "Filmography" and the email, and none of the decoration ("Reel 1", "000",
+//       "TC 00"). The static project.html names every film.
+//     - JSON-LD parses and holds no "</": a Person (#person), an ItemList of exactly the real films, and a
+//       VideoObject exactly when the reel, its poster and its upload date exist, with Clip offsets ascending.
+//     - Speculation rules parse and never prerender (that would start a page's Players unseen).
+//     - sitemap.xml: the home page, photographs.html once it has photographs, and only the real films.
+//   browser "static-content" (the generated index.html, served in place of the committed file)
+//     - JavaScript off, 1440×900: the film titles and the email are visible and nothing overflows sideways
+//       (full-page screenshot .artifacts/screens/nojs--index--1440x900.png).
+//     - JavaScript on, at 1440×900 and 390×844, from the top and arriving on #contact: the layout shift from
+//       the first paint through main.js's re-render (and 1.5 s more) totals at most 0.02.
+// The text helper is exported for tools/test/prerender.test.mjs.
+
+import fs from 'node:fs';
+
+/** The text a fetch without JavaScript reads: comments, scripts, styles and tags removed, entities decoded. */
+export function pageText(html, decode = s => s) {
+  const text = String(html).replace(/<!--[\s\S]*?-->/g, ' ').replace(/<(script|style|template)\b[\s\S]*?<\/\1\s*>/gi, ' ').replace(/<[^>]+>/g, ' ');
+  return decode(text).replace(/\s+/g, ' ').trim();
+}
+
+/** Every JSON-LD block of a page: [{ raw, json | error }]. */
+export function jsonLdBlocks(html) {
+  return [...String(html).matchAll(/<script\b[^>]*\btype\s*=\s*"application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi)].map(m => {
+    try { return { raw: m[1], json: JSON.parse(m[1]) }; } catch (e) { return { raw: m[1], error: e.message }; }
+  });
+}
+
+const nodesOf = j => [j, ...(Array.isArray(j?.['@graph']) ? j['@graph'] : [])].filter(n => n && typeof n === 'object');
+const typed = (nodes, t) => nodes.filter(n => [].concat(n['@type']).includes(t));
+
+async function staticRun({ pass, fail, warn, info, R, read, exists, deployedFiles, loadData, decode }) {
+  let P;
+  try { P = await import('../prerender.mjs'); } catch (e) { return fail(`tools/prerender.mjs does not import: ${e.message.split('\n')[0]}`); }
+  const data = await loadData();
+
+  // 1. Markers, generation, sync.
+  let pages;
+  try { pages = P.readPages(); } catch (e) { return fail(`prerender pages: ${e.message}`); }
+  let bad = 0;
+  const counts = [];
+  for (const [file, src] of pages) {
+    try {
+      const names = P.markers(file, src).map(p => p.name);
+      const spec = P.PAGES[file];
+      const missing = Object.keys(spec.markers).filter(n => !names.includes(n));
+      const unknown = names.filter(n => !spec.markers[n] && !spec.optional?.[n]);
+      if (missing.length) { bad++; fail(`${file}: missing prerender marker(s) ${missing.join(', ')}`); }
+      if (unknown.length) { bad++; fail(`${file}: unknown prerender marker(s) ${unknown.join(', ')}`); }
+      counts.push(`${file} ${names.length}`);
+    } catch (e) { bad++; fail(e.message); }
+  }
+  if (bad) return;
+  let out;
+  try { out = P.generate(data, pages); } catch (e) { return fail(`tools/prerender.mjs generate() failed: ${e.message}`); }
+  pass(`prerender markers present and balanced (${counts.join(', ')}); generate() writes ${[...out.keys()].join(', ')}`);
+  const stale = [...out].filter(([f, c]) => !exists(f) || read(f) !== c).map(([f]) => f);
+  if (stale.length) warn(`stale: ${stale.join(', ')} ${stale.length === 1 ? 'differs' : 'differ'} from what data/portfolio.js renders: run npm run prerender (CI regenerates them into _site, so the deployed site is current)`);
+  else pass(`committed ${[...out.keys()].join(', ')} are in sync with data/portfolio.js`);
+
+  // 2. The static index reads as text; the static project.html names every film.
+  const index = out.get('index.html');
+  const text = pageText(index, decode);
+  const films = (data.films ?? []).filter(f => f?.title);
+  const want = [data.person?.name, data.person?.role, ...films.map(f => f.title), 'Filmography', data.contact?.email].filter(Boolean);
+  const missing = want.filter(w => !text.includes(w));
+  const decor = ['Reel 1', '000', 'TC 00'].filter(w => text.includes(w));
+  if (missing.length) fail(`static index.html text lacks ${missing.map(w => `"${w}"`).join(', ')}`);
+  if (decor.length) fail(`static index.html text contains decoration ${decor.map(w => `"${w}"`).join(', ')} (keep it in data-* attributes, printed by CSS)`);
+  if (!missing.length && !decor.length) pass(`static index.html reads as text (${text.length} characters): the name, role, ${films.length} film titles, "Filmography" and the email; no "Reel 1", "000" or "TC 00"`);
+  const projectText = pageText(out.get('project.html') ?? '', decode);
+  const unlisted = films.filter(f => !projectText.includes(f.title)).map(f => f.title);
+  if (unlisted.length) fail(`static project.html does not name ${unlisted.join(', ')}`);
+  else pass(`static project.html names all ${films.length} films (its filmography, hidden under html.js)`);
+
+  // 3. JSON-LD.
+  const errs = [];
+  const blocks = [...out].filter(([f]) => f.endsWith('.html')).flatMap(([f, html]) => jsonLdBlocks(html).map(b => ({ ...b, file: f })));
+  for (const b of blocks) {
+    if (b.error) errs.push(`${b.file}: JSON-LD does not parse: ${b.error}`);
+    if (/<\//.test(b.raw)) errs.push(`${b.file}: JSON-LD holds "</" (escape "<" as \\u003c)`);
+  }
+  const ld = blocks.find(b => b.file === 'index.html' && b.json)?.json;
+  const nodes = nodesOf(ld);
+  const person = typed(nodes, 'Person')[0];
+  if (!person) errs.push('index.html: JSON-LD has no Person');
+  else if (!String(person['@id'] ?? '').endsWith('#person')) errs.push(`index.html: the Person's @id is ${JSON.stringify(person['@id'])}, expected …#person`);
+  const real = films.filter(f => f.placeholder !== true).map(f => f.title);
+  const list = typed(nodes, 'ItemList')[0];
+  const listed = (list?.itemListElement ?? []).map(e => e?.item?.name);
+  if (JSON.stringify(listed) !== JSON.stringify(real)) errs.push(`index.html: the ItemList names ${JSON.stringify(listed)}, the real films are ${JSON.stringify(real)} (sample films never enter it)`);
+  const r = data.reel ?? {};
+  const wantVideo = R.hasReel(data) && !!R.safeUrl(r.poster) && !!r.uploadDate;
+  const videos = typed(nodes, 'VideoObject');
+  if (wantVideo && videos.length !== 1) errs.push(`index.html: the reel has a poster and an upload date but the JSON-LD has ${videos.length} VideoObject(s) (reel-data.js videoObjectLD)`);
+  if (!wantVideo && videos.length) errs.push('index.html: a VideoObject without a playable reel, a poster and an upload date');
+  for (const v of videos) {
+    const clips = [].concat(v.hasPart ?? []).filter(c => [].concat(c?.['@type']).includes('Clip'));
+    const starts = clips.map(c => Number(c.startOffset));
+    if (starts.some((s, i) => !Number.isFinite(s) || (i && s <= starts[i - 1]))) errs.push(`index.html: VideoObject Clip startOffsets are not ascending numbers: ${starts.join(', ')}`);
+    const backwards = clips.filter(c => c.endOffset != null && !(Number(c.endOffset) > Number(c.startOffset)));
+    if (backwards.length) errs.push(`index.html: ${backwards.length} Clip(s) end before they start`);
+  }
+  for (const e of errs) fail(e);
+  if (!errs.length) pass(`JSON-LD parses, holds no "</": ${nodes.map(n => [].concat(n['@type']).join('/')).filter(Boolean).join(', ')}${videos.length ? ` (${[].concat(videos[0].hasPart ?? []).length} Clips ascending)` : ` (no VideoObject: ${R.hasReel(data) ? 'no poster or upload date' : 'no reel yet'})`}; the ItemList ${real.length ? `names the ${real.length} real film(s)` : 'is left out while every film is a sample'}`);
+
+  // 4. Speculation rules: prefetch only.
+  let rules = 0;
+  const ruleErrs = [];
+  for (const f of deployedFiles(['.html'])) {
+    for (const m of read(f).matchAll(/<script\b[^>]*\btype\s*=\s*"speculationrules"[^>]*>([\s\S]*?)<\/script>/gi)) {
+      rules++;
+      let j;
+      try { j = JSON.parse(m[1]); } catch (e) { ruleErrs.push(`${f}: speculation rules do not parse: ${e.message}`); continue; }
+      if ('prerender' in j) ruleErrs.push(`${f}: speculation rules prerender (that would start the page's Players unseen): prefetch only`);
+    }
+  }
+  for (const e of ruleErrs) fail(e);
+  if (!ruleErrs.length) pass(`${rules} speculation-rules block(s) parse and only prefetch`);
+
+  // 5. The sitemap generate() writes.
+  const map = out.get('sitemap.xml') ?? '';
+  const locs = [...map.matchAll(/<loc>([^<]*)<\/loc>/g)].map(m => decode(m[1]));
+  const base = data.site?.url ?? '';
+  const filmUrl = f => new URL(`project.html?slug=${encodeURIComponent(f.slug)}`, base).href;
+  const wantLocs = [base, ...(R.hasPhotographs(data) && pages.has('photographs.html') ? [new URL('photographs.html', base).href] : []),
+    ...(data.films ?? []).filter(f => f?.slug && f.placeholder !== true).map(filmUrl)];
+  if (!/^<\?xml[^>]*\?>\s*(?:<!--[\s\S]*?-->\s*)?<urlset xmlns="http:\/\/www\.sitemaps\.org\/schemas\/sitemap\/0\.9">/.test(map)) fail('sitemap.xml is not a sitemaps.org urlset');
+  else if (JSON.stringify(locs) !== JSON.stringify(wantLocs)) fail(`sitemap.xml lists ${JSON.stringify(locs)}, expected ${JSON.stringify(wantLocs)}`);
+  else pass(`sitemap.xml lists ${locs.length} URL(s): the home page${wantLocs.length > 1 ? ', ' : ''}${locs.slice(1).map(u => u.slice(base.length)).join(', ')} (sample films left out)`);
+  info(`${stale.length ? 'run npm run prerender to refresh the committed files' : 'tools/prerender.mjs --check passes'}; CI writes the same output into _site`);
+}
+
+async function browserRun({ pass, fail, info, browser, watch, loadData, fullPageShot, abs, OPT }) {
+  if (OPT.only && !OPT.only.some(o => 'index'.includes(o))) return info('skipped: the index page is not selected (--only)');
+  const { srv, browser: chromium, contextOptions } = browser();
+  const data = await loadData();
+  const P = await import('../prerender.mjs');
+  const html = P.generate(data, P.readPages()).get('index.html');
+  const url = srv.url + 'index.html';
+  const serve = ctx => ctx.route(url, r => r.fulfill({ status: 200, contentType: 'text/html; charset=utf-8', body: html }));
+  const films = (data.films ?? []).map(f => f.title).filter(Boolean);
+  const email = data.contact?.email;
+
+  // 1. JavaScript off.
+  {
+    const ctx = await chromium.newContext({ ...contextOptions({ w: 1440, h: 900 }), javaScriptEnabled: false });
+    await serve(ctx);
+    const page = await ctx.newPage();
+    const { errors } = watch(page, srv);
+    try {
+      await page.goto(url, { waitUntil: 'load', timeout: 45000 });
+      await page.evaluate(() => document.fonts.ready);
+      const r = await page.evaluate(({ films, email }) => {
+        const shown = el => { const b = el.getBoundingClientRect(), cs = getComputedStyle(el); return b.width > 0 && b.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
+        const titles = [...document.querySelectorAll('.work-card__title')].filter(shown).map(el => el.textContent.trim());
+        const mail = [...document.querySelectorAll('a[href^="mailto:"]')].filter(shown).map(a => a.textContent.trim());
+        return { missing: films.filter(t => !titles.includes(t)), mail: mail.includes(email), sw: document.documentElement.scrollWidth, iw: innerWidth, js: document.documentElement.classList.contains('js') };
+      }, { films, email });
+      const shot = abs('.artifacts/screens/nojs--index--1440x900.png');
+      fs.mkdirSync(abs('.artifacts/screens'), { recursive: true });
+      await fullPageShot(page, shot, 1440);
+      const issues = [];
+      if (r.js) issues.push('html.js is set with JavaScript off');
+      if (r.missing.length) issues.push(`film titles not visible: ${r.missing.join(', ')}`);
+      if (email && !r.mail) issues.push(`the email ${email} is not a visible link`);
+      if (r.sw > r.iw + 1) issues.push(`horizontal overflow (scrollWidth ${r.sw} > ${r.iw})`);
+      // With JavaScript off, Chromium refuses the module scripts and their preloads ("csp"): that is the point.
+      const real = errors.filter(e => !/^requestfailed: \S+\.js csp$/.test(e));
+      if (real.length) issues.push(`${real.length} error(s): ${real.slice(0, 2).join(' | ')}`);
+      if (issues.length) fail(`index without JavaScript, 1440×900: ${issues.join('; ')}`);
+      else pass(`index without JavaScript, 1440×900: ${films.length} film titles and the email visible, no horizontal overflow (.artifacts/screens/nojs--index--1440x900.png)`);
+    } catch (e) { fail(`index without JavaScript: ${e.message.split('\n')[0]}`); }
+    await ctx.close();
+  }
+
+  // 2. JavaScript on: the layout shift until the scripts have rendered the same sections again. Arriving on
+  //    #contact puts prerendered content on screen while main.js replaces it, so a markup difference would
+  //    show; at 1440 that run is in reduced motion, because the desktop layer's pinned strip moves the page
+  //    by itself as it arms (not the prerender's doing).
+  const runs = [{ w: 1440, h: 900 }, { w: 390, h: 844 }, { w: 1440, h: 900, hash: '#contact', reduced: true }, { w: 390, h: 844, hash: '#contact' }];
+  for (const { w, h, hash = '', reduced = false } of runs) {
+    const tag = `${w}×${h}${hash ? ` ${hash}` : ''}${reduced ? ' (reduced motion)' : ''}`;
+    const ctx = await chromium.newContext(contextOptions({ w, h, reducedMotion: reduced ? 'reduce' : 'no-preference' }));
+    await serve(ctx);
+    await ctx.addInitScript(() => {
+      window.__shifts = []; window.__rerender = null;
+      new PerformanceObserver(list => {
+        for (const e of list.getEntries()) if (!e.hadRecentInput) window.__shifts.push({ value: e.value, at: Math.round(e.startTime), what: (e.sources ?? []).map(s => (s.node ? `${s.node.nodeName.toLowerCase()}.${String(s.node.className || '').split(' ')[0]}` : '?')).slice(0, 3).join(' ') });
+      }).observe({ type: 'layout-shift', buffered: true });
+      // The parser inserts the prerendered sections while loading; main.js replaces them afterwards.
+      new MutationObserver(ms => {
+        if (window.__rerender == null && document.readyState !== 'loading' && ms.some(m => m.target.matches?.('[data-render="work"]'))) window.__rerender = Math.round(performance.now());
+      }).observe(document, { childList: true, subtree: true });
+    });
+    const page = await ctx.newPage();
+    const { errors } = watch(page, srv);
+    try {
+      await page.goto(url + hash, { waitUntil: 'load', timeout: 45000 });
+      await page.waitForFunction(() => window.__rerender != null, null, { timeout: 15000 });
+      await page.waitForTimeout(1500);
+      const r = await page.evaluate(() => ({ shifts: window.__shifts, rerender: window.__rerender }));
+      const cls = r.shifts.reduce((s, e) => s + e.value, 0);
+      const worst = [...r.shifts].sort((a, b) => b.value - a.value).slice(0, 3).map(e => `${e.value.toFixed(4)} at ${e.at} ms ${e.what}`).join('; ');
+      if (errors.length) fail(`index with JavaScript, ${tag}: ${errors.length} error(s): ${errors.slice(0, 2).join(' | ')}`);
+      if (cls > 0.02) fail(`${tag}: layout shift ${cls.toFixed(4)} > 0.02 from the first paint through main.js's re-render at ${r.rerender} ms (${worst})`);
+      else pass(`${tag}: layout shift ${cls.toFixed(4)} ≤ 0.02 from the first paint through main.js's re-render at ${r.rerender} ms and 1.5 s after (${r.shifts.length} shift(s)${worst ? `: ${worst}` : ''})`);
+    } catch (e) { fail(`index with JavaScript, ${tag}: ${e.message.split('\n')[0]}`); }
+    await ctx.close();
+  }
+}
+
+export const staticSections = [
+  { name: 'seo-static', title: 'Static content and SEO: prerender markers and sync, page text, JSON-LD, speculation rules, sitemap', run: staticRun },
+];
+export const browserSections = [
+  { name: 'static-content', title: 'Static content in the browser: no-JS index at 1440, layout shift through the re-render (top and #contact, 1440 and 390)', run: browserRun },
+];

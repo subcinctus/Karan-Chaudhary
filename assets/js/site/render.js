@@ -1,141 +1,81 @@
-// Escaping templates and the section renderers shared by index.html and project.html.
+// The section renderers shared by index.html and project.html, the header and menu lists, and the page
+// chrome (header, menu sheet, anchors).
 //
-// Every string that comes from data/portfolio.js goes through esc(): the html`` tag escapes each
-// interpolated value unless it is wrapped in raw() (only for markup built by this module).
-// URLs go through safeUrl(): relative paths, https:, http: and mailto: only; never a leading "/".
+// The renderers are pure string builders that also run in Node: tools/prerender.mjs writes their output
+// into the pages for crawlers and no-JS visitors, and the page scripts render the same markup again (no
+// layout shift). The shared primitives (escaping, URL guards, formatters, the section head, JSON-LD)
+// live in ./html.js and are re-exported here, so `import * as R from './render.js'` reaches them all.
+// Blocks owned by the feature modules (work index, film facts, reel) are called from here in page
+// order; those modules import ./html.js, never this file.
 
-// --- Escaping ---------------------------------------------------------------------
+import {
+  html, raw, safeUrl, srcsetOf, pad2, aspectLabel, fpsLabel, filled, badge, camReport, sectionHead, scFor, hiddenSections,
+  hasReel, hasPrevisMedia, featuredStill, cleanPalette, paletteBackground, MOVE_NAMES, STUDY_LABEL,
+} from './html.js';
+import { renderWorkToggle, renderWorkIndex } from './work-index.js';
+import { renderCrew, renderLaurels, renderReferences, renderEnquiries, renderSequenceShell, renderPlotShell } from './film-facts.js';
+import { reelLabel, renderReelFallback } from './reel-data.js';
+import { renderReelIndex } from './reel-index.js';
 
-const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;', '`': '&#96;' };
-/** Escape text for HTML text and attribute positions. null/undefined → ''. */
-export const esc = v => (v == null ? '' : String(v).replace(/[&<>"'`]/g, c => ESC[c]));
+export * from './html.js';
 
-class Raw { constructor(s) { this.s = s; } toString() { return this.s; } }
-/** Mark trusted markup (built here) so html`` does not escape it. */
-export const raw = s => (s instanceof Raw ? s : new Raw(String(s ?? '')));
-
-function part(v) {
-  if (v == null || v === false) return '';
-  if (v instanceof Raw) return v.s;
-  if (Array.isArray(v)) return v.map(part).join('');
-  return esc(v);
-}
-/** Tagged template: interpolations are escaped; arrays are joined; raw() passes through. */
-export function html(strings, ...vals) {
-  let out = strings[0];
-  for (let i = 0; i < vals.length; i++) out += part(vals[i]) + strings[i + 1];
-  return new Raw(out);
-}
-
-/**
- * Make a data URL safe for href/src. Relative paths (no leading "/", no "//"), https:, http: and
- * mailto: are allowed; everything else (javascript:, data:, root-relative) returns null.
- */
-export function safeUrl(u, { allowMail = false } = {}) {
-  if (typeof u !== 'string') return null;
-  const s = u.trim();
-  if (!s || s.startsWith('/') || s.startsWith('\\')) return null;
-  const scheme = /^([a-z][a-z0-9+.-]*):/i.exec(s);
-  if (!scheme) return s;   // relative
-  const p = scheme[1].toLowerCase();
-  if (p === 'https' || p === 'http') return s;
-  if ((p === 'mailto' || p === 'tel') && allowMail) return s;
-  return null;
-}
-
-// --- Small formatters ----------------------------------------------------------------
-
-export const pad2 = n => String(n).padStart(2, '0');
-/** 2.39 → "2.39:1", 1.33 → "1.33:1" (4:3 shown as written in the data). */
-export const aspectLabel = a => `${Number(a).toFixed(2)}:1`;
-/** fps → "24 fps" / "23.976 fps". */
-export const fpsLabel = f => `${+Number(f).toFixed(3)} fps`;
-/** Slate object → "A-CAM · 40mm · T2.0 · 5600K · 24 fps · 2.39:1". */
-export function slateLine(s = {}) {
-  return [s.cam, s.lens, s.stop, s.kelvin && `${s.kelvin}K`, s.fps && `${s.fps} fps`, s.aspect].filter(Boolean).join(' · ');
-}
 export const studyAnchor = id => `study-${id}`;
 
-/** Template strings in data/portfolio.js that are not real information yet: never shown on the site. */
-const TEMPLATE_TEXT = new Set(['Director Name', 'Production / School', 'Artist / Label', 'Agency / Client', 'City, Country',
-  'School name', 'Programme / course', 'Years']);
-/** The value, or null while it still holds template text (so "dir. Director Name" is left out). */
-export const filled = v => (v == null || TEMPLATE_TEXT.has(String(v).trim()) ? null : v);
+// --- Header nav and menu sheet --------------------------------------------------------------
 
-/** True when data.reel points at something playable (a Vimeo / YouTube id or a video file). */
-export function hasReel(data) {
-  const r = data?.reel ?? {};
-  if (r.provider === 'file') return !!safeUrl(r.src);
-  if (r.provider === 'vimeo') return /^\d{4,12}$/.test(String(r.id ?? ''));
-  if (r.provider === 'youtube') return /^[\w-]{6,20}$/.test(String(r.id ?? ''));
-  return false;
-}
-/** True once at least one previs shot has a rendered video. */
-export const hasPrevisMedia = data => Object.values(data?.previs?.media ?? {}).some(m => !!safeUrl(m?.video));
-/** Scene number for a section: the reel is Sc. 01 when there is one; without it every scene moves up. */
-export const scNo = (data, n) => pad2(hasReel(data) ? n : n - 1);
+/** The home page's sections as the header and the menu sheet list them: [id, nav label, menu label]. Contact is the header's pill. */
+const NAV = [
+  ['reel', 'Reel', 'Reel'], ['work', 'Work', 'Selected work'], ['photographs', 'Photographs', 'Photographs'],
+  ['studies', 'Studies', 'Studies'], ['previs', 'Previs', 'Previs'], ['about', 'About', 'About'],
+  ['credits', 'Credits', 'Credits'], ['contact', null, 'Contact'],
+];
 
 /**
- * Without a reel there is no reel section: hide it, drop every "#reel" link (header, menu sheet) and
- * renumber the menu's scene labels, so the first thing under the name is the work, not an absence.
+ * The header nav's list. Links are "#id" on the home page and "index.html#id" elsewhere (base). Sections
+ * that wait for material are listed hidden, so pruneSections() can show them once the data has it.
  */
-export function pruneReel(data) {
-  if (hasReel(data)) return;
-  document.getElementById('reel')?.setAttribute('hidden', '');
-  for (const a of document.querySelectorAll('a[href="#reel"], a[href="index.html#reel"]')) {
-    if (a.matches('[data-watch-reel]')) continue;
-    (a.closest('li') ?? a).remove();
+export function renderNav(data, { base = '' } = {}) {
+  const off = hiddenSections(data);
+  return html`<ul role="list">${NAV.filter(([, nav]) => nav).map(([id, nav]) => html`<li${off[id] ? raw(' hidden') : ''}><a href="${base}#${id}">${nav}</a></li>`)}</ul>`;
+}
+
+/** The menu sheet's list, each section with its scene number. */
+export function renderMenu(data, { base = '' } = {}) {
+  const off = hiddenSections(data);
+  return html`<ol class="menu__list" role="list">${NAV.map(([id, , label]) => html`<li${off[id] ? raw(' hidden') : ''}><a href="${base}#${id}"><span class="cam-label" aria-hidden="true">Sc. ${scFor(data, id)}</span>${label}</a></li>`)}</ol>`;
+}
+
+/**
+ * Sections that wait for real material (the reel, the photographs) stay hidden, with their header and
+ * menu links, until data/portfolio.js has it, and the menu's scene labels follow (scFor): the first
+ * thing under the name is the work, not an absence. Runs on the home page and on pages whose links
+ * point at index.html#…; safe to run again.
+ */
+export function pruneSections(data) {
+  const off = hiddenSections(data);
+  for (const [id, hide] of Object.entries(off)) document.getElementById(id)?.toggleAttribute('hidden', hide);
+  for (const a of document.querySelectorAll('.site-nav a[href*="#"], .menu__list a[href*="#"]')) {
+    const id = a.hash.slice(1);
+    if (id in off) (a.closest('li') ?? a).hidden = off[id];
+    const sc = a.querySelector('.cam-label');
+    if (sc) sc.textContent = `Sc. ${scFor(data, id)}`;
   }
-  document.querySelectorAll('.menu__list > li .cam-label').forEach((el, i) => { el.textContent = `Sc. ${pad2(i + 1)}`; });
 }
-
-/** Visible SAMPLE badge for placeholder records (when the site switch allows it). */
-export function badge(rec, data, label = 'Sample') {
-  if (!rec?.placeholder || data?.site?.showPlaceholderBadges === false) return '';
-  return html`<span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">${label}</span>`;
-}
-
-/** Camera-report rows: [[label, value], …] → <dl>. Empty values are skipped. */
-export function camReport(rows, cls = 'report') {
-  const items = rows.filter(([, v]) => v != null && v !== '' && v !== false);
-  return html`<dl class="${cls}">${items.map(([k, v]) => html`<div class="${cls}__row"><dt>${k}</dt><dd>${v}</dd></div>`)}</dl>`;
-}
-
-/** Section header used by every index section: slate line + h2. */
-export function sectionHead({ sc, label, title, id, aside = '', lede = '' }) {
-  return html`
-    <header class="section-head" data-reveal>
-      <p class="section-head__slate cam-label"><span>Sc. ${sc}</span><span class="section-head__rule" aria-hidden="true"></span><span>${label}</span>${aside ? html`<span class="section-head__aside">${aside}</span>` : ''}</p>
-      <h2 class="section-head__title" id="${id}">${title}</h2>
-      ${lede ? html`<p class="section-head__lede">${lede}</p>` : ''}
-    </header>`;
-}
-
-// --- Palette placeholders (used until pieces/still.js or shotcard.js exist) ---------------------
-
-/** CSS background for a film's palette when no still and no card piece is available. */
-export function paletteBackground(p = []) {
-  const [a = '#0C0D10', b = '#1E2127', c = '#8A857C', d = '#B9B3A8'] = p;
-  return `radial-gradient(60% 80% at 68% 58%, ${c}55 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, ${d}40 0%, transparent 70%), linear-gradient(180deg, ${a} 0%, ${b} 62%, ${a} 100%)`;
-}
-const HEX = /^#[0-9a-f]{6}$/i;
-export const cleanPalette = p => (Array.isArray(p) ? p.filter(c => HEX.test(c)) : []);
 
 // --- Index sections ---------------------------------------------------------------------
 
+/** The reel, its label and its shot index; nothing at all until there is a playable reel. */
 export function renderReel(data) {
+  if (!hasReel(data)) return '';
   const r = data.reel ?? {};
-  const s = data.person?.slate ?? {};
   return html`
-    ${sectionHead({ sc: '01', label: 'Showreel', title: r.title || 'Showreel', id: 'reel-title', aside: r.runtime ? `Runtime ${r.runtime}` : '' })}
+    ${sectionHead({ sc: scFor(data, 'reel'), label: 'Showreel', title: r.title || 'Showreel', id: 'reel-title', aside: reelLabel(r) })}
     <div class="reel" data-reveal>
-      <div class="reel__frame frame" style="--ar:${r.provider ? 16 / 9 : 2.39}" data-reel-frame></div>
-      <p class="reel__meta cam-label"><span>Showreel${r.runtime ? ` · ${r.runtime}` : ''}</span><span>Cinematography by ${data.person?.name ?? ''}</span>${r.provider ? badge(r, data) : ''}</p>
-    </div>`;
+      <div class="reel__frame frame" style="--ar:${16 / 9}" data-reel-frame>${renderReelFallback(data)}</div>
+      <p class="reel__meta cam-label"><span>Showreel${r.runtime ? ` · ${r.runtime}` : ''}</span><span>Cinematography by ${data.person?.name ?? ''}</span>${badge(r, data)}</p>
+    </div>
+    ${renderReelIndex(data)}`;
 }
-
-/** Motion Prompt camera moves used by the shot-language cards (and the previs shot list). */
-export const MOVE_NAMES = { '#027': 'Dolly in', '#030': 'Orbit', '#031': 'Crane up', '#032': 'Dolly zoom', '#033': 'Rack focus', '#043': 'Whip pan' };
 
 /** Film card for the Selected work grid. The frame hosts the shot-language card (or a still). */
 export function renderFilmCard(film, i, data) {
@@ -159,14 +99,16 @@ export function renderFilmCard(film, i, data) {
     </li>`;
 }
 
+/** Selected work: the view toggle in the head, the frames, then the index table (one shows at a time). */
 export function renderWork(data) {
   const films = data.films ?? [];
   const years = films.map(f => f.year).filter(Number.isFinite);
   const span = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : '';
   return html`
-    ${sectionHead({ sc: scNo(data, 2), label: 'Selected work', title: 'Selected work', id: 'work-title', aside: `${films.length} films${span ? ` · ${span}` : ''}`,
-      lede: 'Each frame is cropped to the aspect ratio the film was delivered in. Hover or focus a card to see the camera move that defines it.' })}
+    ${sectionHead({ sc: scFor(data, 'work'), label: 'Selected work', title: 'Selected work', id: 'work-title', aside: `${films.length} films${span ? ` · ${span}` : ''}`,
+      lede: 'Each frame is cropped to the aspect ratio the film was delivered in. Hover or focus a card to see the camera move that defines it.', tools: renderWorkToggle(data) })}
     <ol class="work-grid" role="list">${films.map((f, i) => renderFilmCard(f, i, data))}</ol>
+    ${renderWorkIndex(data)}
     <p class="work-note cam-label" data-reveal>Camera moves: Motion Prompt #027 #030 #031 #032 #033 #043 by Shohei Ohtaki (MIT).</p>`;
 }
 
@@ -189,6 +131,7 @@ export function renderStudy(study, data) {
       <header class="study-block__head" data-reveal>
         <p class="cam-label">Study ${copy.n}</p>
         <h3 class="study-block__title" id="${studyAnchor(study.id)}-title">${study.title}</h3>
+        <p class="tag study-block__kind">${STUDY_LABEL}</p>
         <p class="study-block__lede">${study.blurb || copy.lede}</p>
       </header>
       <div class="study-block__body">
@@ -206,7 +149,7 @@ export function renderStudy(study, data) {
 export function renderStudies(data) {
   const studies = data.studies ?? [];
   return html`
-    ${sectionHead({ sc: scNo(data, 3), label: 'Studies', title: 'Focus\u00a0/ Light\u00a0/ Colour', id: 'studies-title', aside: 'Rendered live',
+    ${sectionHead({ sc: scFor(data, 'studies'), label: 'Studies', title: 'Focus / Light / Colour', id: 'studies-title', aside: 'Rendered live',
       lede: 'Three working studies, each rendered live in your browser from the maths a camera department uses.' })}
     ${studies.map(s => renderStudy(s, data))}`;
 }
@@ -214,7 +157,7 @@ export function renderStudies(data) {
 export function renderPrevisShell(data) {
   const p = data.previs ?? {};
   return html`
-    ${sectionHead({ sc: scNo(data, 4), label: 'Previs', title: String(p.heading || 'Virtual production / Previs').replace(/ \//g, '\u00a0/'), id: 'previs-title', aside: 'Unreal Engine · Sequencer',
+    ${sectionHead({ sc: scFor(data, 'previs'), label: 'Previs', title: String(p.heading || 'Virtual production / Previs').replace(/ \//g, ' /'), id: 'previs-title', aside: 'Unreal Engine · Sequencer',
       lede: hasPrevisMedia(data) ? p.intro : (p.introPending || p.intro) })}
     <ol class="previs-grid" role="list" data-previs-grid hidden></ol>`;
 }
@@ -227,8 +170,10 @@ export function renderAbout(data) {
     ['Name', p.name], ['Role', (p.roles ?? [p.role]).filter(Boolean).join(' / ')], ['Based', filled(p.base)], ['Status', p.availability],
   ];
   const edu = (p.education ?? []).filter(e => filled(e.school));
+  // The owner's own list of films (FAMU asks for ten): text only, shown once there is one.
+  const films = (p.tenFilms ?? []).filter(f => f?.title);
   return html`
-    ${sectionHead({ sc: scNo(data, 5), label: 'About & approach', title: 'About', id: 'about-title' })}
+    ${sectionHead({ sc: scFor(data, 'about'), label: 'About & approach', title: 'About', id: 'about-title' })}
     <div class="about">
       <div class="about__lead" data-reveal>
         ${portrait ? html`<figure class="about__portrait frame" style="--ar:0.8"><img src="${portrait}" alt="${p.portrait?.alt ?? ''}" loading="lazy" decoding="async"></figure>` : ''}
@@ -239,6 +184,7 @@ export function renderAbout(data) {
         ${(bio.long ?? []).map(t => html`<p>${t}</p>`)}
         ${camReport(facts)}
         ${edu.length ? html`<div class="about__edu"><p class="cam-label">Education</p><ul role="list">${edu.map(e => html`<li><span class="about__school">${e.school}</span> <span class="about__prog">${[e.programme, e.years].filter(Boolean).join(' · ')}</span> ${badge(e, data)}</li>`)}</ul></div>` : ''}
+        ${films.length ? html`<div class="about__films"><p class="cam-label">${films.length === 10 ? 'Ten films' : 'Reference films'}</p><ul role="list">${films.map(f => html`<li><span class="about__film">${f.title}</span> <span class="about__prog">${[f.year, filled(f.dp) && `DP ${f.dp}`, f.note].filter(Boolean).join(' · ')}</span></li>`)}</ul></div>` : ''}
       </div>
     </div>
     <h3 class="approach-title" data-reveal>Approach</h3>
@@ -248,7 +194,7 @@ export function renderAbout(data) {
           <p class="approach__n cam-label">${pad2(i + 1)}</p>
           <h4 class="approach__head">${a.title}</h4>
           <p class="approach__text">${a.text}</p>
-          ${a.study ? html`<a class="approach__link" href="#${studyAnchor(a.study)}" data-study-link="${a.study}" ${a.preset ? raw(`data-study-preset="${esc(a.preset)}"`) : ''}>See it in the ${cap(a.study)} study${a.preset ? ` · ${presetName(a.preset)}` : ''} <span aria-hidden="true">→</span></a>` : ''}
+          ${a.study ? html`<a class="approach__link" href="#${studyAnchor(a.study)}" data-study-link="${a.study}" ${a.preset ? html`data-study-preset="${a.preset}"` : ''}>See it in the ${cap(a.study)} study${a.preset ? ` · ${presetName(a.preset)}` : ''} <span aria-hidden="true">→</span></a>` : ''}
         </li>`)}
     </ol>
     ${badge(p, data) ? html`<p class="approach__note cam-label" data-reveal>${badge(p, data, 'Sample approach')}</p>` : ''}`;
@@ -264,7 +210,7 @@ export function renderKit(data) {
       <dl class="kit__list">${groups.map(g => html`<div class="kit__row"><dt>${g.group}</dt><dd>${(g.items ?? []).join(' · ')}</dd></div>`)}</dl>
     </div>`;
   return html`
-    ${sectionHead({ sc: scNo(data, 6), label: 'Kit', title: 'Kit', id: 'kit-title', aside: k.placeholder ? '' : 'Camera report', lede: '' })}
+    ${sectionHead({ sc: scFor(data, 'kit'), label: 'Kit', title: 'Kit', id: 'kit-title', aside: k.placeholder ? '' : 'Camera report', lede: '' })}
     <div class="kit">${table('Owned', k.owned)}${table('Experienced with', k.experienced)}</div>
     ${badge(k, data) ? html`<p class="kit__note cam-label" data-reveal>${badge(k, data, 'Sample kit list')}</p>` : ''}`;
 }
@@ -301,7 +247,7 @@ export function renderContact(data) {
   return html`
     ${band.length ? html`<div class="marquee" data-marquee aria-hidden="true"><div class="marquee__track"><span class="marquee__unit">${band.map(t => html`<span>${t}</span><i>·</i>`)}</span></div></div>` : ''}
     <div class="contact" data-reveal>
-      <p class="cam-label">Sc. ${scNo(data, 7)} · Contact</p>
+      <p class="cam-label">Sc. ${scFor(data, 'contact')} · Contact</p>
       <h2 class="contact__title" id="contact-title">${c.heading || 'Contact'}</h2>
       <p class="contact__avail">${data.person?.availability}${filled(data.person?.base) ? ` · ${data.person.base}` : ''}</p>
       ${mail ? html`<p class="contact__mail"><a href="${mail}">${c.email}</a></p>` : ''}
@@ -342,22 +288,47 @@ export function renderColophon(data, { replay = true } = {}) {
 
 // --- Project page ---------------------------------------------------------------------------
 
+const MADE_AT = { school: 'School', independent: 'Independent', commissioned: 'Commissioned' };
+/** { type, name?, note? } → "School · name · note" / "Independent" / "Commissioned · client"; template text left out. */
+function madeAtLine(m) {
+  if (!MADE_AT[m?.type]) return null;
+  return [MADE_AT[m.type], filled(m.name), filled(m.note)].filter(Boolean).join(' · ');
+}
+/** 'none' → "None"; otherwise the owner's own words about what AI did on the film. */
+const aiUseLine = v => (typeof v !== 'string' || !v.trim() ? null : v.trim().toLowerCase() === 'none' ? 'None' : v.trim());
+/** { event, year, url? } → "Event · 2026", linked when there is a URL. */
+function premiereLine(p) {
+  const text = [filled(p?.event), p?.year].filter(Boolean).join(' · ');
+  if (!text) return null;
+  const href = safeUrl(p.url);
+  return href ? html`<a href="${href}" rel="noopener">${text}</a>` : text;
+}
+
+/** Camera-report rows for a film. Made at, Premiere and AI use show only once the owner fills them. */
 export function filmReport(f) {
   const lens = f.lenses ?? {}, cam = f.camera ?? {};
   return [
-    ['Role', f.role], ['Director', filled(f.director)], ['Production', filled(f.production)], ['Format', f.format], ['Runtime', f.runtime],
+    ['Role', f.role], ['Director', filled(f.director)], ['Production', filled(f.production)], ['Made at', madeAtLine(f.madeAt)],
+    ['Format', f.format], ['Runtime', f.runtime], ['Premiere', premiereLine(f.premiere)],
     ['Camera', cam.body], ['Mode', cam.mode], ['Codec', cam.codec],
     ['Lenses', [lens.set, lens.range].filter(Boolean).join(' · ')], ['Anamorphic', lens.anamorphic ? 'Yes' : null], ['Filtration', lens.filtration],
     ['Aspect', f.aspect ? aspectLabel(f.aspect) : null], ['Frame rate', f.frameRate ? fpsLabel(f.frameRate) : null],
     ['Camera move', f.move ? `${f.move} ${MOVE_NAMES[f.move] ?? ''}`.trim() : null],
+    ['AI use', aiUseLine(f.aiUse)],
   ];
 }
 
+/**
+ * The film page, in order: head → lead frame → report and credits | lighting, palette, laurels,
+ * watch, enquiries → sequence → frames → lighting plot → references → BTS → pager. A real featured
+ * still is in the lead frame from the first paint; procedural frames are painted by project.js.
+ */
 export function renderProject(film, data, { prev, next, index }) {
   const pal = cleanPalette(film.palette);
   const watch = safeUrl(film.watch);
-  const awards = (film.awards ?? []).filter(Boolean);
   const bts = (film.bts ?? []).filter(b => safeUrl(b?.src));
+  const lead = featuredStill(film);
+  const leadSet = srcsetOf(lead);
   return html`
     <article class="film" aria-labelledby="film-title" style="--ar:${Number(film.aspect) || 1.78}">
       <header class="film__head container">
@@ -365,12 +336,15 @@ export function renderProject(film, data, { prev, next, index }) {
         <h1 class="film__title" id="film-title">${film.title}</h1>
         <p class="film__logline">${film.logline}</p>
       </header>
-      <div class="film__hero container"><div class="film__frame frame" data-film-hero style="background:${paletteBackground(pal)}"></div></div>
+      <div class="film__hero container"><div class="film__frame frame" data-film-hero style="background:${paletteBackground(pal)}">${lead ? html`<img src="${safeUrl(lead.src)}"${leadSet ? html` srcset="${leadSet}" sizes="100vw"` : ''} alt="${lead.alt ?? ''}" decoding="async" fetchpriority="high">` : ''}</div></div>
       <div class="film__body container">
-        <section class="film__report" aria-labelledby="report-title">
-          <h2 class="cam-label film__h" id="report-title">Camera report</h2>
-          ${camReport(filmReport(film))}
-        </section>
+        <div class="film__facts">
+          <section class="film__report" aria-labelledby="report-title">
+            <h2 class="cam-label film__h" id="report-title">Camera report</h2>
+            ${camReport(filmReport(film))}
+          </section>
+          ${renderCrew(film, data)}
+        </div>
         <section class="film__notes" aria-labelledby="light-title">
           <h2 class="cam-label film__h" id="light-title">Lighting</h2>
           <p class="film__lighting">${film.lighting}</p>
@@ -378,14 +352,18 @@ export function renderProject(film, data, { prev, next, index }) {
           <ul class="palette" role="list" aria-labelledby="palette-title">
             ${pal.map(c => html`<li class="palette__chip"><span class="palette__swatch" style="background:${c}"></span><span class="palette__hex">${c.toUpperCase()}</span></li>`)}
           </ul>
-          ${awards.length ? html`<h2 class="cam-label film__h">Recognition</h2><ul class="film__awards" role="list">${awards.map(a => html`<li>${typeof a === 'string' ? a : a.title}</li>`)}</ul>` : ''}
+          ${renderLaurels(film, data)}
           ${watch ? html`<p class="film__watch"><a class="btn" href="${watch}" rel="noopener">Watch the film <span aria-hidden="true">↗</span></a></p>` : ''}
+          ${renderEnquiries(film, data)}
         </section>
       </div>
+      ${renderSequenceShell(film, data)}
       <section class="film__stills container" aria-labelledby="stills-title">
         <h2 class="cam-label film__h" id="stills-title">Frames</h2>
         <ul class="stills" role="list" data-stills></ul>
       </section>
+      ${renderPlotShell(film, data)}
+      ${renderReferences(film, data)}
       ${bts.length ? html`
         <section class="film__bts container" aria-labelledby="bts-title">
           <h2 class="cam-label film__h" id="bts-title">Behind the scenes</h2>
@@ -412,34 +390,7 @@ export function renderNotFound(slug, data) {
     </section>`;
 }
 
-// --- JSON-LD -------------------------------------------------------------------------------
-
-const abs = (data, rel) => (rel ? new URL(rel, data.site?.url ?? location.href).href : undefined);
-
-export function personLD(data) {
-  const p = data.person ?? {};
-  return {
-    '@context': 'https://schema.org', '@type': 'Person', name: p.name, jobTitle: p.role,
-    hasOccupation: { '@type': 'Occupation', name: (p.roles ?? [])[0] ?? p.role },
-    url: data.site?.url, image: abs(data, data.site?.ogImage),
-    // Unreal Engine is claimed only once a previs render exists (data.previs.media.*.video).
-    knowsAbout: (p.knowsAbout ?? ['Cinematography', 'Lighting', 'Colour grading', 'Previsualization'])
-      .filter(k => k !== 'Unreal Engine' || hasPrevisMedia(data)),
-    sameAs: (p.sameAs ?? []).filter(u => /^https:\/\//.test(u)),
-  };
-}
-
-export function creativeWorkLD(film, data) {
-  const p = data.person ?? {};
-  return {
-    '@context': 'https://schema.org', '@type': 'CreativeWork',
-    name: film.title, genre: film.format, dateCreated: film.year ? String(film.year) : undefined,
-    abstract: film.logline, url: abs(data, `project.html?slug=${encodeURIComponent(film.slug)}`),
-    contributor: { '@type': 'Person', name: p.name, jobTitle: film.role, url: data.site?.url },
-    ...(film.director && !film.placeholder ? { director: { '@type': 'Person', name: film.director } } : {}),
-    ...(film.placeholder ? { creativeWorkStatus: 'Sample placeholder' } : {}),
-  };
-}
+// --- JSON-LD (the builders are in ./html.js) ----------------------------------------------------
 
 /** Insert (or replace) a JSON-LD script; `<` is escaped so the JSON cannot close the tag. */
 export function setJsonLd(id, obj) {
@@ -447,9 +398,6 @@ export function setJsonLd(id, obj) {
   if (!el) { el = document.createElement('script'); el.type = 'application/ld+json'; el.id = id; document.head.append(el); }
   el.textContent = JSON.stringify(obj).replace(/</g, '\\u003c');
 }
-
-/** Write markup into an element (markup must come from html``). */
-export function put(el, markup) { if (el) el.innerHTML = String(markup); return el; }
 
 // --- Page chrome (header, menu sheet, motion toggles), shared by index.html and project.html ------
 

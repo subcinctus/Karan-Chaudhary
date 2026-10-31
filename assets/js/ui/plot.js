@@ -5,11 +5,14 @@
 //     cameras?: [{ x, y, fov, label, aim? }, …],                       // further cameras (e.g. a B camera)
 //     path?:   [{ x, y }, …],                                          // camera path, drawn dashed with an arrow
 //     subject: { x = 0, y = 0, r = 0.12, facing = 'camera', label },  // facing: 'camera' or an angle in degrees
-//     lights:  [{ role, az, el, dist, kelvin, label?, size? } | { role, x, y, kelvin, label? }, …],
+//     lights:  [{ role, az, el, dist, kelvin, label?, detail?, size? } | { role, x, y, kelvin, label?, detail? }, …],
 //     props?:  [{ x, y, r = 0.1, label, detail?, kelvin? }, …],        // set pieces; kelvin = a practical
 //     labels:  { title, desc, scale = true, extent? },                 // extent: minimum half-width (m) for a stable scale
 //   })
 //
+// A light's label is its role and Kelvin ("KEY" over "3200K · 45°↑"), or its own `label`; an optional
+// `detail` adds a line under it (the film page's plots: "KEY" over "2000K"). Labels sit beside their
+// glyphs and the plan widens until they fit, so a long line on a light far to one side zooms it out.
 // Plan coordinates: subject at the origin, camera toward +y (drawn at the bottom), +x = screen right.
 // Lights given in spherical form use (x, y) = (−sinθ·r, cosθ·r), θ positive = camera-left.
 // A camera's `aim` is the plan point { x, y } its lens looks toward (default: the subject).
@@ -62,7 +65,8 @@ export function renderPlan(svg, { camera = {}, cameras = [], path = null, subjec
     l.text = l.label ?? (Number.isFinite(l.el) ? lightLabel(l) : `${(l.role ?? 'light').toUpperCase()} ${l.kelvin ?? ''}K`);
     // Two lines when the label starts with its role ("KEY" / "3200K · 45°↑"): narrower boxes, calmer plan.
     const role = (l.role ?? '').toUpperCase();
-    l.lines = !l.label && role && l.text.startsWith(role + ' ') ? [role, l.text.slice(role.length + 1)] : [l.text];
+    const head = !l.label && role && l.text.startsWith(role + ' ') ? [role, l.text.slice(role.length + 1)] : [l.text];
+    l.lines = l.detail ? [...head, String(l.detail)] : head;
   }
   for (const p of P) p.lines = [p.label ?? 'PROP', p.detail].filter(Boolean).map(String);
 
@@ -117,15 +121,15 @@ export function renderPlan(svg, { camera = {}, cameras = [], path = null, subjec
     // Scale bar in the bottom-left corner (rings are 1 m apart).
     const bx = minX + unit * 5, by = maxY - unit * 5;
     svg.append(
-      s('path', { d: `M${f(bx)} ${f(by - unit)}V${f(by)}H${f(bx + 1)}V${f(by - unit)}`, ...stroke, style: 'stroke:var(--paper-3, #8A857C)', 'stroke-width': 1 }),
-      s('text', { x: f(bx + 1 + unit * 1.5), y: f(by), ...mono, style: 'fill:var(--paper-3, #8A857C)' }, '1 m'),
+      s('path', { d: `M${f(bx)} ${f(by - unit)}V${f(by)}H${f(bx + 1)}V${f(by - unit)}`, ...stroke, style: 'stroke:var(--paper-3, #8E8980)', 'stroke-width': 1 }),
+      s('text', { x: f(bx + 1 + unit * 1.5), y: f(by), ...mono, style: 'fill:var(--paper-3, #8E8980)' }, '1 m'),
     );
   }
 
   // Camera FOV wedges, out to just past the subject.
   for (const c of cams) svg.append(s('path', {
     d: `M${f(c.x)} ${f(c.y)}L${c.wedge.map(p => p.map(f).join(' ')).join('L')}Z`,
-    style: 'fill:var(--paper, #ECE6DA);fill-opacity:0.06;stroke:var(--paper-3, #8A857C);stroke-opacity:0.5',
+    style: 'fill:var(--paper, #ECE6DA);fill-opacity:0.06;stroke:var(--paper-3, #8E8980);stroke-opacity:0.5',
     'vector-effect': 'non-scaling-stroke',
   }));
 
@@ -164,7 +168,7 @@ export function renderPlan(svg, { camera = {}, cameras = [], path = null, subjec
     const [x, y] = p.xy, r = Math.max(p.r, unit * 1.2);
     const chip = Number.isFinite(p.kelvin) ? kelvinChip(p.kelvin, 5600) : null;
     if (chip) svg.append(s('circle', { cx: f(x), cy: f(y), r: f(r * 2.2), style: `fill:${chip};fill-opacity:0.18` }));
-    svg.append(s('circle', { cx: f(x), cy: f(y), r: f(r), style: chip ? `fill:${chip};stroke:var(--ink-0, #07080A)` : 'fill:var(--ink-3, #1E2127);stroke:var(--paper-3, #8A857C)', 'vector-effect': 'non-scaling-stroke' }));
+    svg.append(s('circle', { cx: f(x), cy: f(y), r: f(r), style: chip ? `fill:${chip};stroke:var(--ink-0, #07080A)` : 'fill:var(--ink-3, #1E2127);stroke:var(--paper-3, #8E8980)', 'vector-effect': 'non-scaling-stroke' }));
   }
 
   // Lights: a rectangle aimed at the subject, a Kelvin chip and a mono label. A light fanned out of
@@ -192,7 +196,7 @@ export function renderPlan(svg, { camera = {}, cameras = [], path = null, subjec
     const t = s('text', { x: f(b.x), y: f(b.y + unit * 1.1), 'text-anchor': b.anchor, ...mono, style: 'fill:var(--paper, #ECE6DA)' });
     it.lines.forEach((line, i) => t.append(s('tspan', {
       x: f(b.x), dy: i ? f(unit * FONT * 1.3) : null,
-      style: i ? `fill:var(${it.kind === 'prop' ? '--paper-3, #8A857C' : '--paper-2, #B9B3A8'})` : `fill:${chip}`,
+      style: i ? `fill:var(${it.kind === 'prop' ? '--paper-3, #8E8980' : '--paper-2, #B9B3A8'})` : `fill:${chip}`,
     }, line)));
     svg.append(t);
   }

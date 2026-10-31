@@ -1,0 +1,15 @@
+WEBVTT
+
+NOTE Fixture captions for the generated test reel (.artifacts/fixtures/reel.mp4, 20 s). Never deployed.
+
+00:00.000 --> 00:05.000
+FIXTURE CAPTION · test pattern, not the reel
+
+00:05.000 --> 00:10.000
+FIXTURE CAPTION · second cue
+
+00:10.000 --> 00:15.000
+FIXTURE CAPTION · third cue
+
+00:15.000 --> 00:20.000
+FIXTURE CAPTION · last cue

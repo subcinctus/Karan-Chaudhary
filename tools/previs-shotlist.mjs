@@ -90,38 +90,116 @@ function key(t, loc, rotation, focal, focus, tStop, extra = {}) {
 const nearFar = (focal, tStop, focus) => (({ near, far }) => ({ near, far }))(dof(focal, tStop, focus));
 
 // ---------------------------------------------------------------- lighting (core/presets.js)
+/**
+ * A preset's lights as the Unreal session places them (cm, aimed at the head). A light may carry `gain`:
+ * its intensity relative to the preset's own (a shot that moves a light keeps the light on the face).
+ */
+function lightRows(p, prefix = p.label.replace(/[^A-Za-z]/g, '')) {
+  const counts = {};
+  return p.lights.map(l => {
+    counts[l.role] = (counts[l.role] ?? 0) + 1;
+    const n = p.lights.filter(m => m.role === l.role).length > 1 ? `_${counts[l.role]}` : '';
+    const loc = unrealLocation(l, HEAD[2]);
+    const d = [HEAD[0] - loc[0], HEAD[1] - loc[1], HEAD[2] - loc[2]];
+    return {
+      name: `LGT_${prefix}_${l.role[0].toUpperCase()}${l.role.slice(1)}${n}`,
+      role: l.role, type: l.type,
+      az: l.az, el: l.el, dist: r(l.dist * 100, 1),
+      loc: vec(loc),
+      rot: rot(deg(Math.atan2(d[2], Math.hypot(d[0], d[1]))), deg(Math.atan2(d[1], d[0])), 0),
+      sourceWidth: r(l.size * 100, 1), sourceHeight: r(l.size * 100, 1),
+      kelvin: l.kelvin,
+      intensity: r((l.role === 'fill' ? fillIntensity(1, p.ratio) : 1) * (l.gain ?? 1), 4),
+    };
+  });
+}
+
 function lightingBlock() {
   const ids = [...PRESET_ORDER, ...Object.keys(LIGHTING_PRESETS).filter(k => !PRESET_ORDER.includes(k))];
   const out = {};
   for (const id of ids) {
     const p = LIGHTING_PRESETS[id];
-    const counts = {};
-    const lights = p.lights.map(l => {
-      counts[l.role] = (counts[l.role] ?? 0) + 1;
-      const n = p.lights.filter(m => m.role === l.role).length > 1 ? `_${counts[l.role]}` : '';
-      const loc = unrealLocation(l, HEAD[2]);
-      const d = [HEAD[0] - loc[0], HEAD[1] - loc[1], HEAD[2] - loc[2]];
-      return {
-        name: `LGT_${p.label.replace(/[^A-Za-z]/g, '')}_${l.role[0].toUpperCase()}${l.role.slice(1)}${n}`,
-        role: l.role, type: l.type,
-        az: l.az, el: l.el, dist: r(l.dist * 100, 1),
-        loc: vec(loc),
-        rot: rot(deg(Math.atan2(d[2], Math.hypot(d[0], d[1]))), deg(Math.atan2(d[1], d[0])), 0),
-        sourceWidth: r(l.size * 100, 1), sourceHeight: r(l.size * 100, 1),
-        kelvin: l.kelvin,
-        intensity: r(l.role === 'fill' ? fillIntensity(1, p.ratio) : 1, 4),
-      };
-    });
     out[id] = {
       label: p.label, mp: p.mp, ...(p.original ? { original: true } : {}), ...(p.p2 ? { p2: true, subjectYaw: p.yaw } : {}),
       note: p.note,
       ratio: p.ratio, ratioStops: r(ratioStops(p.ratio), 2),
       cameraWB: p.cameraWB, ambient: p.ambient, backgroundStops: p.backgroundStops,
       ...(p.veil ? { veil: { ...p.veil, hint: 'A low Exponential Height Fog with Volumetric Scattering on the key light' } } : {}),
-      lights,
+      lights: lightRows(p),
     };
   }
   return out;
+}
+
+/**
+ * A shot's own version of its preset's lights: `changes` by role (az, el in degrees, dist in metres). A light
+ * moved further away is turned up by the inverse square, so the face gets the light the preset gives it.
+ */
+function lightsOverride(shotId, presetId, changes, why) {
+  const p = LIGHTING_PRESETS[presetId];
+  const lights = p.lights.map(l => {
+    const c = changes[l.role];
+    return c ? { ...l, ...c, gain: ((c.dist ?? l.dist) / l.dist) ** 2 } : l;
+  });
+  return { why, lights: lightRows({ ...p, lights }, shotId.replace('-', '')) };
+}
+
+// ---------------------------------------------------------------- framing: what the lens sees
+/**
+ * Where a point sits in a camera's picture: x and y as fractions of the half-width and the half-height
+ * (both within ±1: inside the frame; y up) and z, its depth along the lens axis (cm; ≤ 0: behind the lens).
+ */
+export function inFrame(cam, { pitch = 0, yaw = 0 }, { hfov, vfov }, p) {
+  const pr = (pitch * Math.PI) / 180, yr = (yaw * Math.PI) / 180;
+  const f = [Math.cos(pr) * Math.cos(yr), Math.cos(pr) * Math.sin(yr), Math.sin(pr)];
+  const right = [-Math.sin(yr), Math.cos(yr), 0];
+  const up = [-Math.sin(pr) * Math.cos(yr), -Math.sin(pr) * Math.sin(yr), Math.cos(pr)];
+  const d = [p[0] - cam[0], p[1] - cam[1], p[2] - cam[2]];
+  const dot = a => a[0] * d[0] + a[1] * d[1] + a[2] * d[2];
+  const z = dot(f);
+  const tan = v => Math.tan((v / 2) * Math.PI / 180);
+  return { x: dot(right) / z / tan(hfov), y: dot(up) / z / tan(vfov), z };
+}
+
+/** A pivot rig's camera along its arc: `steps` + 1 positions and rotations between the first and last key. */
+export function orbitCameras(shot, steps = 240) {
+  const { loc, offset, cameraLocalRot } = shot.rig;
+  const [a, b] = [shot.keys[0].pivotYaw, shot.keys.at(-1).pivotYaw];
+  return Array.from({ length: steps + 1 }, (_, i) => {
+    const yaw = a + ((b - a) * i) / steps, y = (yaw * Math.PI) / 180;
+    return {
+      yaw, rot: { pitch: cameraLocalRot.pitch, yaw: yaw + cameraLocalRot.yaw },
+      loc: [loc[0] + offset[0] * Math.cos(y) - offset[1] * Math.sin(y), loc[1] + offset[0] * Math.sin(y) + offset[1] * Math.cos(y), loc[2] + offset[2]],
+    };
+  });
+}
+
+/** A rect light's centre and its four corners (cm): the source faces the head, its edges level and plumb. */
+export function lightCorners(light) {
+  const c = light.loc, n = [HEAD[0] - c[0], HEAD[1] - c[1], HEAD[2] - c[2]];
+  const h = Math.hypot(n[0], n[1]) || 1;
+  const side = [-n[1] / h, n[0] / h, 0];                    // level, across the source
+  const nl = Math.hypot(...n);
+  const up = [n[1] * side[2] - n[2] * side[1], n[2] * side[0] - n[0] * side[2], n[0] * side[1] - n[1] * side[0]].map(v => v / nl);
+  const hw = light.sourceWidth / 2, hh = light.sourceHeight / 2;
+  return [c, ...[[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([i, j]) => c.map((v, k) => v + i * hw * side[k] + j * hh * up[k]))];
+}
+
+/**
+ * How far a light keeps out of an orbit's frame: the least, over the arc and the source's centre and
+ * corners, of max(|x|, |y|) in frame units (above 1: never in the picture). Where that least value falls.
+ */
+export function clearance(shot, light) {
+  let least = Infinity, at = null;
+  for (const cam of orbitCameras(shot)) {
+    for (const p of lightCorners(light)) {
+      const q = inFrame(cam.loc, cam.rot, shot.lens, p);
+      if (q.z <= 0) continue;
+      const m = Math.max(Math.abs(q.x), Math.abs(q.y));
+      if (m < least) { least = m; at = r(cam.yaw, 1); }
+    }
+  }
+  return { clearance: r(least, 3), pivotYaw: at };
 }
 
 // ---------------------------------------------------------------- the six shots
@@ -176,7 +254,12 @@ function shots() {
         how: 'Spawn an empty actor at the head as the pivot; attach the CineCamera to it at the local offset and rotation; key only the pivot Yaw.',
       },
       keys: [pk(0.5, deg(a0)), pk(3.6, deg(-a0))],
-      notes: 'A 109° arc at 6 m. The camera is parented to a pivot at the head and the pivot yaw is keyed (+54.4° → −54.4°), so the path is a true arc. Under split light the move carries the face from its lit half to its shadow half.',
+      // The split preset's key (90°, level, 1.5 m) is in the picture for most of this arc: from the far side it
+      // hangs just behind the head. Raised to 35° and moved back to 3.5 m (3.5 m above the floor) the whole
+      // 0.6 m source clears the top of the frame from every point of the arc; it still splits the face.
+      lightsOverride: lightsOverride('PV-030', 'split', { key: { el: 35, dist: 3.5 } },
+        'The preset\'s key (90°, level, 1.5 m) would be in the picture for most of the arc. Raised to 35° and moved back to 3.5 m it stays above the top of the frame from every point of it; intensity × (3.5 / 1.5)² keeps the light on the face.'),
+      notes: 'A 109° arc at 6 m. The camera is parented to a pivot at the head and the pivot yaw is keyed (+54.4° → −54.4°), so the path is a true arc. Under split light the move carries the face from its lit half to its shadow half; for this shot the key is raised to 35° and moved back to 3.5 m, so it never enters the frame.',
     });
   }
 
@@ -263,6 +346,7 @@ function shots() {
       camera: s.camera, lens: s.lens, dof: dof(s.lens.focal, s.lens.tStop, s.lens.focus),
       durationS: s.durationS, ease: s.ease,
       ...(s.rig ? { rig: s.rig } : {}),
+      ...(s.lightsOverride ? { lightsOverride: s.lightsOverride } : {}),
       ...(s.bakedEveryFrames ? { bakedEveryFrames: s.bakedEveryFrames } : {}),
       keys: s.keys,
       ...(s.cameraB ? { cameraB: s.cameraB, cuts: s.cuts } : {}),
@@ -275,6 +359,23 @@ function shots() {
     start += frames;
     return out;
   });
+}
+
+/**
+ * Every orbit's lights stay out of its picture (a light on a stand in frame would make the shot unusable on
+ * a real stage): the shot list is not written while one would be seen. Returns, per orbit, each light's
+ * clearance (above 1: out of frame), which the shot carries as `framing`.
+ */
+export function checkFraming(shotList, lighting) {
+  for (const s of shotList) {
+    if (s.rig?.type !== 'pivot') continue;
+    const lights = s.lightsOverride?.lights ?? lighting[s.lighting]?.lights ?? [];
+    const rows = lights.map(l => ({ name: l.name, ...clearance(s, l) }));
+    const seen = rows.filter(row => !(row.clearance > 1));
+    if (seen.length) throw new Error(`${s.id}: ${seen.map(row => `${row.name} is in the frame at pivot yaw ${row.pivotYaw}° (clearance ${row.clearance})`).join('; ')}`);
+    s.framing = { lights: rows, note: 'Clearance: the least max(|x|, |y|) of each source (centre and corners) over the arc, in half-frames; above 1 it never enters the picture.' };
+  }
+  return shotList;
 }
 
 // ---------------------------------------------------------------- stage and props
@@ -312,7 +413,8 @@ function stage() {
 // ---------------------------------------------------------------- the document
 export function generate() {
   const extractH = extractionHeight(S35.w, S35.h, ASPECT);
-  const shotList = shots();
+  const lighting = lightingBlock();
+  const shotList = checkFraming(shots(), lighting);
   return {
     $comment: 'GENERATED by tools/previs-shotlist.mjs from assets/js/core/presets.js, assets/js/core/optics.js and Motion Prompt #027 #030 #031 #032 #033 #043. Do not edit by hand: run npm run previs:shotlist.',
     version: 1,
@@ -336,7 +438,7 @@ export function generate() {
     },
     subject: { headCentre: HEAD, facing: '-X', bust: 'previs/bust.md' },
     stage: stage(),
-    lighting: lightingBlock(),
+    lighting,
     sequence: {
       master: '/Game/Previs/Seq/PV_Master', displayRate: FPS,
       totalFrames: shotList.reduce((n, s) => n + s.frames, 0),

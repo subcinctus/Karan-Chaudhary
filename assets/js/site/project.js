@@ -1,17 +1,24 @@
 // Film detail page (project.html?slug=…). Reads the film from data/portfolio.js and renders the
-// camera report, palette, frames (real stills, or procedural "PLACEHOLDER STILL" frames from
-// pieces/still.js, or palette frames if that module is missing), BTS and prev/next. Sets the page
-// title, description, canonical URL and CreativeWork JSON-LD. Unknown slug → a friendly not-found.
+// camera report and credits, palette, the scene sequence, the frames (real stills, or procedural
+// "PLACEHOLDER STILL" frames from pieces/still.js, or palette frames if that module is missing), the
+// lighting plot, BTS and prev/next. Sets the page title, description, canonical URL, robots (sample
+// films are not indexed) and CreativeWork JSON-LD. Unknown slug → a friendly not-found.
+//
+// The lead frame shows the same image as the film's work card and frame 01 (frame-card.js frameSeed:
+// slug + 0), so a match cut from the index lands on the picture it started from; a real featured still
+// is in the page from the first paint (render.js renderProject).
 
 import data from '../../../data/portfolio.js';
 import { applyPageGrain } from '../core/grain.js';
 import { bindMotionToggle } from '../core/motion-pref.js';
-import { hashString } from '../core/prng.js';
 import * as R from './render.js';
 import { initShutter, openShutter } from './shutter.js';
 import { initProgress } from './progress.js';
 import { loadDesktopMotion } from './desktop.js';
 import { recall, remember } from './place.js';
+import { takeHandoff } from './match-cut.js';
+import { frameItems, renderFrameCards, paintStill, paintGates } from './frame-card.js';
+import { mountFilmExtras } from './film-facts.js';
 
 const films = data.films ?? [];
 
@@ -29,7 +36,8 @@ function setMeta(film) {
     set('link[rel="canonical"]', 'href', url);
     set('meta[property="og:url"]', 'content', url);
   }
-  if (!film) {
+  // A sample film is not a page for search engines (nor is a missing one).
+  if (!film || film.placeholder) {
     const robots = document.createElement('meta');
     robots.name = 'robots'; robots.content = 'noindex';
     document.head.append(robots);
@@ -39,70 +47,48 @@ function setMeta(film) {
 /** New frames are in the page: the desktop layer gives them their entrances (motion/frames.js). */
 const announce = scope => window.dispatchEvent(new CustomEvent('kc:content', { detail: { scope } }));
 
-/** Frames: real stills first; otherwise procedural placeholders (one per stillKinds entry). */
-async function renderFrames(film, list, hero) {
-  const real = (film.stills ?? []).filter(s => R.safeUrl(s?.src));
-  if (real.length) {
-    const lead = real.find(s => s.featured) ?? real[0];
-    hero.innerHTML = String(R.html`<img src="${R.safeUrl(lead.src)}" alt="${lead.alt ?? ''}" decoding="async">`);
-    R.put(list, R.html`${real.map(s => R.html`
-      <li class="still"><figure>
-        <div class="frame" style="--ar:${Number(s.aspect) || Number(film.aspect) || 1.78}"><img src="${R.safeUrl(s.src)}" alt="${s.alt ?? ''}" loading="lazy" decoding="async"></div>
-        ${s.caption ? R.html`<figcaption class="cam-label">${s.caption}</figcaption>` : ''}
-      </figure></li>`)}`);
-    announce(list);
-    return;
-  }
+/**
+ * Once an image is painted over the hand-off image (the work card's still that the match cut carried
+ * in), the hand-off goes: decoded first, so the swap is never a flash.
+ */
+async function settleHandoff(img, handoff) {
+  if (!img || !handoff) return;
+  if (!img.complete) await new Promise(r => { img.addEventListener('load', r, { once: true }); img.addEventListener('error', r, { once: true }); });
+  if (!img.naturalWidth) return;   // the still did not load: the hand-off stands in for it
+  await img.decode?.().catch(() => {});
+  handoff.remove();
+}
 
-  const kinds = film.stillKinds?.length ? film.stillKinds : ['wide-ext', 'interior-practical', 'close-silhouette'];
-  const pal = R.cleanPalette(film.palette);
-  const aspect = Number(film.aspect) || 1.78;
-  const cap = (i, kind) => R.html`<figcaption><span class="cam-label">Frame ${R.pad2(i + 1)} · ${String(kind).replace(/-/g, ' ')} · ${R.aspectLabel(aspect)}</span><span class="badge-sample">Placeholder still</span></figcaption>`;
-  R.put(list, R.html`${kinds.map((k, i) => R.html`
-    <li class="still"><figure>
-      <div class="frame" style="--ar:${aspect};background:${R.paletteBackground(pal)}" data-still="${i}"></div>
-      ${cap(i, k)}
-    </figure></li>`)}`);
-  hero.insertAdjacentHTML('beforeend', String(R.html`<span class="film__frame-cap badge-sample">Placeholder still</span>`));
-  announce(list);
-
-  let still = null;
-  try { still = await import('../pieces/still.js'); } catch (err) { console.info('[project] procedural stills unavailable; palette frames stay', err?.message ?? err); }
-  if (!still?.renderStill) return;
-  const dpr = Math.min(2, devicePixelRatio || 1);
-  // Painting a still is synchronous canvas work: give the browser a frame between stills so
-  // scrolling, the shutter and input never wait on a whole set of them.
-  const yieldFrame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
-  const draw = async (el, kind, seed, alt) => {
-    try {
-      await yieldFrame();
-      // caption:false: the DOM "Placeholder still" badge labels these frames (readable, translatable).
-      const url = await still.renderStill({ palette: pal, aspect, seed, kind, width: Math.round(el.clientWidth * dpr) || 1280, caption: false });
-      const img = new Image();
-      img.alt = alt; img.decoding = 'async'; img.src = url;
-      el.prepend(img);
-    } catch (err) { console.warn('[project] still', kind, err); }
+/**
+ * The frame lightbox (lightbox.js) is fetched on the first click on a frame, or a beat earlier when the
+ * pointer or keyboard focus reaches one; never on the critical path (this module blocks rendering).
+ * Once it has loaded it handles every [data-lightbox] button in root itself.
+ */
+function lazyLightbox(root, opts) {
+  let ready = null;
+  const load = () => (ready ??= import('./lightbox.js').then(m => {
+    root.removeEventListener('click', first);
+    return m.bindLightbox(root, opts);
+  }).catch(err => { console.warn('[project] lightbox unavailable', err); return null; }));
+  const warm = e => {
+    if (!e.target.closest?.('[data-lightbox]')) return;
+    root.removeEventListener('pointerover', warm); root.removeEventListener('focusin', warm);
+    load();
   };
-  await draw(hero, kinds[0], hashString(`${film.slug}hero`), `Placeholder frame for ${film.title}`);
-  // The grid is below the fold: paint each frame as it comes near the viewport.
-  const near = (el, fn) => {
-    if (typeof IntersectionObserver === 'undefined') return fn();
-    return new Promise(res => {
-      const io = new IntersectionObserver(es => { if (es.some(e => e.isIntersecting)) { io.disconnect(); res(fn()); } }, { rootMargin: '800px 0px' });
-      io.observe(el);
-    });
-  };
-  for (const el of list.querySelectorAll('[data-still]')) {
-    const i = Number(el.dataset.still);
-    await near(el, () => draw(el, kinds[i], hashString(film.slug + i), `Placeholder frame ${i + 1} for ${film.title}: ${String(kinds[i]).replace(/-/g, ' ')}`));
+  async function first(e) {
+    const button = e.target.closest?.('[data-lightbox][data-lightbox-index]');
+    if (button) (await load())?.open(button);
   }
+  root.addEventListener('pointerover', warm);
+  root.addEventListener('focusin', warm);
+  root.addEventListener('click', first);
 }
 
 async function boot() {
   applyPageGrain();
   initShutter();
   R.put(document.querySelector('[data-render="colophon"]'), R.renderColophon(data, { replay: false }));
-  R.pruneReel(data);
+  R.pruneSections(data);
   R.initChrome({ bindMotionToggle, solidAfter: () => -1 });
 
   const slug = new URLSearchParams(location.search).get('slug');
@@ -119,17 +105,33 @@ async function boot() {
   const prev = films[(index - 1 + films.length) % films.length];
   const next = films[(index + 1) % films.length];
   R.put(main, R.renderProject(film, data, { prev: films.length > 1 ? prev : null, next: films.length > 1 ? next : null, index }));
+  const hero = main.querySelector('[data-film-hero]');
+  const lead = R.featuredStill(film), leadImg = hero.querySelector('img');
+  // Synchronously, before the first paint: a match cut from the index lands on this lead frame.
+  const handoff = takeHandoff(film.slug, hero) ?? null;
+  // A real still keeps its own aspect: the lead frame letterboxes it, never crops it.
+  if (lead && Number(lead.aspect) > 0) hero.style.setProperty('--ar', Number(lead.aspect));
+  if (!lead) hero.insertAdjacentHTML('beforeend', String(R.html`<span class="film__frame-cap badge-sample">Placeholder still</span>`));
+  const frames = frameItems(film);
+  const list = main.querySelector('[data-stills]');
+  R.put(list, renderFrameCards(film));
+  lazyLightbox(main, { film, data });
   R.setJsonLd('ld-film', R.creativeWorkLD(film, data));
   initProgress({ runtime: data.site?.timecodeRuntime ?? 180 });
   recall();
   remember();
+  settleHandoff(leadImg, handoff);
   // On desktop the curtain waits a beat (≤ 0.25 s) for the motion layer, so the title's entrance can
   // play as it lifts; it never holds the page longer than that, and elsewhere it opens at once. A layer
   // that arms after the lift has begun treats the first screen as already seen.
   const motion = loadDesktopMotion({ page: 'project' });
   await Promise.race([motion, new Promise(r => setTimeout(r, 250))]);
   await openShutter();   // uncover first: painting stills must not hold the panel over the page
-  await renderFrames(film, main.querySelector('[data-stills]'), main.querySelector('[data-film-hero]'));
+  announce(list);
+  // The lead frame first (frame 01's image, painted at the lead frame's size), then each frame of the
+  // grid, the sequence and the plot as it comes near.
+  const painted = lead ? null : paintStill(hero, frames[0], { after: handoff }).then(img => settleHandoff(img, handoff));
+  await Promise.all([painted, paintGates(list, frames), mountFilmExtras(main, film, data)]);
 }
 
 boot();

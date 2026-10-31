@@ -2,6 +2,8 @@
 # One-time setup by the owner: Settings → Pages → Build and deployment → Source: "GitHub Actions".
 # Only an explicit list of files is deployed (plus THIRD-PARTY-NOTICES.md): tools/, prompts/, .claude/, previs/README.md and the
 # Unreal PNG sequences under media/previs/<shot>/ never ship. No .nojekyll is needed (no Jekyll build).
+# The deployed pages are regenerated from data/portfolio.js on every run (tools/prerender.mjs --out _site), so an edit made
+# in GitHub's web editor reaches the static HTML, the JSON-LD and the sitemap even when nobody ran npm run prerender.
 name: Deploy site to GitHub Pages
 
 on:
@@ -9,7 +11,7 @@ on:
     branches: [main]
   workflow_dispatch:
 
-# Least privilege: the check job (which runs repo scripts) can only read; only deploy can publish.
+# Least privilege: the check job (which runs repo scripts) can only read; the deploy job runs no repo code at all.
 permissions:
   contents: read
 
@@ -22,42 +24,29 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 22
-      - name: Unit tests (core maths, tooling)
+      - name: Unit tests (core maths, renderers, prerender, fonts, tooling)
         run: node --test tools/test/
-      - name: Static checks (URLs, determinism grep, licences, data, SEO, sitemap, contrast)
+      - name: Static checks (URLs, determinism grep, licences, vendored files and fonts, data, SEO, contrast, check plugins)
         run: node tools/check.mjs --no-browser
-
-  deploy:
-    needs: check
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      pages: write
-      id-token: write
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/configure-pages@v6
       - name: Stage site
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p _site
-          # Required: the pages, their data and code.
-          for f in index.html project.html 404.html assets data studies; do
+          # Required: the pages, their data and code (photographs.html included: the print view for applications).
+          for f in index.html project.html photographs.html 404.html assets data studies; do
             if [ ! -e "$f" ]; then echo "::error::missing required path $f"; exit 1; fi
             cp -R "$f" _site/
           done
           # Optional: copied when present. THIRD-PARTY-NOTICES.md carries the MIT notice that must travel
-          # with the vendored Motion Prompt code (assets/js/vendor/ points to it).
+          # with the vendored Motion Prompt code (assets/js/vendor/ points to it) and the fonts' OFL notices.
           for f in sitemap.xml site.webmanifest THIRD-PARTY-NOTICES.md media; do
             if [ -e "$f" ]; then cp -R "$f" _site/; else echo "::warning::optional path $f not found, skipped"; fi
           done
@@ -72,9 +61,26 @@ jobs:
           fi
           # Never ship editor or OS noise.
           find _site \( -name '.DS_Store' -o -name 'Thumbs.db' -o -name '*.swp' \) -delete
-          echo "Staged $(find _site -type f | wc -l) files, $(du -sh _site | cut -f1)"
+      - name: Prerender the static content into the staged copy (pages, JSON-LD, sitemap)
+        run: node tools/prerender.mjs --out _site
+      - name: Size of the staged site
+        run: echo "Staged $(find _site -type f | wc -l) files, $(du -sh _site | cut -f1)"
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
+
+  deploy:
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Publishing only: no checkout and no repository scripts run with these permissions.
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v6
       - id: deployment
         uses: actions/deploy-pages@v5

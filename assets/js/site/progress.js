@@ -5,7 +5,8 @@
 //
 // Timecode scroll progress. The bar uses a CSS scroll-driven animation where supported (site.css,
 // animation-timeline: scroll(root)), with this module as the fallback; the readout maps the scroll
-// fraction onto site.timecodeRuntime seconds at 24 fps: "TC 00:01:23:12".
+// fraction onto site.timecodeRuntime seconds at 24 fps: "TC 00:01:23:12", written to each [data-tc]
+// element's data-tc (CSS prints it), so the timecode is never page text.
 // Reduced motion / Motion off: both are hidden by site.css (html[data-motion="off"]).
 //
 //   import { initProgress } from './progress.js';
@@ -35,7 +36,7 @@ export function initProgress({ runtime = 180, fps = 24 } = {}) {
     const p = max > 0 ? Math.min(1, Math.max(0, scrollY / max)) : 0;
     if (!cssDriven && fill) fill.style.transform = `scaleX(${p.toFixed(4)})`;
     const tc = timecode(p * runtime, fps);
-    if (tc !== last) { last = tc; for (const el of tcs) el.textContent = tc; }
+    if (tc !== last) { last = tc; for (const el of tcs) el.dataset.tc = tc; }
   }
   const queue = () => { if (!raf) raf = requestAnimationFrame(update); };
   addEventListener('scroll', queue, { passive: true });

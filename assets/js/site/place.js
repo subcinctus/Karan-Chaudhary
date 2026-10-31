@@ -13,7 +13,7 @@
 //   yanks someone who has already scrolled.
 
 const root = document.documentElement;
-const CANDIDATES = 'main h1, main h2, main h3, main p, main li, main figure, main .section-head, main .work-card, main [data-reveal], main .credits__row, footer';
+const CANDIDATES = 'main h1, main h2, main h3, main p, main li, main tr, main figure, main .section-head, main .work-card, main [data-reveal], main .credits__row, footer';
 const KEY = 'kc:place:';
 const NAV_KEYS = new Set(['Tab', 'PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', ' ', 'Home', 'End']);
 

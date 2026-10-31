@@ -16,12 +16,15 @@
 // strip moves it (and never turns into the browser's swipe-back).
 // Keyboard: every card is a real link; focusing one scrolls the page to the point where that card sits
 // in the middle of the strip, so focus is never off screen. Without the desktop layer (touch, small
-// screens, reduced motion, Motion off) the cards are the ordinary grid.
+// screens, reduced motion, Motion off) the cards are the ordinary grid. In the Index view
+// (html[data-work-view="index"], site/work-index.js) there is no strip: the table is the plain layout,
+// and switching views re-arms the layer (kc:relayout).
 
 const pad2 = n => String(n).padStart(2, '0');
 
 export function initWorkRail(env) {
   const { gsap, ScrollTrigger, root, state } = env;
+  if (root.dataset.workView === 'index') return undefined;
   const box = document.querySelector('#work [data-render="work"]');
   const grid = box?.querySelector('.work-grid');
   const cards = grid ? [...grid.querySelectorAll('.work-card')] : [];

@@ -1,0 +1,49 @@
+/* Reel extras: the no-JS fallback inside the frame, the dialogue note and the shot index under the
+   player (assets/js/site/{reel-data,reel-index}.js). index.html only; requires tokens.css, base.css,
+   site.css. A shot's frame is never cropped: each sits letterboxed in a 16:9 gate, like the reel. */
+
+/* --- Fallback (crawlers; replaced by the facade) ------------------------------------------------ */
+
+.reel-fallback { position: absolute; inset: 0; display: block; background: var(--ink-0); color: var(--paper); text-decoration: none; }
+.reel-fallback__poster { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.85; }
+.reel-fallback__label { position: absolute; left: var(--s4); bottom: var(--s4); color: var(--paper-2); }
+
+/* --- Dialogue note and shot index ---------------------------------------------------------------- */
+
+.reel-more { display: grid; gap: var(--s5); margin-top: var(--s6); }
+.reel-note { margin: 0; color: var(--paper-2); }
+
+.reel-index { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s6) var(--s4); }
+html:not(.js) .reel-index { display: none; }   /* its buttons need the player; the fallback link stands in */
+@media (min-width: 720px) { .reel-index { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s6) var(--s5); } }
+@media (min-width: 1100px) { .reel-index { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
+/* The tile is the button that plays the reel from that shot. */
+.reel-shot {
+  display: grid; gap: var(--s1); width: 100%; padding: 0; border: 0; border-radius: 0;
+  background: none; color: inherit; text-align: left; cursor: pointer;
+}
+.reel-shot__frame {
+  --ar: 1.778;
+  display: block; margin-bottom: var(--s2); background: #030304;
+  outline: 1px solid var(--line); outline-offset: -1px; transition: outline-color var(--dur-2) var(--ease-out);
+}
+.reel-shot__frame > img { object-fit: contain; opacity: 0.9; transition: opacity var(--dur-2) var(--ease-out); }
+.reel-shot__tc {
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: var(--tracking-mono);
+  color: var(--tungsten); font-variant-numeric: tabular-nums;
+}
+.reel-shot__title { font-family: var(--font-display); font-size: 1.1rem; line-height: 1.25; color: var(--paper); }
+.reel-shot__meta {
+  font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: var(--tracking-mono); text-transform: uppercase;
+  line-height: 1.5; color: var(--paper-3);
+}
+.reel-shot:hover .reel-shot__frame { outline-color: var(--paper-3); }
+.reel-shot:hover .reel-shot__frame > img { opacity: 1; }
+.reel-shot[aria-current="true"] .reel-shot__frame { outline-color: var(--tungsten); }
+.reel-shot:focus-visible { outline: none; }
+.reel-shot:focus-visible .reel-shot__frame { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+@media (forced-colors: active) {
+  .reel-shot__frame { outline-color: CanvasText; }
+  .reel-shot:focus-visible .reel-shot__frame, .reel-shot[aria-current="true"] .reel-shot__frame { outline: 3px solid Highlight; }
+}

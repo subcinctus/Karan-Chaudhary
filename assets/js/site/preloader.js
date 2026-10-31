@@ -59,9 +59,10 @@ export function runPreloader({ enabled = true, rise = [] } = {}) {
     const t = now();
     const p = eOut(P(t, T.countIn, T.countOut));
     const n = Math.round(100 * p);
+    // Numerals are decoration, kept out of the page text: CSS prints data-n / data-t (site.css).
     const leader = String(Math.max(1, 8 - Math.floor(p * 7)));
-    if (leader !== lastNum) { num.textContent = leader; lastNum = leader; }
-    pct.textContent = String(n).padStart(3, '0');
+    if (leader !== lastNum) { num.dataset.n = leader; lastNum = leader; }
+    pct.dataset.t = String(n).padStart(3, '0');
     bar.style.transform = `scaleX(${n / 100})`;
     sweep.style.setProperty('--a', `${(((p * 7) % 1) * 360).toFixed(1)}deg`);
     if (!lifted && t >= T.liftIn) lift(t);

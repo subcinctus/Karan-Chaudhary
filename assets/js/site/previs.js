@@ -8,7 +8,8 @@
 //
 // Unreal → plan coordinates (shotlist axes: X forward, the subject at the origin facing −X, Y right,
 // cm): plan x = Y / 100 (screen right), plan y = −X / 100 (toward the camera). Lights come from
-// core/presets.js, the same table the shot list and the Light study are generated from.
+// core/presets.js, the same table the shot list and the Light study are generated from, unless the shot
+// carries its own (lightsOverride: PV-030's key, raised and moved back so the orbit never sees it).
 
 import { html, put, esc, safeUrl, MOVE_NAMES as MOVES } from './render.js';
 import { renderPlan } from '../ui/plot.js';
@@ -107,6 +108,15 @@ function planProps(shot, list) {
   });
 }
 
+/** The lights a shot's plan shows: its own (the shot list's lightsOverride, cm) or its preset's (metres). */
+function shotLights(shot, preset) {
+  const own = shot.lightsOverride?.lights;
+  if (Array.isArray(own) && own.length) {
+    return own.map(l => ({ role: l.role, az: l.az, el: l.el, dist: l.dist / 100, kelvin: l.kelvin, size: (l.sourceWidth ?? 60) / 100 }));
+  }
+  return (preset?.lights ?? []).map(l => ({ role: l.role, az: l.az, el: l.el, dist: l.dist, kelvin: l.kelvin, size: l.size }));
+}
+
 function drawPlan(svg, shot, list) {
   const path = cameraPath(shot);
   const cam0 = path[0] ?? { x: 0, y: 4 };
@@ -124,7 +134,7 @@ function drawPlan(svg, shot, list) {
     cameras,
     path: moves && path.length > 1 ? path : null,
     subject: { r: 0.14 },
-    lights: (pr?.lights ?? []).map(l => ({ role: l.role, az: l.az, el: l.el, dist: l.dist, kelvin: l.kelvin, size: l.size })),
+    lights: shotLights(shot, pr),
     props: planProps(shot, list),
     labels: { title: `Plan of previs shot ${shot.id}: ${shot.title ?? shot.move ?? ''}`, scale: true },
   });

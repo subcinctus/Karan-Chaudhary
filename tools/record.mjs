@@ -223,7 +223,7 @@ function assertFonts(info, job, opt) {
   if (!m || m.fontsOk == null) return;   // Motion Prompt pages: READY already waits for fonts
   if (!m.fontsOk) {
     const msg = `${job.page}: canvas fonts did not load (${(m.fonts ?? []).join(' | ')}). Fallback fonts would be recorded.`;
-    if (!opt.allowFallbackFonts) throw new Error(`${msg}\n    Check the network (Google Fonts) or pass --allow-fallback-fonts for a draft.`);
+    if (!opt.allowFallbackFonts) throw new Error(`${msg}\n    The faces are self-hosted: check that the page links assets/css/fonts.css and that its files are in place (node tools/vendor-motion.mjs --verify), or pass --allow-fallback-fonts for a draft.`);
     console.warn(`  warning: ${msg} (continuing: --allow-fallback-fonts)`);
   }
 }

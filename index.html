@@ -2,7 +2,9 @@
 <!--
   Karan Chaudhary, cinematographer. Home page.
   Static shell: SEO/OG/JSON-LD tags here must match data/portfolio.js (npm run check compares them).
-  Sections are rendered from data/portfolio.js by assets/js/site/main.js. Every URL is relative:
+  Sections are rendered from data/portfolio.js by assets/js/site/main.js. Inside each pair of
+  "prerender:NAME" / "/prerender:NAME" comment markers, tools/prerender.mjs writes the same renderers'
+  output, so crawlers and visitors without JavaScript read the page as text. Every URL is relative:
   the site is served from https://subcinctus.github.io/Karan-Chaudhary/.
 -->
 <html lang="en">
@@ -34,28 +36,42 @@
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
   <link rel="manifest" href="site.webmanifest">
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <!-- fonts -->
+  <!-- Self-hosted type (assets/css/fonts.css). Preloaded: the faces the main title draws with
+       (the name, the role and the slate), so the first frame never waits on them. -->
+  <link rel="preload" href="assets/fonts/cormorant-garamond/cormorant-garamond-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/ibm-plex-mono/ibm-plex-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/inter-tight/inter-tight-latin-500-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/fonts.css">
+  <!-- /fonts -->
   <link rel="stylesheet" href="assets/css/tokens.css">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/player.css">
   <link rel="stylesheet" href="assets/css/study-focus.css">
   <link rel="stylesheet" href="assets/css/site.css">
   <link rel="stylesheet" href="assets/css/motion.css">
+  <link rel="stylesheet" href="assets/css/work.css">
+  <link rel="stylesheet" href="assets/css/reel.css">
+  <link rel="stylesheet" href="assets/css/transitions.css">
+  <link rel="stylesheet" href="assets/css/print.css" media="print">
   <link rel="modulepreload" href="assets/js/site/main.js">
 
   <!-- Before first paint: decide whether the film-leader preloader (#089, first visit per session) or
        the arriving half of the shutter transition (#092) covers the page. Never under reduced motion;
        a safety timer uncovers the page even if the modules fail to load. The leader is off unless
        <html> carries data-leader="on" (and data/portfolio.js site.intro.preloader is true): the main
-       title is the one intro, and a countdown in front of it would double it. -->
+       title is the one intro, and a countdown in front of it would double it.
+       Also before first paint: the Selected work view the visitor chose last (html[data-work-view]),
+       and how this page arrived (html[data-vt]: "on" under a match cut, "skipped" with Motion off,
+       "none" without a view transition). -->
   <script>
     (function () {
       var d = document.documentElement; d.classList.add('js');
+      d.dataset.workView = 'frames';
       try {
         var s = sessionStorage, reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || localStorage.getItem('kc:motion') === 'off';
         d.dataset.motion = reduce ? 'off' : 'on';
+        if (localStorage.getItem('kc:work-view') === 'index') d.dataset.workView = 'index';
         var sh = s.getItem('kc:shutter');
         if (!reduce && sh) {
           d.classList.add('shutter-cover');
@@ -67,15 +83,23 @@
         s.removeItem('kc:shutter');
       } catch (e) { /* storage blocked: no intro */ }
       setTimeout(function () { d.classList.remove('is-preloading', 'shutter-cover', 'shutter-titled'); }, 4500);
+      addEventListener('pagereveal', function (e) {
+        if (!e.viewTransition) { d.dataset.vt = 'none'; return; }
+        if (d.dataset.motion === 'off') { e.viewTransition.skipTransition(); d.dataset.vt = 'skipped'; } else d.dataset.vt = 'on';
+      });
     })();
   </script>
+  <!-- Fetch a film page (or the photographs) as the pointer settles on its link: the click lands at once.
+       Prefetch only, never prerender (that would start the page's Players unseen). -->
+  <script type="speculationrules">{"prefetch":[{"where":{"or":[{"href_matches":"project.html*"},{"href_matches":"photographs.html*"}]},"eagerness":"moderate"}]}</script>
 
-  <script type="application/ld+json" id="ld-person">{"@context":"https://schema.org","@type":"Person","name":"Karan Chaudhary","jobTitle":"Cinematographer","hasOccupation":{"@type":"Occupation","name":"Director of Photography"},"url":"https://subcinctus.github.io/Karan-Chaudhary/","image":"https://subcinctus.github.io/Karan-Chaudhary/media/og/og-title.jpg","knowsAbout":["Cinematography","Lighting","Colour grading","Previsualization"],"sameAs":[]}</script>
+  <script type="application/ld+json" id="ld-person">{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"https://subcinctus.github.io/Karan-Chaudhary/#person","name":"Karan Chaudhary","jobTitle":"Cinematographer","hasOccupation":{"@type":"Occupation","name":"Director of Photography"},"url":"https://subcinctus.github.io/Karan-Chaudhary/","image":"https://subcinctus.github.io/Karan-Chaudhary/media/og/og-title.jpg","knowsAbout":["Cinematography","Lighting","Colour grading","Previsualization"],"sameAs":[]},{"@type":"WebSite","@id":"https://subcinctus.github.io/Karan-Chaudhary/#website","url":"https://subcinctus.github.io/Karan-Chaudhary/","name":"Karan Chaudhary","description":"Cinematographer / director of photography. Reel, selected work, and light, lens and colour studies rendered live in code.","inLanguage":"en","publisher":{"@id":"https://subcinctus.github.io/Karan-Chaudhary/#person"}}]}</script>
 </head>
 <body class="site site--home">
   <a class="skip-link" href="#main">Skip to content</a>
 
-  <!-- #089 film leader (first visit per session). Decorative: hidden from assistive tech. -->
+  <!-- #089 film leader (first visit per session). Decorative: hidden from assistive tech; its numerals
+       and label are data-* attributes that CSS prints, so they are not page text. -->
   <div class="preloader" aria-hidden="true" data-preloader>
     <div class="leader">
       <div class="leader__sweep" data-leader-sweep></div>
@@ -83,10 +107,10 @@
         <circle cx="100" cy="100" r="96"/><circle cx="100" cy="100" r="78"/>
         <path d="M100 0V200M0 100H200"/>
       </svg>
-      <span class="leader__num" data-leader-num>8</span>
+      <span class="leader__num" data-leader-num data-n="8"></span>
     </div>
     <div class="preloader__bar"><span data-leader-bar></span></div>
-    <p class="preloader__label"><span>Karan Chaudhary</span><span>Reel 1</span><span data-leader-pct>000</span></p>
+    <p class="preloader__label"><span data-t="Karan Chaudhary"></span><span data-t="Reel 1"></span><span data-leader-pct data-t="000"></span></p>
   </div>
 
   <!-- #092 shutter panel for page transitions. -->
@@ -98,17 +122,12 @@
   <header class="site-header" data-header>
     <a class="site-header__mark" href="#top" aria-label="Karan Chaudhary, back to the top">K<span aria-hidden="true">·</span>C</a>
     <nav class="site-nav" aria-label="Primary">
-      <ul role="list">
-        <li><a href="#reel">Reel</a></li>
-        <li><a href="#work">Work</a></li>
-        <li><a href="#studies">Studies</a></li>
-        <li><a href="#previs">Previs</a></li>
-        <li><a href="#about">About</a></li>
-        <li><a href="#credits">Credits</a></li>
-        <li><a href="#contact">Contact</a></li>
-      </ul>
+      <!-- prerender:nav -->
+      <ul role="list"><li hidden><a href="#reel">Reel</a></li><li><a href="#work">Work</a></li><li hidden><a href="#photographs">Photographs</a></li><li><a href="#studies">Studies</a></li><li><a href="#previs">Previs</a></li><li><a href="#about">About</a></li><li><a href="#credits">Credits</a></li></ul>
+      <!-- /prerender:nav -->
     </nav>
-    <p class="site-header__tc" aria-hidden="true" data-tc>TC 00:00:00:00</p>
+    <a class="site-header__contact" href="#contact">Contact</a>
+    <p class="site-header__tc" aria-hidden="true" data-tc="TC 00:00:00:00"></p>
     <button class="site-header__motion" type="button" data-motion-toggle>Motion off</button>
     <button class="site-header__menu" type="button" aria-haspopup="dialog" aria-controls="menu" aria-expanded="false" data-menu-open>Menu</button>
   </header>
@@ -119,15 +138,9 @@
       <button class="menu__close" type="button" data-menu-close>Close</button>
     </div>
     <nav aria-label="Site menu">
-      <ol class="menu__list" role="list">
-        <li><a href="#reel"><span class="cam-label" aria-hidden="true">Sc. 01</span>Reel</a></li>
-        <li><a href="#work"><span class="cam-label" aria-hidden="true">Sc. 02</span>Selected work</a></li>
-        <li><a href="#studies"><span class="cam-label" aria-hidden="true">Sc. 03</span>Studies</a></li>
-        <li><a href="#previs"><span class="cam-label" aria-hidden="true">Sc. 04</span>Previs</a></li>
-        <li><a href="#about"><span class="cam-label" aria-hidden="true">Sc. 05</span>About</a></li>
-        <li><a href="#credits"><span class="cam-label" aria-hidden="true">Sc. 06</span>Credits</a></li>
-        <li><a href="#contact"><span class="cam-label" aria-hidden="true">Sc. 07</span>Contact</a></li>
-      </ol>
+      <!-- prerender:menu -->
+      <ol class="menu__list" role="list"><li hidden><a href="#reel"><span class="cam-label" aria-hidden="true">Sc. 01</span>Reel</a></li><li><a href="#work"><span class="cam-label" aria-hidden="true">Sc. 01</span>Selected work</a></li><li hidden><a href="#photographs"><span class="cam-label" aria-hidden="true">Sc. 02</span>Photographs</a></li><li><a href="#studies"><span class="cam-label" aria-hidden="true">Sc. 02</span>Studies</a></li><li><a href="#previs"><span class="cam-label" aria-hidden="true">Sc. 03</span>Previs</a></li><li><a href="#about"><span class="cam-label" aria-hidden="true">Sc. 04</span>About</a></li><li><a href="#credits"><span class="cam-label" aria-hidden="true">Sc. 05</span>Credits</a></li><li><a href="#contact"><span class="cam-label" aria-hidden="true">Sc. 06</span>Contact</a></li></ol>
+      <!-- /prerender:menu -->
     </nav>
     <button class="btn btn--ghost menu__motion" type="button" data-motion-toggle>Motion off</button>
   </dialog>
@@ -149,26 +162,321 @@
     </section>
 
     <noscript>
-      <section class="section noscript container">
-        <h2>Karan Chaudhary</h2>
-        <p>Cinematographer · Director of Photography.</p>
-        <p>Contact: <a href="mailto:hello@example.com">hello@example.com</a></p>
-        <p class="cam-label">The reel, the selected work and the live light, lens and colour studies on this page need JavaScript. Please enable it to see them.</p>
+      <section class="noscript container">
+        <p class="cam-label">The live light, lens and colour studies and the previs plans on this page are rendered in your browser, and need JavaScript.</p>
       </section>
     </noscript>
 
-    <section class="section section--reel" id="reel" aria-labelledby="reel-title"><div class="container" data-render="reel"></div></section>
-    <section class="section section--work" id="work" aria-labelledby="work-title"><div class="container" data-render="work"></div></section>
-    <section class="section section--studies" id="studies" aria-labelledby="studies-title"><div class="container" data-render="studies"></div></section>
-    <section class="section section--previs" id="previs" aria-labelledby="previs-title"><div class="container" data-render="previs"></div></section>
-    <section class="section section--about" id="about" aria-labelledby="about-title"><div class="container" data-render="about"></div></section>
-    <section class="section section--kit" id="kit" aria-labelledby="kit-title"><div class="container" data-render="kit"></div></section>
-    <section class="credits" id="credits" aria-labelledby="credits-title" data-render="credits"></section>
+    <section class="section section--reel" id="reel" aria-labelledby="reel-title" hidden><div class="container" data-render="reel"><!-- prerender:reel --><!-- /prerender:reel --></div></section>
+    <section class="section section--work" id="work" aria-labelledby="work-title"><div class="container" data-render="work"><!-- prerender:work --><header class="section-head" data-reveal>
+      <div class="section-head__slate cam-label"><span>Sc. 01</span><span class="section-head__rule" aria-hidden="true"></span><span>Selected work</span><span class="section-head__aside">6 films · 2023–2026</span><div class="section-head__tools"><div class="work-view" role="group" aria-label="Selected work view"><button class="work-view__btn" type="button" data-view="frames" aria-pressed="true">Frames</button><button class="work-view__btn" type="button" data-view="index" aria-pressed="false">Index</button></div></div></div>
+      <h2 class="section-head__title" id="work-title">Selected work</h2>
+      <p class="section-head__lede">Each frame is cropped to the aspect ratio the film was delivered in. Hover or focus a card to see the camera move that defines it.</p>
+    </header>
+    <ol class="work-grid" role="list">
+    <li class="work-card" data-reveal style="--ar:2.39">
+      <a class="work-card__link" href="project.html?slug=untitled-short-01" aria-labelledby="film-untitled-short-01-title" data-film="untitled-short-01">
+        <div class="work-card__gate">
+          <div class="work-card__frame frame" data-card-frame style="background:radial-gradient(60% 80% at 68% 58%, #C77B3B55 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, #E8C49A40 0%, transparent 70%), linear-gradient(180deg, #0E1A24 0%, #1F3B4D 62%, #0E1A24 100%)">
+            <span class="work-card__aspect" aria-hidden="true">2.39:1</span>
+          </div>
+        </div>
+        <div class="work-card__text">
+          <p class="work-card__slate cam-label"><span>01</span><span>2026 · Short fiction</span></p>
+          <h3 class="work-card__title" id="film-untitled-short-01-title">Untitled Short I</h3>
+          <p class="work-card__role">Director of Photography</p>
+          <p class="work-card__foot cam-label"><span>#027 Dolly in</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
+        </div>
+      </a>
+    </li>
+    <li class="work-card" data-reveal style="--ar:1.85">
+      <a class="work-card__link" href="project.html?slug=night-exterior-sample" aria-labelledby="film-night-exterior-sample-title" data-film="night-exterior-sample">
+        <div class="work-card__gate">
+          <div class="work-card__frame frame" data-card-frame style="background:radial-gradient(60% 80% at 68% 58%, #D98E3255 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, #F2C46D40 0%, transparent 70%), linear-gradient(180deg, #0B0C10 0%, #2B2A33 62%, #0B0C10 100%)">
+            <span class="work-card__aspect" aria-hidden="true">1.85:1</span>
+          </div>
+        </div>
+        <div class="work-card__text">
+          <p class="work-card__slate cam-label"><span>02</span><span>2025 · Short fiction</span></p>
+          <h3 class="work-card__title" id="film-night-exterior-sample-title">Night Exterior</h3>
+          <p class="work-card__role">Director of Photography</p>
+          <p class="work-card__foot cam-label"><span>#033 Rack focus</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
+        </div>
+      </a>
+    </li>
+    <li class="work-card" data-reveal style="--ar:2.39">
+      <a class="work-card__link" href="project.html?slug=sample-music-video" aria-labelledby="film-sample-music-video-title" data-film="sample-music-video">
+        <div class="work-card__gate">
+          <div class="work-card__frame frame" data-card-frame style="background:radial-gradient(60% 80% at 68% 58%, #B4436C55 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, #E6A5B840 0%, transparent 70%), linear-gradient(180deg, #120E16 0%, #3A2140 62%, #120E16 100%)">
+            <span class="work-card__aspect" aria-hidden="true">2.39:1</span>
+          </div>
+        </div>
+        <div class="work-card__text">
+          <p class="work-card__slate cam-label"><span>03</span><span>2025 · Music video</span></p>
+          <h3 class="work-card__title" id="film-sample-music-video-title">Music Video</h3>
+          <p class="work-card__role">Director of Photography</p>
+          <p class="work-card__foot cam-label"><span>#030 Orbit</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
+        </div>
+      </a>
+    </li>
+    <li class="work-card" data-reveal style="--ar:1.33">
+      <a class="work-card__link" href="project.html?slug=untitled-documentary-sample" aria-labelledby="film-untitled-documentary-sample-title" data-film="untitled-documentary-sample">
+        <div class="work-card__gate">
+          <div class="work-card__frame frame" data-card-frame style="background:radial-gradient(60% 80% at 68% 58%, #8C7A5B55 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, #C9B79C40 0%, transparent 70%), linear-gradient(180deg, #16130F 0%, #4A3F31 62%, #16130F 100%)">
+            <span class="work-card__aspect" aria-hidden="true">1.33:1</span>
+          </div>
+        </div>
+        <div class="work-card__text">
+          <p class="work-card__slate cam-label"><span>04</span><span>2024 · Documentary short</span></p>
+          <h3 class="work-card__title" id="film-untitled-documentary-sample-title">Untitled Documentary</h3>
+          <p class="work-card__role">Cinematographer</p>
+          <p class="work-card__foot cam-label"><span>#032 Dolly zoom</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
+        </div>
+      </a>
+    </li>
+    <li class="work-card" data-reveal style="--ar:2.76">
+      <a class="work-card__link" href="project.html?slug=coastal-study-sample" aria-labelledby="film-coastal-study-sample-title" data-film="coastal-study-sample">
+        <div class="work-card__gate">
+          <div class="work-card__frame frame" data-card-frame style="background:radial-gradient(60% 80% at 68% 58%, #6F8C9655 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, #B8C9CC40 0%, transparent 70%), linear-gradient(180deg, #0D1316 0%, #2C3E46 62%, #0D1316 100%)">
+            <span class="work-card__aspect" aria-hidden="true">2.76:1</span>
+          </div>
+        </div>
+        <div class="work-card__text">
+          <p class="work-card__slate cam-label"><span>05</span><span>2024 · Experimental short</span></p>
+          <h3 class="work-card__title" id="film-coastal-study-sample-title">Coastal Study</h3>
+          <p class="work-card__role">Director of Photography</p>
+          <p class="work-card__foot cam-label"><span>#031 Crane up</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
+        </div>
+      </a>
+    </li>
+    <li class="work-card" data-reveal style="--ar:1.78">
+      <a class="work-card__link" href="project.html?slug=sample-commercial" aria-labelledby="film-sample-commercial-title" data-film="sample-commercial">
+        <div class="work-card__gate">
+          <div class="work-card__frame frame" data-card-frame style="background:radial-gradient(60% 80% at 68% 58%, #E0A45855 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, #F3D9B140 0%, transparent 70%), linear-gradient(180deg, #101114 0%, #33363D 62%, #101114 100%)">
+            <span class="work-card__aspect" aria-hidden="true">1.78:1</span>
+          </div>
+        </div>
+        <div class="work-card__text">
+          <p class="work-card__slate cam-label"><span>06</span><span>2023 · Commercial</span></p>
+          <h3 class="work-card__title" id="film-sample-commercial-title">Spot</h3>
+          <p class="work-card__role">Director of Photography</p>
+          <p class="work-card__foot cam-label"><span>#043 Whip pan</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
+        </div>
+      </a>
+    </li></ol>
+    
+    <div class="work-index" data-work-index data-reveal>
+      <div class="work-index__list">
+        <table class="work-index__table">
+          <caption class="visually-hidden">Selected work: 6 films, one per row</caption>
+          <thead><tr><th class="work-index__no" scope="col">No</th><th class="work-index__year" scope="col">Year</th><th class="work-index__film" scope="col">Title</th><th class="work-index__dir" scope="col">Director</th><th class="work-index__prod" scope="col">Production / Platform</th><th class="work-index__format" scope="col">Format</th><th class="work-index__aspect" scope="col">Aspect</th><th class="work-index__kit" scope="col">Camera / Lens</th><th class="work-index__premiere" scope="col">Premiere</th></tr></thead>
+          <tbody>
+          <tr class="work-index__row" data-film="untitled-short-01"><td class="work-index__no">01</td><td class="work-index__year">2026</td><th class="work-index__film" scope="row"><a class="work-index__link" href="project.html?slug=untitled-short-01"><span class="work-index__title">Untitled Short I</span></a> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></th><td class="work-index__dir"><span class="work-index__none" aria-hidden="true">—</span></td><td class="work-index__prod"><span class="work-index__none" aria-hidden="true">—</span></td><td class="work-index__format">Short fiction</td><td class="work-index__aspect">2.39:1</td><td class="work-index__kit"><span class="work-index__line">Super 35 digital cinema camera</span><span class="work-index__line">Spherical primes</span></td><td class="work-index__premiere"><span class="work-index__none" aria-hidden="true">—</span></td></tr>
+          <tr class="work-index__row" data-film="night-exterior-sample"><td class="work-index__no">02</td><td class="work-index__year">2025</td><th class="work-index__film" scope="row"><a class="work-index__link" href="project.html?slug=night-exterior-sample"><span class="work-index__title">Night Exterior</span></a> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></th><td class="work-index__dir"><span class="work-index__none" aria-hidden="true">—</span></td><td class="work-index__prod"><span class="work-index__none" aria-hidden="true">—</span></td><td class="work-index__format">Short fiction</td><td class="work-index__aspect">1.85:1</td><td class="work-index__kit"><span class="work-index__line">Super 35 digital cinema camera</span><span class="work-index__line">Fast spherical primes</span></td><td class="work-index__premiere"><span class="work-index__none" aria-hidden="true">—</span></td></tr>
+          <tr class="work-index__row" data-film="sample-music-video"><td class="work-index__no">03</td><td class="work-index__year">2025</td><th class="work-index__film" scope="row"><a class="work-index__link" href="project.html?slug=sample-music-video"><span class="work-index__title">Music Video</span></a> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></th><td class="work-index__dir"><span class="work-index__none" aria-hidden="true">—</span></td><td class="work-index__prod"><span class="work-index__none" aria-hidden="true">—</span></td><td class="work-index__format">Music video</td><td class="work-index__aspect">2.39:1</td><td class="work-index__kit"><span class="work-index__line">Full-frame digital cinema camera</span><span class="work-index__line">Vintage spherical primes</span></td><td class="work-index__premiere"><span class="work-index__none" aria-hidden="true">—</span></td></tr>
+          <tr class="work-index__row" data-film="untitled-documentary-sample"><td class="work-index__no">04</td><td class="work-index__year">2024</td><th class="work-index__film" scope="row"><a class="work-index__link" href="project.html?slug=untitled-documentary-sample"><span class="work-index__title">Untitled Documentary</span></a> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></th><td class="work-index__dir"><span class="work-index__none" aria-hidden="true">—</span></td><td class="work-index__prod"><span class="work-index__none" aria-hidden="true">—</span></td><td class="work-index__format">Documentary short</td><td class="work-index__aspect">1.33:1</td><td class="work-index__kit"><span class="work-index__line">Super 16 film camera</span><span class="work-index__line">Zoom + two primes</span></td><td class="work-index__premiere"><span class="work-index__none" aria-hidden="true">—</span></td></tr>
+          <tr class="work-index__row" data-film="coastal-study-sample"><td class="work-index__no">05</td><td class="work-index__year">2024</td><th class="work-index__film" scope="row"><a class="work-index__link" href="project.html?slug=coastal-study-sample"><span class="work-index__title">Coastal Study</span></a> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></th><td class="work-index__dir"><span class="work-index__none" aria-hidden="true">—</span></td><td class="work-index__prod"><span class="work-index__none" aria-hidden="true">—</span></td><td class="work-index__format">Experimental short</td><td class="work-index__aspect">2.76:1</td><td class="work-index__kit"><span class="work-index__line">Large-format digital cinema camera</span><span class="work-index__line">Anamorphic (1.3× squeeze)</span></td><td class="work-index__premiere"><span class="work-index__none" aria-hidden="true">—</span></td></tr>
+          <tr class="work-index__row" data-film="sample-commercial"><td class="work-index__no">06</td><td class="work-index__year">2023</td><th class="work-index__film" scope="row"><a class="work-index__link" href="project.html?slug=sample-commercial"><span class="work-index__title">Spot</span></a> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></th><td class="work-index__dir"><span class="work-index__none" aria-hidden="true">—</span></td><td class="work-index__prod"><span class="work-index__none" aria-hidden="true">—</span></td><td class="work-index__format">Commercial</td><td class="work-index__aspect">1.78:1</td><td class="work-index__kit"><span class="work-index__line">Super 35 digital cinema camera</span><span class="work-index__line">Spherical zoom</span></td><td class="work-index__premiere"><span class="work-index__none" aria-hidden="true">—</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="work-index__preview" aria-hidden="true">
+        <div class="work-index__gate"><div class="work-index__shot frame" data-preview-frame data-film="untitled-short-01" data-title="Untitled Short I" style="--ar:2.39;background:radial-gradient(60% 80% at 68% 58%, #C77B3B55 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, #E8C49A40 0%, transparent 70%), linear-gradient(180deg, #0E1A24 0%, #1F3B4D 62%, #0E1A24 100%)"></div></div>
+        <p class="work-index__logline">Sample logline. Two siblings clear out their late father’s workshop over one long evening, and the light goes with the day.</p>
+        <p class="work-index__meta cam-label">2.39:1 · #027 Dolly in</p>
+      </div>
+    </div>
+    <p class="work-note cam-label" data-reveal>Camera moves: Motion Prompt #027 #030 #031 #032 #033 #043 by Shohei Ohtaki (MIT).</p><!-- /prerender:work --></div></section>
+    <section class="section section--photographs" id="photographs" aria-labelledby="photographs-title" hidden><div class="container" data-render="photographs"><!-- prerender:photographs --><!-- /prerender:photographs --></div></section>
+    <section class="section section--studies" id="studies" aria-labelledby="studies-title"><div class="container" data-render="studies"><!-- prerender:studies --><header class="section-head" data-reveal>
+      <p class="section-head__slate cam-label"><span>Sc. 02</span><span class="section-head__rule" aria-hidden="true"></span><span>Studies</span><span class="section-head__aside">Rendered live</span></p>
+      <h2 class="section-head__title" id="studies-title">Focus / Light / Colour</h2>
+      <p class="section-head__lede">Three working studies, each rendered live in your browser from the maths a camera department uses.</p>
+    </header>
+    
+    <article class="study-block study-block--focus" id="study-focus" aria-labelledby="study-focus-title" data-study="focus">
+      <header class="study-block__head" data-reveal>
+        <p class="cam-label">Study 01</p>
+        <h3 class="study-block__title" id="study-focus-title">Focus</h3>
+        <p class="tag study-block__kind">Interactive study · code written with AI assistance · not camera work</p>
+        <p class="study-block__lede">Depth of field from real lens maths: format, focal length, stop and focus distance.</p>
+      </header>
+      <div class="study-block__body">
+        <div class="study-block__stage" data-study-host></div>
+        <figure class="study-ruler" data-study-ruler><div class="study-ruler__frame focus-ruler__frame" data-dof-ruler></div><figcaption class="focus-readout" data-dof-readout></figcaption></figure>
+        <aside class="study-block__panel" data-controls aria-label="Focus study controls"></aside>
+      </div>
+      <p class="study-block__foot cam-label">
+        <span>Motion Prompt #033 #105 (MIT)</span>
+        <a class="study-block__open" href="studies/focus.html">Open <span class="visually-hidden">the Focus study </span>full screen <span aria-hidden="true">→</span></a>
+      </p>
+    </article>
+    <article class="study-block study-block--light" id="study-light" aria-labelledby="study-light-title" data-study="light">
+      <header class="study-block__head" data-reveal>
+        <p class="cam-label">Study 02</p>
+        <h3 class="study-block__title" id="study-light-title">Light</h3>
+        <p class="tag study-block__kind">Interactive study · code written with AI assistance · not camera work</p>
+        <p class="study-block__lede">A plaster bust under classic portrait set-ups, with key:fill ratio and colour temperature.</p>
+      </header>
+      <div class="study-block__body">
+        <div class="study-block__stage" data-study-host></div>
+        <figure class="study-plan" data-study-plan><svg id="index-light-plan" class="study-plan__svg" data-light-plan></svg><figcaption class="study-plan__cap"><p class="study-plan__note" data-light-note></p><dl class="report report--tight" data-light-report></dl></figcaption></figure>
+        <aside class="study-block__panel" data-controls aria-label="Light study controls"></aside>
+      </div>
+      <p class="study-block__foot cam-label">
+        <span>Motion Prompt #097 #098 #100 #101 #102 #114 (MIT)</span>
+        <a class="study-block__open" href="studies/light.html">Open <span class="visually-hidden">the Light study </span>full screen <span aria-hidden="true">→</span></a>
+      </p>
+    </article>
+    <article class="study-block study-block--colour" id="study-colour" aria-labelledby="study-colour-title" data-study="colour">
+      <header class="study-block__head" data-reveal>
+        <p class="cam-label">Study 03</p>
+        <h3 class="study-block__title" id="study-colour-title">Colour</h3>
+        <p class="tag study-block__kind">Interactive study · code written with AI assistance · not camera work</p>
+        <p class="study-block__lede">A scene-referred frame graded from LogC to finished looks, with live scopes.</p>
+      </header>
+      <div class="study-block__body">
+        <div class="study-block__stage" data-study-host></div>
+        
+        <aside class="study-block__panel" data-controls aria-label="Colour study controls"></aside>
+      </div>
+      <p class="study-block__foot cam-label">
+        <span>Motion Prompt #087 #115 #117 #118 (MIT)</span>
+        <a class="study-block__open" href="studies/colour.html">Open <span class="visually-hidden">the Colour study </span>full screen <span aria-hidden="true">→</span></a>
+      </p>
+    </article><!-- /prerender:studies --></div></section>
+    <section class="section section--previs" id="previs" aria-labelledby="previs-title"><div class="container" data-render="previs"><!-- prerender:previs --><header class="section-head" data-reveal>
+      <p class="section-head__slate cam-label"><span>Sc. 03</span><span class="section-head__rule" aria-hidden="true"></span><span>Previs</span><span class="section-head__aside">Unreal Engine · Sequencer</span></p>
+      <h2 class="section-head__title" id="previs-title">Virtual production / Previs</h2>
+      <p class="section-head__lede">Six shots planned for Unreal Engine: lens, stop, focus and lighting are set on the plans below; the renders are pending.</p>
+    </header>
+    <ol class="previs-grid" role="list" data-previs-grid hidden></ol><!-- /prerender:previs --></div></section>
+    <section class="section section--about" id="about" aria-labelledby="about-title"><div class="container" data-render="about"><!-- prerender:about --><header class="section-head" data-reveal>
+      <p class="section-head__slate cam-label"><span>Sc. 04</span><span class="section-head__rule" aria-hidden="true"></span><span>About &amp; approach</span></p>
+      <h2 class="section-head__title" id="about-title">About</h2>
+      
+    </header>
+    <div class="about">
+      <div class="about__lead" data-reveal>
+        
+        <p class="about__short">I am a cinematographer. I light for the moment a scene turns, and I would rather move the camera once, for a reason, than often for effect.</p>
+        <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample bio</span>
+      </div>
+      <div class="about__body" data-reveal>
+        <p>On set I start from what the scene is about, then work out where the light would plausibly come from and how close the lens needs to be to the actors.</p><p>I like small crews, long takes and practical sources I can put in the frame. I plan with overhead diagrams and previs so the day itself can stay open to the actors.</p><p>The studies on this site are how I think about the job: depth of field as a choice about attention, key-to-fill ratio as a choice about mood, and the grade as the last step of the lighting.</p>
+        <dl class="report"><div class="report__row"><dt>Name</dt><dd>Karan Chaudhary</dd></div><div class="report__row"><dt>Role</dt><dd>Director of Photography / Camera Operator</dd></div><div class="report__row"><dt>Status</dt><dd>Available for shorts and music videos</dd></div></dl>
+        
+        
+      </div>
+    </div>
+    <h3 class="approach-title" data-reveal>Approach</h3>
+    <ol class="approach" role="list">
+      
+        <li class="approach__item" data-reveal>
+          <p class="approach__n cam-label">01</p>
+          <h4 class="approach__head">Motivated light</h4>
+          <p class="approach__text">Every source should have a reason to be where it is. I build the key from the practical or the window the audience can see, then decide how much of the face to give away.</p>
+          <a class="approach__link" href="#study-light" data-study-link="light" data-study-preset="rembrandt">See it in the Light study · Rembrandt <span aria-hidden="true">→</span></a>
+        </li>
+        <li class="approach__item" data-reveal>
+          <p class="approach__n cam-label">02</p>
+          <h4 class="approach__head">Focus is attention</h4>
+          <p class="approach__text">Where the plane of focus sits tells the audience where to look. I choose the stop for the scene, not for the lens.</p>
+          <a class="approach__link" href="#study-focus" data-study-link="focus" >See it in the Focus study <span aria-hidden="true">→</span></a>
+        </li>
+        <li class="approach__item" data-reveal>
+          <p class="approach__n cam-label">03</p>
+          <h4 class="approach__head">Colour carries the scene</h4>
+          <p class="approach__text">I light for the grade I intend: warm against cool, separation before saturation, highlights that roll off rather than clip.</p>
+          <a class="approach__link" href="#study-colour" data-study-link="colour" >See it in the Colour study <span aria-hidden="true">→</span></a>
+        </li>
+    </ol>
+    <p class="approach__note cam-label" data-reveal><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample approach</span></p><!-- /prerender:about --></div></section>
+    <section class="section section--kit" id="kit" aria-labelledby="kit-title"><div class="container" data-render="kit"><!-- prerender:kit --><header class="section-head" data-reveal>
+      <p class="section-head__slate cam-label"><span>Sc. 05</span><span class="section-head__rule" aria-hidden="true"></span><span>Kit</span></p>
+      <h2 class="section-head__title" id="kit-title">Kit</h2>
+      
+    </header>
+    <div class="kit">
+    <div class="kit__col" data-reveal>
+      <h3 class="kit__title cam-label">Owned</h3>
+      <dl class="kit__list"><div class="kit__row"><dt>Camera</dt><dd>Camera body · Monitor · Media and readers</dd></div><div class="kit__row"><dt>Lenses</dt><dd>Prime set · Zoom</dd></div><div class="kit__row"><dt>Grip &amp; light</dt><dd>LED panel · Tube lights · Diffusion frames</dd></div></dl>
+    </div>
+    <div class="kit__col" data-reveal>
+      <h3 class="kit__title cam-label">Experienced with</h3>
+      <dl class="kit__list"><div class="kit__row"><dt>Cameras</dt><dd>Digital cinema cameras · Super 16 film</dd></div><div class="kit__row"><dt>Lighting</dt><dd>HMI · LED · Practical / tungsten</dd></div><div class="kit__row"><dt>Tools</dt><dd>Colour pipeline (LogC → Rec.709) · Previs in Unreal Engine</dd></div></dl>
+    </div></div>
+    <p class="kit__note cam-label" data-reveal><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample kit list</span></p><!-- /prerender:kit --></div></section>
+    <section class="credits" id="credits" aria-labelledby="credits-title" data-render="credits"><!-- prerender:credits --><div class="credits__mask credits__mask--top" aria-hidden="true"></div>
+    <div class="credits__roll">
+      <h2 class="credits__heading display-caps" id="credits-title">Filmography</h2>
+      <ol class="credits__list" role="list">
+        
+          <li class="credits__row">
+            <span class="credits__role">Director of Photography</span>
+            <span class="credits__name"><span class="credits__film">Untitled Short I</span><span class="credits__meta">Short · 2026</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></span>
+          </li>
+          <li class="credits__row">
+            <span class="credits__role">Director of Photography</span>
+            <span class="credits__name"><span class="credits__film">Night Exterior</span><span class="credits__meta">Short · 2025</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></span>
+          </li>
+          <li class="credits__row">
+            <span class="credits__role">Director of Photography</span>
+            <span class="credits__name"><span class="credits__film">Music Video</span><span class="credits__meta">Music video · 2025</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></span>
+          </li>
+          <li class="credits__row">
+            <span class="credits__role">Cinematographer</span>
+            <span class="credits__name"><span class="credits__film">Untitled Documentary</span><span class="credits__meta">Documentary · 2024</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></span>
+          </li>
+          <li class="credits__row">
+            <span class="credits__role">Director of Photography</span>
+            <span class="credits__name"><span class="credits__film">Coastal Study</span><span class="credits__meta">Experimental · 2024</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></span>
+          </li>
+          <li class="credits__row">
+            <span class="credits__role">Director of Photography</span>
+            <span class="credits__name"><span class="credits__film">Spot</span><span class="credits__meta">Commercial · 2023</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></span>
+          </li>
+          <li class="credits__row">
+            <span class="credits__role">Camera Operator</span>
+            <span class="credits__name"><span class="credits__film">Untitled Short II</span><span class="credits__meta">Short · 2023</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></span>
+          </li>
+      </ol>
+      <div class="credits__end">
+        <p class="credits__role">Photographed by</p>
+        <p class="credits__signature display-caps">Karan Chaudhary</p>
+      </div>
+    </div>
+    <div class="credits__mask credits__mask--bottom" aria-hidden="true"></div><!-- /prerender:credits --></section>
   </main>
 
   <footer class="site-footer" id="contact" aria-labelledby="contact-title">
-    <div class="container" data-render="contact"></div>
-    <div class="container" data-render="colophon"></div>
+    <div class="container" data-render="contact"><!-- prerender:contact --><div class="marquee" data-marquee aria-hidden="true"><div class="marquee__track"><span class="marquee__unit"><span>Available for shorts and music videos</span><i>·</i><span>Cinematographer</span><i>·</i><span>Karan Chaudhary</span><i>·</i></span></div></div>
+    <div class="contact" data-reveal>
+      <p class="cam-label">Sc. 06 · Contact</p>
+      <h2 class="contact__title" id="contact-title">Let’s make something.</h2>
+      <p class="contact__avail">Available for shorts and music videos</p>
+      <p class="contact__mail"><a href="mailto:hello@example.com">hello@example.com</a></p>
+      <ul class="contact__links" role="list">
+        
+        
+        
+        
+      </ul>
+      <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample contact</span>
+    </div><!-- /prerender:contact --></div>
+    <div class="container" data-render="colophon"><!-- prerender:colophon --><div class="colophon">
+      <div class="colophon__text">
+        <p class="cam-label">Colophon · How this site was made</p>
+        <p class="colophon__lead">The main title, the studies, the film-card moves and the previs plans on this page are rendered live in your browser from code written with Claude Opus 5.5. Concept, shot design, lens and lighting choices by Karan Chaudhary.</p>
+        <p class="colophon__flag"><span class="badge-sample" title="The owner has not yet confirmed this disclosure: data/portfolio.js colophon.confirmed">To confirm</span></p>
+        <ul class="colophon__credits" role="list"><li>Camera moves and the title reveal ported from Motion Prompt (MIT) by Shohei Ohtaki: #005 #027 #030 #031 #032 #033 #043. Lighting, lens, colour, grain and web-behaviour numbers rebuilt (no code copied) from #002 #073 #074 #075 #077 #079 #083 #084 #086 #087 #089 #092 #094 #097 #098 #100 #101 #102 #105 #112 #114 #115 #117 #118. <a href="THIRD-PARTY-NOTICES.md">Third-party notices</a> · <a href="https://showheyohtaki.github.io/motion-prompt/" rel="noopener">Motion Prompt</a></li><li>Inspired by the Awesome Opus 5.5 Videos collection. No media from the collection is used on this site. <a href="https://github.com/yihui-dev/awesome-opus5-5-videos" rel="noopener">The collection</a></li><li>Type: Cormorant Garamond, Inter Tight and IBM Plex Mono (SIL Open Font License), served by Google Fonts.</li><li>Page motion on desktop: GSAP 3.15.0 (GSAP Standard No Charge License) and Lenis 1.3.27 (MIT), served from this site.</li><li>Previs: Epic Games’ Unreal Engine with the Unreal Engine Skills plugin for Claude Code, referenced by the previs workflow, not included in this site.</li></ul>
+      </div>
+      <div class="colophon__tools">
+        <button class="btn btn--ghost" type="button" data-replay-titles>Replay titles</button>
+        <button class="btn btn--ghost" type="button" data-motion-toggle>Motion off</button>
+        <p class="colophon__mark cam-label">© Karan Chaudhary</p>
+      </div>
+    </div><!-- /prerender:colophon --></div>
   </footer>
 
   <script type="module" src="assets/js/site/main.js"></script>

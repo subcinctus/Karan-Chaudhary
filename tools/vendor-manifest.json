@@ -1,5 +1,5 @@
 {
-  "note": "Vendored motion libraries (desktop layer). Files are byte-identical copies from the npm tarballs; check.mjs verifies the hashes and tools/vendor-motion.mjs re-fetches them.",
+  "note": "Vendored third-party files: the motion libraries (desktop layer) and the self-hosted fonts (\"kind\": \"font\": latin and latin-ext woff2 for the faces the site uses, plus each package's OFL LICENSE). Files are byte-identical copies from the npm tarballs, stored flat in \"dir\"; check.mjs verifies the hashes and tools/vendor-motion.mjs re-fetches them.",
   "packages": [
     {
       "name": "gsap", "version": "3.15.0", "licence": "GSAP Standard No Charge License (https://gsap.com/standard-license)",
@@ -20,6 +20,48 @@
         "dist/lenis.mjs": "4cdb25138c7233e7419f630d9536adb41d71fa51906c059f0a27a1268ddedacc",
         "dist/lenis.mjs.map": "b4d0666eb2e85ab6b029e5fac1c88aea885f8f3736516b422270cae9397c307f",
         "LICENSE": "7d1896b31f2eed9f286b05faca067c4e35b2f109ae7c4ed5105220e2d2820228"
+      }
+    },
+    {
+      "name": "@fontsource/cormorant-garamond", "version": "5.3.0", "kind": "font", "notice": "Cormorant Garamond", "licence": "SIL Open Font License 1.1 (OFL-1.1)",
+      "integrity": "sha512-weuGsCirGVWBWqpt6YUp0yLThTe4G8YO45noq8wxeJCRvEpq5lFrxNMFSTxcyOyV5k5otzJ8guDzYegdYlcLMQ==",
+      "dir": "assets/fonts/cormorant-garamond",
+      "files": {
+        "files/cormorant-garamond-latin-400-normal.woff2": "8048ac209bec741e1c29cd0cfac5aac1c0c2ba8c3ddbd4a58fa9bd92ef5c63c2",
+        "files/cormorant-garamond-latin-ext-400-normal.woff2": "375a088756d1cb10eb91a9a7de18ad5e9858689abe76496dd78e560fef0bbebb",
+        "files/cormorant-garamond-latin-500-normal.woff2": "8197bf53615ddc8c423f444c7f0eec63b7fa0ba093fcfbec60dfdd28429b0fc8",
+        "files/cormorant-garamond-latin-ext-500-normal.woff2": "3de1b0f23516d8ff77cc1a5af88b6c19037a375ec52729a8a5633998f58aa609",
+        "files/cormorant-garamond-latin-600-normal.woff2": "ae062b6d5ae308e7edf61b28b07b9984bbb6e961b1f34d9b2c2f4389c33f21ea",
+        "files/cormorant-garamond-latin-ext-600-normal.woff2": "4993f7f4feb5e31d94f54e3b11428337a06f0c8c8d9ffef331aabd7e6a81b4c8",
+        "files/cormorant-garamond-latin-400-italic.woff2": "e48e58027030df56869b795ca6f19b7012158275f7ad7cde1900b4a0b68d02e2",
+        "files/cormorant-garamond-latin-ext-400-italic.woff2": "96ec6109d044a8f2b279937499923fc0435db3e6bd91ce4cb1fd806d566378b9",
+        "LICENSE": "732f37009943e7f4378cf37113c9bcc4716af002a8583511aa91ed5d37683e73"
+      }
+    },
+    {
+      "name": "@fontsource/inter-tight", "version": "5.3.0", "kind": "font", "notice": "Inter Tight", "licence": "SIL Open Font License 1.1 (OFL-1.1)",
+      "integrity": "sha512-uRwIrjKSUcCKIFeO2qm3yECA9phwge6Y1qQZvUmwqFgiIVWUELwwuq7pFlmlpPtO33ZtFQVOXQGNuvna1JPs6A==",
+      "dir": "assets/fonts/inter-tight",
+      "files": {
+        "files/inter-tight-latin-400-normal.woff2": "6f32da94d4f26e98cb6ccd97034d306aa38945322c816f54a93c7d15dc0905b8",
+        "files/inter-tight-latin-ext-400-normal.woff2": "947ebce4da81e210b247cdc5eb7ab968eaa6bd12ad2ace2f21681e3756415f34",
+        "files/inter-tight-latin-500-normal.woff2": "6c0019f88d5bc179f2c972998ed8c14e779254566da9081c5e29f364a0a0aeb6",
+        "files/inter-tight-latin-ext-500-normal.woff2": "ea6e0ae0639c8d6d2292ca385e0aa0514ee76c8258f6ae46af779214f2ab0142",
+        "files/inter-tight-latin-600-normal.woff2": "db1a039d03ed646ef6a899f9ff92bf2f6fe382a49f1b0992066e85caf88b5be9",
+        "files/inter-tight-latin-ext-600-normal.woff2": "0bc08fdb02baa81e9379b64afba2b34bbe8bf34e2112f9bdd2ab9c30aa778060",
+        "LICENSE": "1e1c8b3dc6dfcbd5498a33f17fcc68ff2d39c599f6e8195fbf14601261dbef6a"
+      }
+    },
+    {
+      "name": "@fontsource/ibm-plex-mono", "version": "5.3.0", "kind": "font", "notice": "IBM Plex Mono", "licence": "SIL Open Font License 1.1 (OFL-1.1)",
+      "integrity": "sha512-eTgnZjZEGk1QtD3ZstF+Vclo2HLAni8YMy34/DxllwZvyz1lR/1RF/xTiAquOBO7MvqBx8D2Ig2WCPMVfdZu7Q==",
+      "dir": "assets/fonts/ibm-plex-mono",
+      "files": {
+        "files/ibm-plex-mono-latin-400-normal.woff2": "08949f728dc52d528e69b1667d15c89a5686a4ee9a296ff90983985f99c380f7",
+        "files/ibm-plex-mono-latin-ext-400-normal.woff2": "6bc0f226a5b7884a8170e3f62c63d7675609d4631bdc5931b5cdab81821f00eb",
+        "files/ibm-plex-mono-latin-500-normal.woff2": "01d285447409c8a588692162439a038b8cbd7871309ee20267b0d2d91c6e8e22",
+        "files/ibm-plex-mono-latin-ext-500-normal.woff2": "6bb06407c97584b0867a959e05e8874693bfeb8c317de190811c51598f2d99ea",
+        "LICENSE": "23b0a9d0c6d3f140a0b77e483c5cfa6bba574325ef5cb189ed9f2fec4884533f"
       }
     }
   ]

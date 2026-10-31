@@ -16,6 +16,11 @@ import { initShutter, openShutter } from './shutter.js';
 import { initReveal } from './reveal.js';
 import { initProgress } from './progress.js';
 import { mountReel } from './reel.js';
+import { mountReelIndex } from './reel-index.js';
+import { mountWorkIndex } from './work-index.js';
+import { renderPhotographsSection } from './photographs.js';
+import { initMatchCut } from './match-cut.js';
+import { siteLD } from './ld.js';
 import { loadDesktopMotion } from './desktop.js';
 import { recall, reapply, remember } from './place.js';
 
@@ -64,6 +69,7 @@ function renderSections() {
   const slot = name => document.querySelector(`[data-render="${name}"]`);
   R.put(slot('reel'), R.renderReel(data));
   R.put(slot('work'), R.renderWork(data));
+  R.put(slot('photographs'), renderPhotographsSection(data));
   R.put(slot('studies'), R.renderStudies(data));
   R.put(slot('previs'), R.renderPrevisShell(data));
   R.put(slot('about'), R.renderAbout(data));
@@ -78,10 +84,11 @@ function renderSections() {
   if (name && p.name) name.textContent = p.name;
   if (role && p.role) role.textContent = p.role;
   if (slate && p.slate) slate.textContent = R.slateLine(p.slate);
-  R.setJsonLd('ld-person', R.personLD(data));
+  R.setJsonLd('ld-person', siteLD(data));   // the same @graph tools/prerender.mjs writes
 
-  // No reel yet: no "coming soon" block. The hero's call to action leads to the work instead.
-  R.pruneReel(data);
+  // No reel (or no photographs) yet: no "coming soon" block, and the menu counts only what is there.
+  // The hero's call to action leads to the work instead.
+  R.pruneSections(data);
   if (!R.hasReel(data)) {
     const cta = document.querySelector('[data-watch-reel]');
     if (cta) { cta.href = '#work'; cta.innerHTML = 'Selected work <span aria-hidden="true">↓</span>'; }
@@ -103,7 +110,6 @@ function initHero(lifted) {
     state = s;
     root.dataset.intro = s;
     if (skipBtn) skipBtn.hidden = s !== 'playing';
-    window.dispatchEvent(new CustomEvent('kc:intro', { detail: { state: s } }));   // the desktop layer's hand-off
   };
 
   const shouldPlay = intro.titleSequence !== false && !isReducedMotion() && !location.hash && scrollY < 24
@@ -167,6 +173,7 @@ function initHero(lifted) {
 function initReel() {
   if (!R.hasReel(data)) return;
   const reel = mountReel(document.querySelector('[data-reel-frame]'), data);
+  mountReelIndex(document.getElementById('reel'), reel, data);
   document.querySelector('[data-watch-reel]')?.addEventListener('click', () => {
     // The link scrolls to #reel; land keyboard focus on the player (or the slate) too.
     requestAnimationFrame(() => reel.focus());
@@ -189,6 +196,48 @@ const KIND_FOCUS = {
   'wide-ext': [[0.68, 0.62], [0.3, 0.72]],
 };
 const THIRDS = [[0.667, 0.4], [0.333, 0.62]];
+
+// Hover previews (film.preview: a few seconds of the film itself, muted). 120 ms after a pointer settles
+// on a card (or keyboard focus lands on it) the clip fades in over the still (600 ms, expo out, work.css);
+// leaving fades it out (250 ms), then it is paused and unloaded. Never under reduced motion, Motion off or
+// Save-Data. A card with a preview shows its still without the camera move.
+function bindPreview(frame, link, src) {
+  let video = null, want = false, timer = 0, gone = 0;
+  const start = () => {
+    want = true;
+    clearTimeout(gone);
+    if (isReducedMotion() || navigator.connection?.saveData) return;
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      if (!want) return;
+      if (!video) {
+        video = document.createElement('video');
+        video.className = 'work-card__preview';
+        video.muted = true; video.loop = true; video.playsInline = true; video.preload = 'none';
+        video.setAttribute('muted', ''); video.setAttribute('playsinline', ''); video.setAttribute('aria-hidden', 'true');
+        frame.append(video);
+      }
+      if (!video.getAttribute('src')) video.src = src;
+      video.play().then(() => { if (want) video.classList.add('is-playing'); }, () => { /* no clip: the still stays */ });
+    }, 120);
+  };
+  const stop = () => {
+    want = false;
+    clearTimeout(timer);
+    if (!video) return;
+    video.classList.remove('is-playing');
+    clearTimeout(gone);
+    gone = setTimeout(() => { if (want) return; video.pause(); video.removeAttribute('src'); video.load(); }, 250);
+  };
+  link.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse' || e.pointerType === 'pen') start(); });
+  link.addEventListener('pointerleave', stop);
+  link.addEventListener('focus', () => {
+    try { if (!link.matches(':focus-visible')) return; } catch { /* old engines: keep going */ }
+    start();
+  });
+  link.addEventListener('blur', stop);
+  onMotionChange(({ reduced }) => { if (reduced) stop(); });
+}
 
 function initWork() {
   const cards = [...document.querySelectorAll('.work-card')];
@@ -230,9 +279,11 @@ function initWork() {
       } catch (err) { console.warn('[work] still', film.slug, err); srcA = null; }
 
       if (srcA) {
-        if (move?.mountStillMove) move.mountStillMove(frame, { move: film.move, srcA, srcB, focus, trigger: link });
+        const clip = R.safeUrl(film.preview?.src);
+        if (move?.mountStillMove && !clip) move.mountStillMove(frame, { move: film.move, srcA, srcB, focus, trigger: link });
         else frame.insertAdjacentHTML('afterbegin', String(R.html`<img src="${srcA}" alt="" decoding="async">`));
         if (placeholder) frame.insertAdjacentHTML('beforeend', '<span class="work-card__still-tag" aria-hidden="true">Placeholder still</span>');
+        if (clip) bindPreview(frame, link, clip);
         frame.classList.add('has-piece');
         return;
       }
@@ -323,6 +374,7 @@ function initStudies() {
 function boot() {
   applyPageGrain();
   initShutter();
+  initMatchCut();
   const hero = document.querySelector('[data-hero]');
   const lifted = runPreloader({ enabled: intro.preloader !== false, rise: hero ? [hero] : [] });
 
@@ -343,6 +395,7 @@ function boot() {
   openShutter();
 
   initWork();
+  mountWorkIndex(document.getElementById('work'), data);
   const aim = R.initAnchorAim();
   loadDesktopMotion({ page: 'home', reveal, aim });
 

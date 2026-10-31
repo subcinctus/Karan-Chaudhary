@@ -16,7 +16,7 @@
   /* Paper (text) */
   --paper: #ECE6DA;   /* primary text, ~15:1 */
   --paper-2: #B9B3A8; /* secondary, ~9:1 */
-  --paper-3: #8A857C; /* camera-report labels / meta, ~5.2:1 */
+  --paper-3: #8E8980; /* camera-report labels / meta, ~5.6:1 (4.64:1 on --ink-3, headroom under the grain) */
 
   /* Light */
   --tungsten: #F4B26A; /* accent + focus ring: 3200 K seen at 5600 K WB, nudged */

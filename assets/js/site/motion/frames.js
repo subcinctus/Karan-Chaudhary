@@ -1,8 +1,9 @@
 // Frames open like a gate. A study picture, a previs plan, the project frames: each is revealed by a
 // clip-path, never a fade: the study and previs frames open from a slit along their centre line
 // (inset 50 % → 0, a letterbox opening, 1.1 s expo in-out) while the plan inside settles from 1.1× to
-// 1 (1.4 s expo out); the project stills wipe up from the bottom (inset 100 % 0 0 0 → 0, 1.1 s expo
-// in-out) as the image inside settles from 1.08× to its full frame. At rest every picture is shown
+// 1 (1.4 s expo out); the project stills, the sequence's frames and the lighting plot's frame wipe up
+// from the bottom (inset 100 % 0 0 0 → 0, 1.1 s expo in-out) as the image inside settles from 1.08×
+// to its full frame (blocks drawn after arming arrive by kc:content). At rest every picture is shown
 // whole (no oversize, no scroll drift): the frames are cropped to the aspect the film was delivered
 // in, and the motion never crops them further. Only clip-path and transform change, and never the size
 // of a Player host, so the Players do not redraw.
@@ -35,10 +36,10 @@ export function initFrames(env) {
       if (inner.length) tl.from(inner, { scale: 1.1, duration: 1.4, ease: 'kc.out', clearProps: 'transform' }, 0.1);
       if (cap) tl.from(cap.children, { y: 24, autoAlpha: 0, duration: 0.8, ease: 'kc.out', stagger: 0.05, clearProps: 'all' }, 0.3);
     }
-    // Project page: the lead frame and the stills. The image inside settles (CSS --ps) to scale 1;
-    // images that arrive later (procedural stills paint async) pick it up.
+    // Project page: the lead frame, the stills, the sequence and the plot's frame. The image inside
+    // settles (CSS --ps) to scale 1; images that arrive later (procedural stills paint async) pick it up.
     const lead = scope.querySelector?.('.film__frame');
-    for (const frame of [lead, ...scope.querySelectorAll('.still .frame')].filter(Boolean)) {
+    for (const frame of [lead, ...scope.querySelectorAll('.still .frame, .sequence .frame, .film-plot__frame')].filter(Boolean)) {
       if (frame.dataset.motionFrame) continue;
       frame.dataset.motionFrame = '1';
       frame.classList.add('kc-settle');

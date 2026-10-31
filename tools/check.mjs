@@ -8,13 +8,21 @@
 // Options
 //   --media                 always run the ffprobe checks (fail if ffprobe is missing)
 //   --allow-offline-fonts   Google Fonts failures are warnings, not failures
-//   --only <text>           browser: only pages whose name contains <text> (comma list allowed)
+//   --only <text>           browser: only pages whose name contains <text> (comma list allowed). A value that
+//                           names a section (built-in or plugin, e.g. honesty) instead runs only the sections
+//                           named: --only work,index runs the work section on the index page.
 //   --viewports 390x844,…   browser: viewports, WxH or WxH@dpr (default 390x844,768x1024,1440x900,1920x1080)
 //   --desktop               browser: the desktop preset instead (1440x900,1512x982@2,1728x1117@2,1920x1080,2560x1440)
-//   --skip <section,…>      skip sections (urls,links,banned,licences,vendor,data,shotlist,seo,sitemap,
-//                           contrast,assets,vectors,screens,determinism,reduced,keyboard,motion,crawl,media)
+//   --skip <section,…>      skip sections (urls,links,banned,licences,vendor,data,shotlist,seo,contrast,assets,
+//                           vectors,plugins,screens,determinism,reduced,keyboard,motion,crawl,media, or a plugin's)
 //   --json <file>           also write the full report as JSON
 //   --gpu                   use the host GPU instead of SwiftShader
+//
+// Plugins: every tools/checks/*.mjs (in name order) may export staticSections and browserSections, arrays
+// of { name, title, run(api) }. Static ones run after the built-in static sections, browser ones after the
+// motion section; `api` (below) hands them the reporting functions and the helpers in this file. A static
+// and a browser section may share a name (--skip fonts skips both); a built-in name is refused. Plugins sit
+// under tools/, so the licence check reads their comments: cite a Motion Prompt ID only with its MIT line.
 //
 // Exit code 1 when anything FAILs. WARN and SKIP never fail the run; every skip says why.
 
@@ -37,6 +45,7 @@ const OPT = {
   viewports: val('--viewports', has('--desktop') ? '1440x900,1512x982@2,1728x1117@2,1920x1080,2560x1440' : '390x844,768x1024,1440x900,1920x1080')
     .split(',').map(s => s.split(/[x@]/).map(Number)).map(([w, h, dpr = 1]) => [w, h, dpr]),
   skip: new Set(val('--skip', '').split(',').filter(Boolean)),
+  sections: null,   // set from --only once the plugins are loaded (null: every section runs)
   json: val('--json', null),
   gpu: has('--gpu'),
 };
@@ -48,15 +57,17 @@ const rec = (level, msg, section = current) => { results.push({ section, level, 
 const pass = m => rec('PASS', m), fail = m => rec('FAIL', m), warn = m => rec('WARN', m), skip = m => rec('SKIP', m), info = m => rec('INFO', m);
 
 async function section(name, title, fn) {
+  if (OPT.sections && !OPT.sections.has(name)) return;   // --only names other sections
   current = name;
-  const t0 = Date.now();
+  const t0 = Date.now(), from = results.length;
   process.stdout.write(`\n== ${title}\n`);
-  if (OPT.skip.has(name)) { skip('skipped: --skip ' + name); flush(name); return; }
+  if (OPT.skip.has(name)) { skip('skipped: --skip ' + name); flush(name, from); return; }
   try { await fn(); } catch (e) { fail(`crashed: ${e?.stack?.split('\n').slice(0, 4).join(' | ') ?? e}`); }
-  flush(name, Date.now() - t0);
+  flush(name, from, Date.now() - t0);
 }
-function flush(name, ms) {
-  const mine = results.filter(r => r.section === name);
+/** Print what this run of the section recorded (a static and a browser plugin section may share a name). */
+function flush(name, from, ms) {
+  const mine = results.slice(from).filter(r => r.section === name);
   for (const r of mine) console.log(`  ${r.level.padEnd(4)} ${r.msg}`);
   if (!mine.length) console.log('  INFO nothing to report');
   if (ms > 2000) console.log(`  (${(ms / 1000).toFixed(1)} s)`);
@@ -79,7 +90,7 @@ function walk(dir, filter = () => true, out = []) {
 }
 /** Every file that is deployed (spec §1 "Deployed"), by extension. */
 function deployedFiles(exts) {
-  const top = ['index.html', 'project.html', '404.html', 'site.webmanifest', 'sitemap.xml'].filter(exists);
+  const top = ['index.html', 'project.html', 'photographs.html', '404.html', 'site.webmanifest', 'sitemap.xml'].filter(exists);
   const dirs = ['assets', 'data', 'studies'].flatMap(d => walk(d));
   return [...top, ...dirs].filter(f => exts.some(e => f.endsWith(e)));
 }
@@ -264,36 +275,43 @@ async function checkLicences() {
   if (!bad) pass(`licence lines present: ${citing} code files cite Motion Prompt IDs, all carry the MIT line; vendored #005 #027 #030 #031 #032 #033 #043 covered`);
 }
 
-// ---------------------------------------------------------------- static: vendored motion libraries
+// ---------------------------------------------------------------- static: vendored motion libraries and fonts
 async function checkVendor() {
   if (!exists('tools/vendor-manifest.json')) return skip('skipped: no tools/vendor-manifest.json');
   const man = JSON.parse(read('tools/vendor-manifest.json'));
+  const pkgs = man.packages ?? [];
+  // Fonts ("kind": "font") are labelled by their "notice" family name and named in the notices by package
+  // and version ("@fontsource/inter-tight 5.3.0"); the motion libraries by product ("GSAP 3.15.0").
+  const label = pkg => pkg.notice ?? (pkg.name === 'gsap' ? 'GSAP' : 'Lenis');
   let bad = 0, n = 0;
-  for (const pkg of man.packages ?? []) {
+  for (const pkg of pkgs) {
+    const font = pkg.kind === 'font';
     for (const [rel, want] of Object.entries(pkg.files ?? {})) {
       const f = path.posix.join(pkg.dir, path.posix.basename(rel));
-      if (!exists(f)) { bad++; fail(`${f} is missing (node tools/vendor-motion.mjs restores it)`); continue; }
+      if (!exists(f)) { bad++; fail(`${f} is missing (npm run vendor restores it)`); continue; }
       const got = crypto.createHash('sha256').update(fs.readFileSync(R(f))).digest('hex');
       if (got !== want) { bad++; fail(`${f}: sha256 ${got.slice(0, 12)}… ≠ manifest ${want.slice(0, 12)}… (vendored files must stay byte-identical)`); continue; }
       n++;
-      if (pkg.name === 'gsap' && f.endsWith('.js')) {
+      if (!font && pkg.name === 'gsap' && f.endsWith('.js')) {
         const head = read(f).slice(0, 400);
         if (!/@license/.test(head) || !/gsap\.com\/standard-license/.test(head) || !head.includes(pkg.version)) { bad++; fail(`${f}: GreenSock licence header (version ${pkg.version}, standard-license) missing`); }
       }
+      if (font && path.posix.basename(f) === 'LICENSE' && !/SIL Open Font License/i.test(read(f))) { bad++; fail(`${f} is not the SIL Open Font License (${label(pkg)})`); }
     }
   }
   if (exists('assets/js/vendor/lenis/LICENSE') && !/MIT License/i.test(read('assets/js/vendor/lenis/LICENSE'))) { bad++; fail('assets/js/vendor/lenis/LICENSE is not the MIT licence'); }
   const notices = exists('THIRD-PARTY-NOTICES.md') ? read('THIRD-PARTY-NOTICES.md') : '';
-  for (const pkg of man.packages ?? []) {
-    const label = pkg.name === 'gsap' ? 'GSAP' : 'Lenis';
-    if (!notices.includes(`${label} ${pkg.version}`)) { bad++; fail(`THIRD-PARTY-NOTICES.md does not name ${label} ${pkg.version}`); }
+  for (const pkg of pkgs) {
+    const want = pkg.kind === 'font' ? `${pkg.name} ${pkg.version}` : `${label(pkg)} ${pkg.version}`;
+    if (!notices.includes(want)) { bad++; fail(`THIRD-PARTY-NOTICES.md does not name ${want}${pkg.kind === 'font' ? ` (the ${label(pkg)} font files in ${pkg.dir})` : ''}`); }
   }
-  // Only the desktop layer may load them (never a static <script>/<link> on a page, never a CDN).
+  // Only the desktop layer may load the motion libraries (never a static <script>/<link> on a page, never a
+  // CDN). Fonts are the opposite: every page links them, so this rule is for GSAP and Lenis only.
   for (const f of deployedFiles(['.html'])) {
     if (/vendor\/(gsap|lenis)\//.test(read(f))) { bad++; fail(`${f} references vendor/gsap or vendor/lenis directly: phones would download them (load them only through site/motion/lib.js)`); }
     if (/(cdn\.jsdelivr|unpkg\.com|cdnjs|gsap\.com\/[^"]*\.js)/.test(read(f))) { bad++; fail(`${f} loads a motion library from a CDN`); }
   }
-  if (!bad) pass(`${n} vendored motion files match tools/vendor-manifest.json (GSAP ${man.packages?.[0]?.version}, Lenis ${man.packages?.[1]?.version}); licence headers, LICENSE and notices present; no page loads them directly`);
+  if (!bad) pass(`${n} vendored files match tools/vendor-manifest.json (${pkgs.map(p => `${label(p)} ${p.version}`).join(', ')}); licence headers, LICENSE files and notices present; no page loads the motion libraries directly`);
 }
 
 // ---------------------------------------------------------------- static: data/portfolio.js
@@ -303,71 +321,19 @@ async function loadData() {
   DATA = (await import(pathToFileURL(R('data/portfolio.js')).href)).default;
   return DATA;
 }
-const HEX = /^#[0-9a-f]{6}$/i;
-const MOVES = new Set(['027', '030', '031', '032', '033', '043']);
-const PATH_KEYS = new Set(['src', 'poster', 'video', 'cv', 'href', 'image', 'ogImage', 'shotlist', 'still', 'file']);
 async function checkData() {
   if (!exists('data/portfolio.js')) return fail('data/portfolio.js is missing');
   let d;
   try { d = await loadData(); } catch (e) { return fail(`data/portfolio.js does not import: ${e.message}`); }
-  let errs = 0;
-  const bad = m => { errs++; fail(m); };
-  const s = d.site ?? {};
-  if (!/^https:\/\/.+\/$/.test(s.url ?? '')) bad(`site.url must be an absolute https URL ending in "/" (got ${JSON.stringify(s.url)})`);
-  for (const k of ['title', 'description']) if (typeof s[k] !== 'string' || !s[k].trim()) bad(`site.${k} is missing`);
-  if (!d.person?.name) bad('person.name is missing');
-
-  const films = Array.isArray(d.films) ? d.films : [];
-  if (!films.length) bad('films is empty (the work grid needs at least one record)');
-  const slugs = new Set();
-  films.forEach((f, i) => {
-    const at = `films[${i}]${f?.slug ? ` (${f.slug})` : ''}`;
-    if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(f.slug ?? '')) bad(`${at}: slug must be lowercase-kebab (got ${JSON.stringify(f.slug)})`);
-    if (slugs.has(f.slug)) bad(`${at}: duplicate slug`);
-    slugs.add(f.slug);
-    if (!f.title) bad(`${at}: title is missing`);
-    if (!(typeof f.aspect === 'number' && Number.isFinite(f.aspect) && f.aspect >= 1 && f.aspect <= 4)) bad(`${at}: aspect must be a number between 1 and 4 (got ${JSON.stringify(f.aspect)})`);
-    if (f.frameRate != null && !(typeof f.frameRate === 'number' && f.frameRate > 0)) bad(`${at}: frameRate must be a number`);
-    if (f.year != null && !Number.isInteger(f.year)) bad(`${at}: year must be a whole number`);
-    if (!Array.isArray(f.palette) || f.palette.length < 2) bad(`${at}: palette must be an array of hex colours`);
-    else {
-      f.palette.forEach((c, j) => { if (!HEX.test(c)) bad(`${at}: palette[${j}] ${JSON.stringify(c)} is not #RRGGBB`); });
-      if (f.palette.length !== 5) warn(`${at}: palette has ${f.palette.length} colours (cards and stills expect 5, darkest → lightest)`);
-    }
-    const mv = String(f.move ?? '').replace(/^#/, '');
-    if (!MOVES.has(mv)) bad(`${at}: move ${JSON.stringify(f.move)} is not one of #027 #030 #031 #032 #033 #043`);
-    for (const [k, arr] of [['stills', f.stills], ['bts', f.bts]]) {
-      if (arr != null && !Array.isArray(arr)) { bad(`${at}: ${k} must be an array`); continue; }
-      (arr ?? []).forEach((st, j) => {
-        if (!st?.src) bad(`${at}: ${k}[${j}] has no src`);
-        if (!st?.alt || !String(st.alt).trim()) bad(`${at}: ${k}[${j}] needs alt text`);
-        if (st?.aspect != null && !(typeof st.aspect === 'number' && st.aspect > 0)) bad(`${at}: ${k}[${j}].aspect must be a number`);
-      });
-    }
-  });
-  (d.credits ?? []).forEach((c, i) => { if (c.year != null && !Number.isInteger(c.year)) bad(`credits[${i}]: year must be a whole number`); });
-  if (d.contact?.email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(d.contact.email)) bad(`contact.email ${JSON.stringify(d.contact.email)} is not an email address`);
-  for (const [id, m] of Object.entries(d.previs?.media ?? {})) if (!/^PV-\d{3}$/.test(id)) warn(`previs.media key ${id} does not look like a shot id (PV-010…)`);
-
-  // Paths: every non-null media/link path is relative and exists.
-  let paths = 0;
-  const seen = new WeakSet();
-  const visit = (v, at, key) => {
-    if (v && typeof v === 'object') {
-      if (seen.has(v)) return; seen.add(v);
-      for (const [k, x] of Object.entries(v)) visit(x, Array.isArray(v) ? `${at}[${k}]` : `${at}.${k}`, Array.isArray(v) ? key : k);
-      return;
-    }
-    if (typeof v !== 'string' || !PATH_KEYS.has(key)) return;
-    if (/^(?:https?:|mailto:|tel:|data:)/i.test(v)) return;
-    if (v.startsWith('/')) return bad(`${at}: "${v}" is root-relative; use a relative path`);
-    const file = v.split(/[?#]/)[0];
-    if (!file) return;
-    paths++;
-    if (!exists(file)) bad(`${at}: "${v}" does not exist`);
-  };
-  visit(d, 'data', '');
-  if (!errs) pass(`schema ok: ${films.length} films (unique slugs, hex palettes, numeric aspects, moves in #027/#030/#031/#032/#033/#043); ${paths} media/link paths exist`);
+  // Field shapes, paths, reel limits and photograph sets (tools/lib/schema.mjs). Its honesty rules (laurels
+  // on sample films, a sample sub-record inside a real film) are reported by the honesty plugin when it is
+  // loaded, so a broken rule is counted once.
+  const { validateData } = await import('./lib/schema.mjs');
+  const schema = validateData(d, { exists, size: p => fs.statSync(R(p)).size, honesty: !PLUGINS.static.some(s => s.name === 'honesty') });
+  for (const m of schema.fails) fail(m);
+  if (!schema.fails.length) pass(schema.summary);
+  for (const m of schema.warns) warn(m);
+  for (const m of schema.infos) info(m);
 
   // Placeholder report.
   let ph = 0;
@@ -383,7 +349,7 @@ async function checkData() {
   if (d.colophon?.confirmed !== true) warn('colophon: the AI-use disclosure is not confirmed by the owner yet (set colophon.confirmed: true once it matches how the work was made; until then the site tags it "To confirm")');
   // Every study page is shareable on its own, so each must carry the AI-use disclosure itself.
   const noDisclosure = walk('studies', f => f.endsWith('.html')).filter(f => !/written with Claude Opus/.test(read(f)));
-  if (noDisclosure.length) bad(`study pages without the AI-use disclosure line ("…written with Claude Opus…"): ${noDisclosure.join(', ')}`);
+  if (noDisclosure.length) fail(`study pages without the AI-use disclosure line ("…written with Claude Opus…"): ${noDisclosure.join(', ')}`);
   info(`placeholders: ${ph} record(s) with placeholder:true (${[...where].map(([k, n]) => `${k} ${n}`).join(', ') || 'none'}); ${todos} TODO(owner) in data/portfolio.js${repoTodos ? `, ${repoTodos} elsewhere` : ''}`);
   if (ph && d.site?.showPlaceholderBadges === false) warn('site.showPlaceholderBadges is false while placeholder records remain: sample content would look real');
 }
@@ -484,27 +450,12 @@ async function checkSeo() {
     const sameAs = (d.person.sameAs ?? []).filter(Boolean);
     if (JSON.stringify(person.sameAs ?? []) !== JSON.stringify(sameAs)) warn(`JSON-LD Person.sameAs ${JSON.stringify(person.sameAs ?? [])} differs from data.person.sameAs ${JSON.stringify(sameAs)}`);
   }
-  for (const f of ['project.html', ...walk('studies', x => x.endsWith('.html'))].filter(exists)) {
+  for (const f of ['project.html', 'photographs.html', ...walk('studies', x => x.endsWith('.html'))].filter(exists)) {
     const h = read(f);
     if (!/<title>[^<]+<\/title>/i.test(h)) { errs++; fail(`${f}: no <title>`); }
     if (metaContent(h, 'name', 'description') == null) warn(`${f}: no meta description`);
   }
   if (!errs) pass(`static <title>, description, canonical, OG and Twitter tags match data.site; JSON-LD (${blocks.length} block) parses, Person matches`);
-}
-
-// ---------------------------------------------------------------- static: sitemap
-async function checkSitemap() {
-  if (!exists('sitemap.xml')) return warn('sitemap.xml not found (search engines will not discover project pages)');
-  const xml = read('sitemap.xml');
-  const d = await loadData();
-  const locs = new Set([...xml.matchAll(/<loc>\s*([^<]+?)\s*<\/loc>/g)].map(m => decode(m[1])));
-  const want = [d.site.url, ...(d.films ?? []).map(f => `${d.site.url}project.html?slug=${f.slug}`)];
-  const missing = want.filter(u => !locs.has(u));
-  for (const u of missing) fail(`sitemap.xml does not list ${u}`);
-  const extra = [...locs].filter(u => !want.includes(u));
-  if (extra.length) warn(`sitemap.xml lists URLs that are not the home page or a film: ${extra.join(', ')}`);
-  for (const u of locs) if (!u.startsWith(d.site.url)) fail(`sitemap.xml: ${u} is outside ${d.site.url}`);
-  if (!missing.length) pass(`sitemap.xml lists the home page and all ${d.films.length} project slugs`);
 }
 
 // ---------------------------------------------------------------- static: token contrast
@@ -526,13 +477,10 @@ async function checkContrast() {
   for (const t of text) for (const b of bgs) {
     const r = contrastRatio(tok[t], tok[b]);
     rows.push(`${t}/${b} ${r.toFixed(2)}`);
-    if (r < 4.5) {
-      // --ink-3 is the raised/hover surface: report, but only the page and surface backgrounds are hard requirements.
-      if (b === 'ink-3') warn(`--${t} on --${b}: ${r.toFixed(2)}:1 < 4.5:1 (avoid ${t} text on raised/hover surfaces)`);
-      else { errs++; fail(`--${t} (${tok[t]}) on --${b} (${tok[b]}): ${r.toFixed(2)}:1 < 4.5:1`); }
-    }
+    // --ink-3, the raised/hover surface, is held to 4.5:1 like the page and surface backgrounds.
+    if (r < 4.5) { errs++; fail(`--${t} (${tok[t]}) on --${b} (${tok[b]}): ${r.toFixed(2)}:1 < 4.5:1`); }
   }
-  if (!errs) pass(`text tokens ≥ 4.5:1 on ink-0/1/2: ${rows.filter(r => !r.includes('/ink-3')).join(', ')}`);
+  if (!errs) pass(`text tokens ≥ 4.5:1 on ink-0/1/2/3: ${rows.join(', ')}`);
 }
 
 // ---------------------------------------------------------------- static: generated assets
@@ -645,6 +593,7 @@ async function pagesToVisit() {
     const d = await loadData().catch(() => null);
     for (const f of d?.films ?? []) list.push({ name: `project-${f.slug}`, path: `project.html?slug=${encodeURIComponent(f.slug)}` });
   }
+  if (exists('photographs.html')) list.push({ name: 'photographs', path: 'photographs.html' });
   for (const f of walk('studies', x => x.endsWith('.html')).sort()) list.push({ name: `study-${path.posix.basename(f, '.html')}`, path: f, study: true });
   list.push({ name: '404', path: 'no-such-scene/take-1/', is404: true });
   return OPT.only ? list.filter(p => OPT.only.some(o => p.name.includes(o))) : list;
@@ -1267,21 +1216,94 @@ async function checkMedia() {
   if (!bad && (clips.length || media.length)) pass(`${clips.length + media.length} clip(s) pass h264/vp9, yuv420p, even size, fps, duration, bt709 and faststart checks`);
 }
 
+// ---------------------------------------------------------------- plugins (tools/checks/*.mjs)
+const STATIC = [
+  ['urls', 'Relative URLs', checkUrls],
+  ['links', 'Local references in HTML', checkStaticLinks],
+  ['banned', 'Determinism grep (pieces, vendored cells, pure core)', checkBanned],
+  ['licences', 'Motion Prompt licence lines', checkLicences],
+  ['vendor', 'Vendored libraries and fonts (hashes, licences)', checkVendor],
+  ['data', 'data/portfolio.js schema and placeholders', checkData],
+  ['shotlist', 'Previs shot list in sync', checkShotlist],
+  ['seo', 'SEO tags and JSON-LD', checkSeo],
+  ['contrast', 'Token contrast', checkContrast],
+  ['assets', 'Generated assets (posters, OG, icon)', checkAssets],
+  ['vectors', 'Piece test vectors (Node)', checkVectors],
+];
+const BROWSER = [
+  ['screens', `Pages × viewports (${OPT.viewports.map(([w, h, d]) => `${w}×${h}${d > 1 ? `@${d}` : ''}`).join(', ')}): errors, overflow, reduced motion, screenshots`, checkScreens],
+  ['determinism', 'Determinism in record mode (sha256 of the canvas)', checkDeterminism],
+  ['keyboard', 'Keyboard: skip link, slider valuetext and live region, focus ring', checkKeyboard],
+  ['motion', 'Desktop motion layer: anchors, keyboard in the strip, reveals, Motion off, phones', checkMotion],
+];
+const BUILTIN = new Set([...STATIC, ...BROWSER].map(([name]) => name).concat('plugins', 'browser', 'crawl', 'media'));
+
+/** Every tools/checks/*.mjs in name order: its sections, plus what failed to load. */
+async function loadPlugins() {
+  const out = { files: [], static: [], browser: [], errors: [] };
+  for (const f of walk('tools/checks', x => x.endsWith('.mjs')).sort()) {
+    let m;
+    try { m = await import(pathToFileURL(R(f)).href); } catch (e) { out.errors.push(`${f} does not import: ${e.message.split('\n')[0]}`); continue; }
+    out.files.push(f);
+    for (const [kind, list] of [['static', m.staticSections], ['browser', m.browserSections]]) {
+      for (const s of list ?? []) {
+        if (!s?.name || typeof s.run !== 'function') out.errors.push(`${f}: every entry of ${kind}Sections needs { name, title, run(api) }`);
+        else if (BUILTIN.has(s.name)) out.errors.push(`${f}: "${s.name}" is a built-in section name (--skip and --only would be ambiguous)`);
+        else out[kind].push({ ...s, file: f });
+      }
+    }
+  }
+  return out;
+}
+const PLUGINS = await loadPlugins();
+
+async function checkPlugins() {
+  for (const e of PLUGINS.errors) fail(e);
+  if (!PLUGINS.files.length) return PLUGINS.errors.length ? undefined : info('no plugins in tools/checks/');
+  const names = list => list.map(s => s.name).join(', ') || 'none';
+  (PLUGINS.errors.length ? info : pass)(`${PLUGINS.files.length} plugin file(s) loaded: ${PLUGINS.files.map(f => path.posix.basename(f)).join(', ')} (static: ${names(PLUGINS.static)}; browser: ${names(PLUGINS.browser)})`);
+}
+
+// --only: a value that names a section (built-in or plugin) selects sections; the rest still filter pages.
+if (OPT.only) {
+  const names = new Set([...BUILTIN, ...PLUGINS.static.map(s => s.name), ...PLUGINS.browser.map(s => s.name)]);
+  const picked = OPT.only.filter(o => names.has(o));
+  if (picked.length) {
+    OPT.sections = new Set(picked);
+    const needsBrowser = [...BROWSER.map(([name]) => name), ...PLUGINS.browser.map(s => s.name), 'crawl'];
+    if (needsBrowser.some(n => OPT.sections.has(n))) OPT.sections.add('browser');
+  }
+  OPT.only = OPT.only.filter(o => !names.has(o));
+  if (!OPT.only.length) OPT.only = null;
+}
+
+/**
+ * A module that does not import in Node stands in as an object whose every property read throws the
+ * import error, so the plugin section that uses it fails with the reason (not "undefined is not a function").
+ */
+const importOr = file => import(pathToFileURL(R(file)).href).catch(e => new Proxy({}, {
+  get: (_, k) => {
+    if (typeof k === 'symbol' || k === 'then') return undefined;
+    throw new Error(`${file} does not import in Node: ${e.message.split('\n')[0]}`);
+  },
+}));
+
+/** What a plugin section's run(api) receives: the reporting functions and the helpers in this file. */
+const api = {
+  OPT, pass, fail, warn, skip, info,
+  R: await importOr('assets/js/site/render.js'),   // the site's renderers (pure string builders), in Node
+  abs: R, exists, read, walk, deployedFiles, splitComments, lineOf, loadData, decode, metaContent,
+  browser: () => PW,                                  // { srv, browser, contextOptions } in browser sections
+  watch, settle, pagesToVisit, scrollThrough, fullPageShot, stripFits, DESKTOP_QUERY, DESKTOP_WAIT,
+  fixture: await importOr('tools/lib/fixture.mjs'),  // fixtureData, routeFixture, stampFixture, ensureTestClip
+};
+
 // ---------------------------------------------------------------- main
 const t0 = Date.now();
-console.log(`check: ${OPT.browser ? 'static + browser' : 'static only (--no-browser)'} · ${REPO_ROOT}`);
-await section('urls', 'Relative URLs', checkUrls);
-await section('links', 'Local references in HTML', checkStaticLinks);
-await section('banned', 'Determinism grep (pieces, vendored cells, pure core)', checkBanned);
-await section('licences', 'Motion Prompt licence lines', checkLicences);
-await section('vendor', 'Vendored motion libraries (hashes, licences)', checkVendor);
-await section('data', 'data/portfolio.js schema and placeholders', checkData);
-await section('shotlist', 'Previs shot list in sync', checkShotlist);
-await section('seo', 'SEO tags and JSON-LD', checkSeo);
-await section('sitemap', 'Sitemap', checkSitemap);
-await section('contrast', 'Token contrast', checkContrast);
-await section('assets', 'Generated assets (posters, OG, icon)', checkAssets);
-await section('vectors', 'Piece test vectors (Node)', checkVectors);
+console.log(`check: ${OPT.browser ? 'static + browser' : 'static only (--no-browser)'} · ${REPO_ROOT}${OPT.sections ? ` · only ${[...OPT.sections].join(', ')}` : ''}`);
+for (const [name, title, fn] of STATIC) await section(name, title, fn);
+await section('plugins', 'Check plugins (tools/checks/*.mjs)', checkPlugins);
+for (const s of PLUGINS.static) await section(s.name, s.title || s.name, () => s.run(api));
 
 if (OPT.browser) {
   let ready = false;
@@ -1291,10 +1313,8 @@ if (OPT.browser) {
   });
   if (ready) {
     try {
-      await section('screens', `Pages × viewports (${OPT.viewports.map(([w, h, d]) => `${w}×${h}${d > 1 ? `@${d}` : ''}`).join(', ')}): errors, overflow, reduced motion, screenshots`, checkScreens);
-      await section('determinism', 'Determinism in record mode (sha256 of the canvas)', checkDeterminism);
-      await section('keyboard', 'Keyboard: skip link, slider valuetext and live region, focus ring', checkKeyboard);
-      await section('motion', 'Desktop motion layer: anchors, keyboard in the strip, reveals, Motion off, phones', checkMotion);
+      for (const [name, title, fn] of BROWSER) await section(name, title, fn);
+      for (const s of PLUGINS.browser) await section(s.name, s.title || s.name, () => s.run(api));
       await section('crawl', 'Internal link crawl', checkCrawl);
     } finally {
       await PW.browser.close().catch(() => {});
@@ -1314,7 +1334,7 @@ console.log(`\n== Summary (${((Date.now() - t0) / 1000).toFixed(1)} s): ${count(
 for (const f of fails) console.log(`  FAIL [${f.section}] ${f.msg}`);
 if (OPT.json) {
   fs.mkdirSync(path.dirname(path.resolve(OPT.json)), { recursive: true });
-  fs.writeFileSync(path.resolve(OPT.json), JSON.stringify({ options: { ...OPT, skip: [...OPT.skip] }, results }, null, 2) + '\n');
+  fs.writeFileSync(path.resolve(OPT.json), JSON.stringify({ options: { ...OPT, skip: [...OPT.skip], sections: OPT.sections && [...OPT.sections] }, results }, null, 2) + '\n');
   console.log(`report: ${OPT.json}`);
 }
 process.exit(fails.length ? 1 : 0);

@@ -1,8 +1,11 @@
 <!doctype html>
 <!--
   Film detail page: project.html?slug=<film slug from data/portfolio.js>.
-  assets/js/site/project.js renders the film (camera report, palette, stills, BTS, prev/next) and
-  sets the title, description, canonical and CreativeWork JSON-LD. Unknown slug → a not-found state.
+  assets/js/site/project.js renders the film (camera report, credits, palette, sequence, frames,
+  lighting plot, BTS, prev/next) and sets the title, description, canonical and CreativeWork JSON-LD.
+  Unknown slug → a not-found state. It loads in <head> and blocks rendering, so the film is in the page
+  at the first paint (a match cut from the index lands on it). Inside the "prerender:films" comment
+  markers, tools/prerender.mjs writes a static filmography for crawlers and visitors without JavaScript.
   Every URL is relative: the site is served from https://subcinctus.github.io/Karan-Chaudhary/.
 -->
 <html lang="en">
@@ -25,16 +28,25 @@
   <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
   <link rel="manifest" href="site.webmanifest">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+  <!-- fonts -->
+  <!-- Self-hosted type (assets/css/fonts.css). Preloaded: the faces of the film's head (the title, the
+       italic logline) and of the camera-report labels. -->
+  <link rel="preload" href="assets/fonts/cormorant-garamond/cormorant-garamond-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/cormorant-garamond/cormorant-garamond-latin-400-italic.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/ibm-plex-mono/ibm-plex-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/fonts.css">
+  <!-- /fonts -->
   <link rel="stylesheet" href="assets/css/tokens.css">
   <link rel="stylesheet" href="assets/css/base.css">
   <link rel="stylesheet" href="assets/css/player.css">
   <link rel="stylesheet" href="assets/css/site.css">
   <link rel="stylesheet" href="assets/css/motion.css">
+  <link rel="stylesheet" href="assets/css/film.css">
+  <link rel="stylesheet" href="assets/css/lightbox.css">
+  <link rel="stylesheet" href="assets/css/transitions.css">
 
-  <!-- Arriving half of the #092 shutter (never under reduced motion; a safety timer uncovers). -->
+  <!-- Arriving half of the #092 shutter (never under reduced motion; a safety timer uncovers), and how
+       this page arrived (html[data-vt]: "on" under a match cut, "skipped" with Motion off, "none"). -->
   <script>
     (function () {
       var d = document.documentElement; d.classList.add('js');
@@ -51,8 +63,22 @@
         sessionStorage.removeItem('kc:shutter');
       } catch (e) { /* storage blocked */ }
       setTimeout(function () { d.classList.remove('shutter-cover', 'shutter-titled'); }, 3000);
+      addEventListener('pagereveal', function (e) {
+        if (!e.viewTransition) { d.dataset.vt = 'none'; return; }
+        if (d.dataset.motion === 'off') { e.viewTransition.skipTransition(); d.dataset.vt = 'skipped'; } else d.dataset.vt = 'on';
+      });
     })();
   </script>
+  <!-- The next and previous films are fetched as the pointer settles on their links (never prerendered). -->
+  <script type="speculationrules">{"prefetch":[{"where":{"href_matches":"project.html*"},"eagerness":"moderate"}]}</script>
+
+  <link rel="modulepreload" href="assets/js/site/project.js">
+  <link rel="modulepreload" href="data/portfolio.js">
+  <link rel="modulepreload" href="assets/js/site/render.js">
+  <link rel="modulepreload" href="assets/js/site/html.js">
+  <link rel="modulepreload" href="assets/js/site/film-facts.js">
+  <link rel="modulepreload" href="assets/js/site/match-cut.js">
+  <script type="module" src="assets/js/site/project.js" blocking="render"></script>
 </head>
 <body class="site site--project">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -63,16 +89,17 @@
     <a class="site-header__mark" href="index.html" aria-label="Karan Chaudhary, home">K<span aria-hidden="true">·</span>C</a>
     <nav class="site-nav" aria-label="Primary">
       <ul role="list">
-        <li><a href="index.html#reel">Reel</a></li>
+        <li hidden><a href="index.html#reel">Reel</a></li>
         <li><a href="index.html#work" aria-current="true">Work</a></li>
+        <li hidden><a href="index.html#photographs">Photographs</a></li>
         <li><a href="index.html#studies">Studies</a></li>
         <li><a href="index.html#previs">Previs</a></li>
         <li><a href="index.html#about">About</a></li>
         <li><a href="index.html#credits">Credits</a></li>
-        <li><a href="index.html#contact">Contact</a></li>
       </ul>
     </nav>
-    <p class="site-header__tc" aria-hidden="true" data-tc>TC 00:00:00:00</p>
+    <a class="site-header__contact" href="index.html#contact">Contact</a>
+    <p class="site-header__tc" aria-hidden="true" data-tc="TC 00:00:00:00"></p>
     <button class="site-header__motion" type="button" data-motion-toggle>Motion off</button>
     <button class="site-header__menu" type="button" aria-haspopup="dialog" aria-controls="menu" aria-expanded="false" data-menu-open>Menu</button>
   </header>
@@ -84,19 +111,32 @@
     </div>
     <nav aria-label="Site menu">
       <ol class="menu__list" role="list">
-        <li><a href="index.html#reel"><span class="cam-label" aria-hidden="true">Sc. 01</span>Reel</a></li>
-        <li><a href="index.html#work"><span class="cam-label" aria-hidden="true">Sc. 02</span>Selected work</a></li>
-        <li><a href="index.html#studies"><span class="cam-label" aria-hidden="true">Sc. 03</span>Studies</a></li>
-        <li><a href="index.html#previs"><span class="cam-label" aria-hidden="true">Sc. 04</span>Previs</a></li>
-        <li><a href="index.html#about"><span class="cam-label" aria-hidden="true">Sc. 05</span>About</a></li>
-        <li><a href="index.html#credits"><span class="cam-label" aria-hidden="true">Sc. 06</span>Credits</a></li>
-        <li><a href="index.html#contact"><span class="cam-label" aria-hidden="true">Sc. 07</span>Contact</a></li>
+        <li hidden><a href="index.html#reel"><span class="cam-label" aria-hidden="true">Sc. 01</span>Reel</a></li>
+        <li><a href="index.html#work"><span class="cam-label" aria-hidden="true">Sc. 01</span>Selected work</a></li>
+        <li hidden><a href="index.html#photographs"><span class="cam-label" aria-hidden="true">Sc. 02</span>Photographs</a></li>
+        <li><a href="index.html#studies"><span class="cam-label" aria-hidden="true">Sc. 02</span>Studies</a></li>
+        <li><a href="index.html#previs"><span class="cam-label" aria-hidden="true">Sc. 03</span>Previs</a></li>
+        <li><a href="index.html#about"><span class="cam-label" aria-hidden="true">Sc. 04</span>About</a></li>
+        <li><a href="index.html#credits"><span class="cam-label" aria-hidden="true">Sc. 05</span>Credits</a></li>
+        <li><a href="index.html#contact"><span class="cam-label" aria-hidden="true">Sc. 06</span>Contact</a></li>
       </ol>
     </nav>
     <button class="btn btn--ghost menu__motion" type="button" data-motion-toggle>Motion off</button>
   </dialog>
 
   <main id="main" tabindex="-1" data-project>
+    <section class="film-static container"><!-- prerender:films --><p class="cam-label">Karan Chaudhary · Cinematographer</p>
+    <h1 class="film-missing__title">Selected work</h1>
+    <p class="film-missing__text">The films on this site. Each one’s page holds its camera report, credits and frames.</p>
+    <ol class="film-missing__list" role="list">
+      <li><a href="project.html?slug=untitled-short-01">Untitled Short I</a> <span class="cam-label">01 · 2026 · Short fiction · Director of Photography</span> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span><p class="film-missing__text">Sample logline. Two siblings clear out their late father’s workshop over one long evening, and the light goes with the day.</p></li>
+      <li><a href="project.html?slug=night-exterior-sample">Night Exterior</a> <span class="cam-label">02 · 2025 · Short fiction · Director of Photography</span> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span><p class="film-missing__text">Sample logline. A night-shift cashier and a stranger wait out the last bus under one sodium streetlight.</p></li>
+      <li><a href="project.html?slug=sample-music-video">Music Video</a> <span class="cam-label">03 · 2025 · Music video · Director of Photography</span> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span><p class="film-missing__text">Sample logline. One performer, one room, one continuous orbit as the song builds.</p></li>
+      <li><a href="project.html?slug=untitled-documentary-sample">Untitled Documentary</a> <span class="cam-label">04 · 2024 · Documentary short · Cinematographer</span> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span><p class="film-missing__text">Sample logline. A portrait of a family bakery in the week before it closes.</p></li>
+      <li><a href="project.html?slug=coastal-study-sample">Coastal Study</a> <span class="cam-label">05 · 2024 · Experimental short · Director of Photography</span> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span><p class="film-missing__text">Sample logline. A shoreline over one tide, framed very wide and very still until it is not.</p></li>
+      <li><a href="project.html?slug=sample-commercial">Spot</a> <span class="cam-label">06 · 2023 · Commercial · Director of Photography</span> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span><p class="film-missing__text">Sample logline. Two rooms, one product, joined by a whip pan.</p></li>
+    </ol>
+    <p><a class="btn" href="index.html#work">Back to selected work</a></p><!-- /prerender:films --></section>
     <noscript>
       <section class="film-missing container">
         <h1 class="film-missing__title">Selected work</h1>
@@ -108,7 +148,5 @@
   <footer class="site-footer site-footer--slim">
     <div class="container" data-render="colophon"></div>
   </footer>
-
-  <script type="module" src="assets/js/site/project.js"></script>
 </body>
 </html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<!--
+  Photographs: still photography by Karan Chaudhary in series (never frames from a film), as a page to
+  look at and as a print view: printed or saved as PDF, every photograph takes a page of its own, the file
+  the schools ask for (APPLYING.md). photographs.html?set=afi (nyu, famu, lodz, bfa) keeps the photographs
+  tagged for one school's set; ?captions=1 adds their captions; ?cover=1 puts a cover page first.
+  assets/js/site/photographs-main.js renders it from data/portfolio.js; inside the "prerender:…" comment
+  markers tools/prerender.mjs writes the same renderers' output (every photograph, no options), for crawlers
+  and visitors without JavaScript. While the data holds no photographs the page says so and is not indexed.
+  Every URL is relative: the site is served from https://subcinctus.github.io/Karan-Chaudhary/.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex">
+  <title>Photographs — Karan Chaudhary, Cinematographer</title>
+  <meta name="description" content="Still photographs by Karan Chaudhary, cinematographer, in series.">
+  <link rel="canonical" href="https://subcinctus.github.io/Karan-Chaudhary/photographs.html">
+  <meta name="theme-color" content="#0C0D10">
+  <meta name="color-scheme" content="dark">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Karan Chaudhary">
+  <meta property="og:title" content="Photographs — Karan Chaudhary, Cinematographer">
+  <meta property="og:description" content="Still photographs by Karan Chaudhary, cinematographer, in series.">
+  <meta property="og:url" content="https://subcinctus.github.io/Karan-Chaudhary/photographs.html">
+  <meta property="og:image" content="https://subcinctus.github.io/Karan-Chaudhary/media/og/og-title.jpg">
+  <meta property="og:image:alt" content="Karan Chaudhary, Cinematographer: the main title, a name revealed in a letterboxed frame.">
+  <meta name="twitter:card" content="summary_large_image">
+
+  <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+  <link rel="manifest" href="site.webmanifest">
+  <!-- fonts -->
+  <!-- Self-hosted type (assets/css/fonts.css). Preloaded: the faces of the page's head and the series
+       titles (Cormorant 400) and of the slate and the series lines (Plex Mono 400). -->
+  <link rel="preload" href="assets/fonts/cormorant-garamond/cormorant-garamond-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="assets/fonts/ibm-plex-mono/ibm-plex-mono-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/css/fonts.css">
+  <!-- /fonts -->
+  <link rel="stylesheet" href="assets/css/tokens.css">
+  <link rel="stylesheet" href="assets/css/base.css">
+  <link rel="stylesheet" href="assets/css/site.css">
+  <link rel="stylesheet" href="assets/css/photographs.css">
+  <link rel="stylesheet" href="assets/css/transitions.css">
+  <link rel="modulepreload" href="assets/js/site/photographs-main.js">
+
+  <!-- Before first paint: the motion preference, and how this page arrived (html[data-vt]: "on" under a
+       view transition from the index, "skipped" with Motion off, "none" without one). -->
+  <script>
+    (function () {
+      var d = document.documentElement; d.classList.add('js');
+      try {
+        var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches || localStorage.getItem('kc:motion') === 'off';
+        d.dataset.motion = reduce ? 'off' : 'on';
+      } catch (e) { /* storage blocked */ }
+      addEventListener('pagereveal', function (e) {
+        if (!e.viewTransition) { d.dataset.vt = 'none'; return; }
+        if (d.dataset.motion === 'off') { e.viewTransition.skipTransition(); d.dataset.vt = 'skipped'; } else d.dataset.vt = 'on';
+      });
+    })();
+  </script>
+</head>
+<body class="site site--photographs">
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="shutter" aria-hidden="true" data-shutter><span class="shutter__mark">K<span>·</span>C</span><span class="shutter__title"></span></div>
+  <div class="progress" aria-hidden="true"><span class="progress__fill" data-progress></span></div>
+
+  <header class="site-header" data-header>
+    <a class="site-header__mark" href="index.html" aria-label="Karan Chaudhary, home">K<span aria-hidden="true">·</span>C</a>
+    <nav class="site-nav" aria-label="Primary">
+      <!-- prerender:nav -->
+      <ul role="list"><li hidden><a href="index.html#reel">Reel</a></li><li><a href="index.html#work">Work</a></li><li hidden><a href="index.html#photographs">Photographs</a></li><li><a href="index.html#studies">Studies</a></li><li><a href="index.html#previs">Previs</a></li><li><a href="index.html#about">About</a></li><li><a href="index.html#credits">Credits</a></li></ul>
+      <!-- /prerender:nav -->
+    </nav>
+    <a class="site-header__contact" href="index.html#contact">Contact</a>
+    <p class="site-header__tc" aria-hidden="true" data-tc="TC 00:00:00:00"></p>
+    <button class="site-header__motion" type="button" data-motion-toggle>Motion off</button>
+    <button class="site-header__menu" type="button" aria-haspopup="dialog" aria-controls="menu" aria-expanded="false" data-menu-open>Menu</button>
+  </header>
+
+  <dialog class="menu" id="menu" aria-label="Site menu" data-menu>
+    <div class="menu__top">
+      <span class="menu__mark" aria-hidden="true">K·C</span>
+      <button class="menu__close" type="button" data-menu-close>Close</button>
+    </div>
+    <nav aria-label="Site menu">
+      <!-- prerender:menu -->
+      <ol class="menu__list" role="list"><li hidden><a href="index.html#reel"><span class="cam-label" aria-hidden="true">Sc. 01</span>Reel</a></li><li><a href="index.html#work"><span class="cam-label" aria-hidden="true">Sc. 01</span>Selected work</a></li><li hidden><a href="index.html#photographs"><span class="cam-label" aria-hidden="true">Sc. 02</span>Photographs</a></li><li><a href="index.html#studies"><span class="cam-label" aria-hidden="true">Sc. 02</span>Studies</a></li><li><a href="index.html#previs"><span class="cam-label" aria-hidden="true">Sc. 03</span>Previs</a></li><li><a href="index.html#about"><span class="cam-label" aria-hidden="true">Sc. 04</span>About</a></li><li><a href="index.html#credits"><span class="cam-label" aria-hidden="true">Sc. 05</span>Credits</a></li><li><a href="index.html#contact"><span class="cam-label" aria-hidden="true">Sc. 06</span>Contact</a></li></ol>
+      <!-- /prerender:menu -->
+    </nav>
+    <button class="btn btn--ghost menu__motion" type="button" data-motion-toggle>Motion off</button>
+  </dialog>
+
+  <main id="main" tabindex="-1" data-photographs><!-- prerender:photographs --><div class="photos-page" data-photos-key="oke1py">
+    <header class="photos-head container">
+      <p class="photos-head__slate cam-label"><a href="index.html">Karan Chaudhary</a><span aria-hidden="true">/</span><span>Photographs</span></p>
+      <h1 class="photos-head__title" id="photographs-page-title">Photographs</h1>
+      <p class="photos-empty">No photographs yet.</p>
+      <div class="photos-head__tools"><a class="btn btn--ghost" href="index.html#work">Selected work</a></div>
+    </header></div><!-- /prerender:photographs --></main>
+
+  <footer class="site-footer site-footer--slim">
+    <div class="container" data-render="colophon"></div>
+  </footer>
+
+  <script type="module" src="assets/js/site/photographs-main.js"></script>
+</body>
+</html>

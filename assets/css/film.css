@@ -1,0 +1,137 @@
+/* Motion Prompt #087 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#087 */
+/* (numbers only: #087's before/after layout for the wipes at the end of this file: the A / B tags at the
+   picture's top corners, each wiped with its own side, and a hairline divider with a round grip.) */
+
+/* Film page blocks: frame cards, crew credits, laurels, references, the Enquiries line, the
+   "Scene in five frames" sequence, the lighting plot and the before/after wipes
+   (assets/js/site/{film-facts,frame-card}.js, assets/js/ui/wipe.js).
+   project.html only; requires tokens.css, base.css, site.css.
+   A frame is never cropped: each sits in a gate at its own aspect (a real still's, or the film's for a
+   placeholder painted to fit), and a real sequence frame, whose aspect the data does not give, is
+   letterboxed inside the film's gate at its own. */
+
+/* --- Frame cards ---------------------------------------------------------------------------------- */
+
+/* The frame is the button that opens the lightbox. */
+.still__open {
+  display: block; width: 100%; padding: 0; border: 0; border-radius: 0; background: none; color: inherit;
+  cursor: zoom-in; text-align: left;
+}
+.still__open .frame { display: block; outline: 1px solid var(--line); outline-offset: -1px; transition: outline-color var(--dur-2) var(--ease-out); }
+.still__open:hover .frame { outline-color: var(--paper-3); }
+.still__open:focus-visible { outline: none; }
+.still__open:focus-visible .frame { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+.still__open .frame:not([data-paint]) > img { object-fit: contain; }
+.sequence .frame:not([data-paint]) { display: grid; place-items: center; }
+.sequence .frame:not([data-paint]) > img { position: static; width: auto; height: auto; max-width: 100%; max-height: 100%; }
+
+/* Caption: the camera line (or the placeholder label and badge), the still's own caption, the chips. */
+.still__cap { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--s3) var(--s5); flex-wrap: wrap; }
+.still__text { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); min-width: 0; }
+.still__line {
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: var(--tracking-mono); text-transform: uppercase;
+  color: var(--paper-2); font-variant-numeric: tabular-nums;
+}
+.still__caption { flex-basis: 100%; font-size: 0.9rem; line-height: 1.5; color: var(--paper-2); }
+.chips { display: inline-flex; gap: 2px; padding-top: 4px; flex: none; }
+.chips i { width: 10px; height: 10px; border-radius: 1px; outline: 1px solid rgb(236 230 218 / 0.1); outline-offset: -1px; }
+
+/* --- Credits, laurels, enquiries, references ------------------------------------------------------- */
+
+.film__crew { display: grid; align-content: start; }
+.film__credit { margin: 0 0 var(--s5); display: grid; gap: var(--s1); font-family: var(--font-display); line-height: 1.15; }
+.film__credit-role { font-style: italic; font-size: var(--step-1); color: var(--paper-2); }
+.film__credit-name { font-size: var(--step-3); }
+
+.film__laurels { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s3); }
+.film__laurel a { display: inline-grid; text-decoration: none; }
+.film__laurel-title { font-family: var(--font-display); font-style: italic; font-size: var(--step-1); line-height: 1.3; color: var(--paper); }
+.film__laurel-event { display: block; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: var(--tracking-mono); text-transform: uppercase; color: var(--paper-3); }
+.film__laurel a:hover .film__laurel-title { color: var(--tungsten); }
+
+.film__enquiries { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); }
+.film__mail { font-family: var(--font-display); font-size: var(--step-2); line-height: 1.2; text-decoration-thickness: 1px; overflow-wrap: anywhere; }
+.film__mail:hover { color: var(--tungsten); }
+.film__mail-subject { flex-basis: 100%; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: var(--tracking-mono); text-transform: uppercase; color: var(--paper-3); }
+.film__enquiries .badge-sample { order: 3; }
+
+.film__refs { padding-bottom: clamp(48px, 6vw, 96px); }
+.film__ref-list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s4); max-width: 72ch; }
+.film__ref { display: grid; gap: var(--s1); padding-top: var(--s3); border-top: 1px solid var(--line); }
+.film__ref-title { font-family: var(--font-display); font-style: italic; font-size: var(--step-1); line-height: 1.3; }
+.film__ref-meta { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: var(--tracking-mono); text-transform: uppercase; color: var(--paper-3); }
+.film__ref-meta:empty { display: none; }
+.film__ref-note { color: var(--paper-2); font-size: 0.95rem; }
+
+/* --- Sequence: one scene in 3–8 frames, in edit order --------------------------------------------- */
+
+.sequence { padding-bottom: clamp(56px, 7vw, 112px); }
+.sequence__head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2) var(--s4); margin-bottom: var(--s6); }
+.sequence__head .film__h { flex-basis: 100%; margin: 0; }
+.sequence__title { font-size: var(--step-3); font-weight: 400; line-height: 1.1; }
+.sequence__list { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s6) var(--s4); }
+@media (min-width: 720px) { .sequence__list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1100px) { .sequence__list { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: var(--s5) var(--s4); } }
+.sequence__item { display: grid; gap: var(--s2); align-content: start; min-width: 0; }
+.sequence__n { margin-top: var(--s1); color: var(--tungsten); font-variant-numeric: tabular-nums; }
+.sequence__intent { font-size: 0.9rem; line-height: 1.5; color: var(--paper-2); }
+.sequence__hindsight { margin-top: var(--s6); max-width: 60ch; display: grid; gap: var(--s2); }
+.sequence__hindsight-text { font-family: var(--font-display); font-style: italic; font-size: var(--step-1); line-height: 1.4; }
+
+/* --- Lighting plot: the frame (7/12) beside the plan of how it was lit (5/12) ------------------------ */
+
+.film-plot { padding-bottom: clamp(56px, 7vw, 112px); }
+.film-plot__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin-bottom: var(--s4); }
+.film-plot__head .film__h { margin: 0; }
+.film-plot__grid { display: grid; gap: var(--s6); }
+@media (min-width: 900px) {
+  .film-plot__grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: clamp(32px, 4vw, 96px); align-items: start; }
+}
+.film-plot__shot { margin: 0; display: grid; gap: var(--s3); }
+.film-plot__plan { display: grid; gap: var(--s4); align-content: start; min-width: 0; }
+.film-plot__svg {
+  width: 100%; max-width: 460px; aspect-ratio: 1; height: auto;
+  border: 1px solid var(--line); border-radius: var(--radius-2); background: var(--ink-0);
+}
+.film-plot__why { max-width: 46ch; font-family: var(--font-display); font-style: italic; font-size: var(--step-1); line-height: 1.35; text-wrap: balance; }
+.film-plot__legend { max-width: 460px; }
+.film-plot__legend .report__row { grid-template-columns: minmax(8ch, 11ch) minmax(0, 1fr); }
+.film-plot__unit { text-transform: none; }
+
+@media (forced-colors: active) {
+  .still__open .frame, .film-plot__svg { border: 1px solid CanvasText; }
+  .still__open:focus-visible .frame { outline: 3px solid Highlight; }
+  .chips { display: none; }
+}
+
+/* --- Before / after: the grade (log → final) and the previs against the final frame (ui/wipe.js) ----------
+   #087's layout: A on the left, B on the right of a hairline divider; each tag sits in its own layer, so the
+   divider wipes it with the picture. The B layer is clipped at --wipe; nothing animates. */
+
+.film-wipe { padding-bottom: clamp(56px, 7vw, 112px); }
+.wipe { margin: 0; display: grid; gap: var(--s3); }
+.wipe__frame { cursor: ew-resize; user-select: none; -webkit-user-select: none; outline: 1px solid var(--line); outline-offset: -1px; }
+.wipe__frame img { object-fit: contain; pointer-events: none; -webkit-user-drag: none; }
+.wipe__b { position: absolute; inset: 0; clip-path: inset(0 0 0 var(--wipe, 50%)); }
+.wipe__b > img { position: absolute; inset: 0; width: 100%; height: 100%; }
+.wipe__tag {
+  position: absolute; top: var(--s3); padding: 2px var(--s2); background: rgb(7 8 10 / 0.58); border-radius: var(--radius-1);
+  font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: var(--tracking-mono); text-transform: uppercase; color: var(--paper);
+}
+.wipe__tag--a { left: var(--s3); }
+.wipe__tag--b { right: var(--s3); }
+.wipe__divider { position: absolute; top: 0; bottom: 0; left: var(--wipe, 50%); width: 1px; margin-left: -0.5px; background: rgb(236 230 218 / 0.9); pointer-events: none; }
+.wipe__grip {
+  position: absolute; top: 50%; left: 50%; width: 30px; height: 30px; transform: translate(-50%, -50%);
+  border: 1px solid rgb(236 230 218 / 0.9); border-radius: 50%; background: rgb(7 8 10 / 0.62);
+}
+.wipe__grip::before, .wipe__grip::after {
+  content: ""; position: absolute; top: 50%; width: 0; height: 0; margin-top: -4px;
+  border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+}
+.wipe__grip::before { left: 6px; border-right: 5px solid var(--paper); }
+.wipe__grip::after { right: 6px; border-left: 5px solid var(--paper); }
+.wipe__control { display: flex; align-items: center; gap: var(--s3); }
+.wipe__control input { flex: 1; min-width: 0; min-height: var(--target); accent-color: var(--tungsten); }
+.wipe__cap { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: var(--tracking-mono); text-transform: uppercase; color: var(--paper-2); }
+@media (forced-colors: active) { .wipe__divider { background: CanvasText; } .wipe__frame { border: 1px solid CanvasText; } }
