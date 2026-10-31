@@ -13,7 +13,7 @@
 // two real frames (an invented before/after would claim a grade that never happened).
 
 import { html, safeUrl, pad2, filled, badge, cleanPalette } from './html.js';
-import { frameItems, sequenceSeed, kindLabel, isOwnDP, renderFrameButton, renderFrameCaption, paintGates } from './frame-card.js';
+import { frameItems, sequenceSeed, kindLabel, keepDots, isOwnDP, renderFrameButton, renderFrameCaption, paintGates } from './frame-card.js';
 
 // --- Credits ----------------------------------------------------------------------------------------
 
@@ -136,7 +136,7 @@ export function renderSequenceShell(film, data) {
     return html`
       <section class="sequence container" aria-labelledby="sequence-${j}-title" data-sequence="${j}">
         <header class="sequence__head">
-          <p class="cam-label film__h">Sequence${q.scene ? ` · ${q.scene}` : ''}</p>
+          <p class="cam-label film__h">${keepDots(`Sequence${q.scene ? ` · ${q.scene}` : ''}`)}</p>
           <h2 class="sequence__title" id="sequence-${j}-title">${q.title}</h2>
           ${badge(q, data, 'Sample sequence')}
         </header>
@@ -227,7 +227,7 @@ export function plotRows(film) {
  * A legend value in camera-report case, as the Light study's readout writes it (ui/light-plot.js): metres
  * keep a lower-case "m" (an upper-case M reads as mega), and no line starts with the "·" separator.
  */
-const legendValue = v => html`${String(v).replace(/ · /g, '\u00a0· ').split(/(?<=\d) m\b/).map((part, k) => (k ? html`\u00a0<span class="film-plot__unit">m</span>${part}` : part))}`;
+const legendValue = v => html`${keepDots(v).split(/(?<=\d) m\b/).map((part, k) => (k ? html`\u00a0<span class="film-plot__unit">m</span>${part}` : part))}`;
 
 /** The lighting plot block: its frame (7/12) beside the plan, the motivation and the legend (5/12). */
 export function renderPlotShell(film, data) {
@@ -238,7 +238,7 @@ export function renderPlotShell(film, data) {
   return html`
     <section class="film-plot container" aria-labelledby="plot-title" data-film-plot>
       <header class="film-plot__head">
-        <h2 class="cam-label film__h" id="plot-title">Lighting plot${filled(p.scene) ? ` · ${p.scene}` : ''}</h2>
+        <h2 class="cam-label film__h" id="plot-title">${keepDots(`Lighting plot${filled(p.scene) ? ` · ${p.scene}` : ''}`)}</h2>
         ${badge(p, data, 'Sample plot')}
       </header>
       <div class="film-plot__grid">
@@ -247,7 +247,7 @@ export function renderPlotShell(film, data) {
           ${renderFrameCaption(film, item, i, { chips: false })}
         </figure>
         <div class="film-plot__plan">
-          <svg class="film-plot__svg" id="film-plot-svg" viewBox="0 0 100 100" role="img" aria-labelledby="film-plot-svg-title film-plot-svg-desc"><title id="film-plot-svg-title">${plotTitle(film, p)}</title><desc id="film-plot-svg-desc">${filled(p.motivation) ?? ''}</desc></svg>
+          <svg class="film-plot__svg" id="film-plot-svg" viewBox="0 0 100 100" role="img" aria-labelledby="film-plot-svg-title" aria-describedby="film-plot-svg-desc"><title id="film-plot-svg-title">${plotTitle(film, p)}</title><desc id="film-plot-svg-desc">${filled(p.motivation) ?? ''}</desc></svg>
           ${filled(p.motivation) ? html`<p class="film-plot__why">${p.motivation}</p>` : ''}
           <dl class="report report--tight film-plot__legend">${plotRows(film).map(([k, v]) => html`<div class="report__row"><dt>${k}</dt><dd>${legendValue(v)}</dd></div>`)}</dl>
         </div>
@@ -304,13 +304,7 @@ const announce = scope => window.dispatchEvent(new CustomEvent('kc:content', { d
 export async function mountFilmExtras(root, film, data) {
   const plot = root.querySelector('[data-film-plot]');
   const seqs = [...root.querySelectorAll('[data-sequence]')];
-  // The wipes follow the plot. render.js places them at the first paint once renderProject calls
-  // renderGradeShell; until then they are put in their place here.
-  if (!root.querySelector('[data-wipe-block]')) {
-    const after = plot ?? root.querySelector('.film__refs, .film__bts, .film__pager');
-    after?.insertAdjacentHTML(plot ? 'afterend' : 'beforebegin', String(renderGradeShell(film, data)));
-  }
-  const wipes = [...root.querySelectorAll('[data-wipe-block]')];
+  const wipes = [...root.querySelectorAll('[data-wipe-block]')];   // renderProject placed them after the plot
   const blocks = [plot, ...seqs, ...wipes].filter(Boolean);
   if (!blocks.length) return;
   if (plot) {

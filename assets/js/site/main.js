@@ -22,7 +22,7 @@ import { renderPhotographsSection } from './photographs.js';
 import { initMatchCut } from './match-cut.js';
 import { siteLD } from './ld.js';
 import { loadDesktopMotion } from './desktop.js';
-import { recall, reapply, remember } from './place.js';
+import { recall, reapply, remember, moved } from './place.js';
 
 const root = document.documentElement;
 const site = data.site ?? {};
@@ -71,7 +71,8 @@ function renderSections() {
   R.put(slot('work'), R.renderWork(data));
   R.put(slot('photographs'), renderPhotographsSection(data));
   R.put(slot('studies'), R.renderStudies(data));
-  R.put(slot('previs'), R.renderPrevisShell(data));
+  // The previs slots tools/prerender.mjs wrote from the shot list stay: previs.js draws the plans into them.
+  if (!slot('previs')?.querySelector('[data-previs-grid] > [data-shot]')) R.put(slot('previs'), R.renderPrevisShell(data));
   R.put(slot('about'), R.renderAbout(data));
   R.put(slot('kit'), R.renderKit(data));
   R.put(slot('credits'), R.renderCredits(data));
@@ -87,12 +88,19 @@ function renderSections() {
   R.setJsonLd('ld-person', siteLD(data));   // the same @graph tools/prerender.mjs writes
 
   // No reel (or no photographs) yet: no "coming soon" block, and the menu counts only what is there.
-  // The hero's call to action leads to the work instead.
+  // Such a section is named by its head's title, which exists only once it is shown.
   R.pruneSections(data);
-  if (!R.hasReel(data)) {
-    const cta = document.querySelector('[data-watch-reel]');
-    if (cta) { cta.href = '#work'; cta.innerHTML = 'Selected work <span aria-hidden="true">↓</span>'; }
-    document.querySelector('.hero__down')?.remove();
+  for (const id of ['reel', 'photographs']) {
+    const section = document.getElementById(id);
+    if (section && !section.hidden) section.setAttribute('aria-labelledby', `${id}-title`);
+  }
+  // The hero's call to action leads to the work, as the HTML says (crawlers read no reel that is not
+  // there). Once there is a reel it plays the reel, and the work moves to the quiet link beside it.
+  const cta = document.querySelector('[data-watch-reel]');
+  if (cta && R.hasReel(data)) {
+    cta.href = '#reel';
+    cta.innerHTML = '<span class="btn__play" aria-hidden="true"></span>Watch reel';
+    cta.parentElement.insertAdjacentHTML('beforeend', '<a class="hero__down cam-label" href="#work">Selected work <span aria-hidden="true">↓</span></a>');
   }
 }
 
@@ -397,24 +405,28 @@ function boot() {
   initWork();
   mountWorkIndex(document.getElementById('work'), data);
   const aim = R.initAnchorAim();
-  loadDesktopMotion({ page: 'home', reveal, aim });
 
   // Previs plans are static SVG from a small JSON file: mount them at once, so the section has its
   // full height before anyone jumps past it. A failing module hides only this block.
   const grid = document.querySelector('[data-previs-grid]');
+  let plans = null;
   if (grid) {
-    import('./previs.js')
+    plans = import('./previs.js')
       .then(({ mountPrevis }) => mountPrevis(grid, data))
       .then(ok => {
         if (ok) { reveal.scan(grid); window.dispatchEvent(new CustomEvent('kc:content', { detail: { scope: grid } })); }
-        // An arrival on #about (etc.) aimed before the plans existed: aim again.
+        // An arrival on #about (etc.) aimed before the plans existed: the plans have just pushed it a few
+        // screens down. Put it back before this frame paints (unless the visitor has scrolled since), then
+        // aim again once any scroll has settled.
         let target = null;
         try { target = location.hash ? document.querySelector(decodeURIComponent(location.hash)) : null; } catch { /* bad hash */ }
         if (recalled) reapply();
-        else if (target) aim(target);
+        else if (target) { if (!moved()) R.settleHash(); aim(target); }
       })
       .catch(err => { console.info('[previs] unavailable', err?.message ?? err); grid.hidden = true; });
   }
+  // The desktop layer arms once the plans are in (motion/index.js initMotion: settled).
+  loadDesktopMotion({ page: 'home', reveal, aim, settled: plans });
 }
 
 boot();

@@ -30,12 +30,19 @@
 }
 .work-view__btn::after { content: ""; position: absolute; inset: -8px 0; }   /* 44 px hit area */
 .work-view__btn:hover { color: var(--paper); }
-/* Pressed: filled, in tungsten. Drawn from html[data-work-view], so it is right from the first paint;
-   aria-pressed follows when main.js mounts the index. */
+/* Pressed: filled, in tungsten, and shown by shape too (the Motion toggle's dot, site.css). Drawn from
+   html[data-work-view], so it is right from the first paint; aria-pressed follows when main.js mounts the
+   index. Forced colours use the same selectors, so they win by coming later. */
 html:not([data-work-view="index"]) .work-view__btn[data-view="frames"],
 html[data-work-view="index"] .work-view__btn[data-view="index"] { background: var(--ink-3); color: var(--tungsten); }
+html:not([data-work-view="index"]) .work-view__btn[data-view="frames"]::before,
+html[data-work-view="index"] .work-view__btn[data-view="index"]::before {
+  content: ""; display: inline-block; width: 6px; height: 6px; margin-right: var(--s2); border-radius: 50%;
+  background: currentColor; vertical-align: 0.05em;
+}
 @media (forced-colors: active) {
-  .work-view__btn[aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
+  html:not([data-work-view="index"]) .work-view__btn[data-view="frames"],
+  html[data-work-view="index"] .work-view__btn[data-view="index"] { forced-color-adjust: none; background: Highlight; color: HighlightText; }
 }
 @media (max-width: 639px) {
   /* Phones: the slate breaks after "Selected work"; "6 films · 2023–2026" and the toggle share line two. */
@@ -48,8 +55,11 @@ html[data-work-view="index"] .work-view__btn[data-view="index"] { background: va
 /* --- One view at a time ------------------------------------------------------------------------- */
 html[data-work-view="index"] #work .work-grid, html:not(.js) #work .work-grid { display: none; }
 html.js:not([data-work-view="index"]) .work-index, html:not(.js) .work-view, html:not(.js) .work-index__preview { display: none; }
-/* The lede speaks of the cards ("hover or focus a card"): the index goes without it. */
-html[data-work-view="index"] #work .section-head__lede, html:not(.js) #work .section-head__lede { display: none; }
+/* The lede ("hover or focus one for the camera move that defines it") holds for the cards, which play the
+   move, and for the index's preview pane, which names it: it goes where neither is, the index under 1100 px
+   (no pane) and without JavaScript. */
+html:not(.js) #work .section-head__lede { display: none; }
+@media (max-width: 1099px) { html[data-work-view="index"] #work .section-head__lede { display: none; } }
 
 /* --- The index table ------------------------------------------------------------------------------ */
 /* The list reaches a cell's padding past the content edges (the text lines up with the heading), and
@@ -73,17 +83,17 @@ html[data-work-view="index"] #work .section-head__lede, html:not(.js) #work .sec
 /* The camera over the lens, each wide enough to break once at most (a block's min-width widens the column). */
 .work-index__line { display: block; min-width: 21ch; }
 .work-index__line + .work-index__line { color: var(--paper-3); }
-.work-index__none { color: var(--line-strong); }
+.work-index__none { color: var(--paper-3); }   /* an empty cell's dash: quiet, but there (5.6:1) */
 .work-index__row { transition: background-color 200ms var(--ease-ui); }
 .work-index__row:is(:hover, :focus-within) { background: var(--ink-2); }
 td.work-index__no { color: var(--paper-3); transition: color 200ms var(--ease-ui); }
 .work-index__row:is(:hover, :focus-within) td.work-index__no { color: var(--tungsten); }
 .work-index__year, .work-index__aspect { white-space: nowrap; }
 
-/* The title: the row's header and its one link, whose area covers the whole row. A sample's badge sits
-   under it. */
-.work-index__film { position: relative; }
-.work-index__link { display: block; color: var(--paper); text-decoration: none; text-wrap: balance; }
+/* The title: the row's header and its one link, whose area covers the whole row. A sample's badge rides
+   on the title's line (the space in the markup parts them), so a row is one line of title tall. */
+.work-index__film { position: relative; text-wrap: balance; }
+.work-index__link { color: var(--paper); text-decoration: none; }
 .work-index__link::after { content: ""; position: absolute; inset: 0 -100vw; }
 .work-index__title {
   font-family: var(--font-display); font-weight: 500; font-size: clamp(1.35rem, 1rem + 0.9vw, 2.2rem); line-height: 1.1;
@@ -91,7 +101,7 @@ td.work-index__no { color: var(--paper-3); transition: color 200ms var(--ease-ui
   transition: background-size 450ms var(--ease-io-expo);
 }
 .work-index__row:hover .work-index__title, .work-index__link:focus-visible .work-index__title { background-size: 100% 1px; background-position-x: 0; }
-.work-index__film .badge-sample { margin-top: 6px; font-size: 0.62rem; padding: 1px 6px; }
+.work-index__film .badge-sample { margin: 0; vertical-align: 0.35em; font-size: 0.62rem; padding: 1px 6px; }
 
 /* Columns by width (see the top): what a width cannot hold waits for a wider one. Without JavaScript
    there is no pane, so from 1100 the table has the full width and every column. */
@@ -101,12 +111,20 @@ td.work-index__no { color: var(--paper-3); transition: color 200ms var(--ease-ui
 @media (max-width: 1365px) {
   html.js .work-index .work-index__kit { display: none; }
 }
+/* With Camera / Lens (two or three lines of it) a row is taller: a tighter padding keeps all six rows on the
+   first screen under the head. */
+@media (min-width: 1366px) {
+  .work-index__table tbody :is(th, td) { padding-block: 14px; }
+}
 @media (max-width: 1099px) {
   .work-index :is(.work-index__prod, .work-index__kit, .work-index__premiere) { display: none; }
 }
 @media (max-width: 719px) {
   .work-index :is(.work-index__no, .work-index__dir) { display: none; }
-  .work-index__list { margin-inline: calc(-1 * var(--s2)); }
+  /* A narrow window (320 px is a 1280 px screen at 400 %) or wider text spacing can need more than the
+     width: the table scrolls sideways instead of cutting off Aspect, and the title cell is the link's area. */
+  .work-index__list { margin-inline: calc(-1 * var(--s2)); overflow-x: auto; }
+  .work-index__link::after { inset: 0; }
   .work-index__table :is(th, td) { padding: 14px var(--s2); }
   .work-index__table thead th { padding-block: 0 var(--s2); }
   .work-index__title { font-size: 1.35rem; }
@@ -137,8 +155,8 @@ td.work-index__no { color: var(--paper-3); transition: color 200ms var(--ease-ui
 .work-index__shot.is-leaving { opacity: 0; pointer-events: none; }   /* fades off the incoming frame below it */
 .work-index__tag {
   position: absolute; right: var(--s2); bottom: var(--s2); z-index: 2;
-  padding: 1px 6px; background: rgb(7 8 10 / 0.6); border-radius: var(--radius-1);
-  font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: var(--tracking-mono); text-transform: uppercase; color: var(--paper-3);
+  padding: 1px 6px; background: rgb(7 8 10 / 0.85); border-radius: var(--radius-1);   /* 4.5:1 on white too */
+  font-family: var(--font-mono); font-size: 0.58rem; letter-spacing: var(--tracking-mono); text-transform: uppercase; color: var(--paper-2);
 }
 .work-index__logline {
   font-family: var(--font-display); font-style: italic; font-size: var(--step-1); line-height: 1.35; color: var(--paper-2);

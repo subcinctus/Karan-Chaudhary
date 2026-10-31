@@ -113,13 +113,13 @@ export function reelShots(data) {
 
 /**
  * VideoObject JSON-LD for the reel, the shot index as Clip key moments (startOffset; endOffset: the next
- * shot or the runtime; url: the home page's ?t= link). Null unless the reel is playable and has a
- * poster and an upload date.
+ * shot or the runtime; url: the home page's ?t= link). Null unless the reel is real (not placeholder:
+ * true), playable, and has a poster and an upload date.
  */
 export function videoObjectLD(data) {
   const r = data?.reel ?? {};
   const poster = safeUrl(r.poster);
-  if (!hasReel(data) || !poster || !r.uploadDate) return null;
+  if (r.placeholder === true || !hasReel(data) || !poster || !r.uploadDate) return null;
   const runtime = parseTime(r.runtime);
   const shots = reelShots(data);
   const clips = shots.map((s, i) => {

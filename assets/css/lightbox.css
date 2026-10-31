@@ -1,9 +1,11 @@
 /* Frame lightbox: the full-screen <dialog class="lightbox"> on the film page (assets/js/site/lightbox.js).
    project.html only; requires tokens.css, base.css, site.css.
    The frame sits on black, letterboxed (object-fit: contain), never cropped, inside the safe areas: a
-   56 px bar above it, 56 px below it (on phones the previous/next buttons take the foot). The info panel
-   is a strip over the foot of the frame, and a 360 px side panel from 1440 px. The open and close fades,
-   the settle and the counter roll are WAAPI in lightbox.js (skipped under reduced motion and Motion off). */
+   56 px bar above it, 56 px below it (on phones the previous/next buttons take the foot). From 720 px the
+   previous/next buttons stand beside the picture, never over it. The info panel is a strip over the foot
+   of the frame, and from 1024 px a side panel (300–360 px) the picture steps aside for. The open and
+   close fades, the settle and the counter roll are WAAPI in lightbox.js (skipped under reduced motion and
+   Motion off). */
 
 .lightbox {
   --lb-side: max(clamp(16px, 4vw, 64px), env(safe-area-inset-left), env(safe-area-inset-right));
@@ -39,14 +41,16 @@
 }
 .lightbox__btn:hover, .lightbox__btn[aria-expanded="true"] { border-color: var(--tungsten); color: var(--tungsten); }
 
+/* The stage takes its new box at once (Info open or closed): under reduced motion and Motion off base.css
+   gives every property a 0.01 ms transition, which would leave the picture's tag placed for the old box. */
 .lightbox__stage {
   position: absolute; z-index: 1; top: var(--lb-top); bottom: var(--lb-foot); left: var(--lb-side); right: var(--lb-side);
-  touch-action: pinch-zoom; user-select: none; -webkit-user-select: none;
+  touch-action: pinch-zoom; user-select: none; -webkit-user-select: none; transition: none;
 }
 .lightbox__img { width: 100%; height: 100%; object-fit: contain; -webkit-user-drag: none; }
 .lightbox__img:not([src]) { visibility: hidden; }
 /* The placeholder badge sits at the foot of the picture, like the lead frame's (lightbox.js places it). */
-.lightbox__tag { position: absolute; left: var(--s3); bottom: var(--s3); }
+.lightbox__tag { position: absolute; left: var(--s3); bottom: var(--s3); background: rgb(7 8 10 / 0.85); }   /* on the picture: 4.5:1 on white too */
 
 .lightbox__nav {
   position: absolute; z-index: 2; top: 50%; transform: translateY(-50%);
@@ -83,15 +87,20 @@
 /* No keyboard hints where there is no keyboard to speak of. */
 @media (hover: none) { .lightbox__btn kbd { display: none; } }
 
-/* From 1440 px the info is a 360 px column beside the frame, which steps aside for it. */
-@media (min-width: 1440px) {
+/* From 720 px the stage clears the previous/next buttons: their 24 px from the edge, their 56 px, a 16 px gap. */
+@media (min-width: 720px) {
+  .lightbox { --lb-side: calc(max(24px, env(safe-area-inset-left), env(safe-area-inset-right)) + 72px); }
+}
+/* From 1024 px the info is a column beside the frame (300–360 px), which steps aside for it. */
+@media (min-width: 1024px) {
+  .lightbox { --lb-info: clamp(300px, 26vw, 360px); }
   .lightbox__info {
-    top: var(--lb-top); bottom: 0; left: auto; width: 360px; max-height: none;
+    top: var(--lb-top); bottom: 0; left: auto; width: var(--lb-info); max-height: none;
     padding: var(--s6) var(--s6) calc(var(--s6) + env(safe-area-inset-bottom));
     border-top: 0; border-left: 1px solid var(--line); gap: var(--s4);
   }
-  .lightbox.is-info .lightbox__stage { right: calc(360px + var(--lb-side)); }
-  .lightbox.is-info .lightbox__nav--next { right: calc(360px + 24px); }
+  .lightbox.is-info .lightbox__stage { right: calc(var(--lb-info) + var(--lb-side)); }
+  .lightbox.is-info .lightbox__nav--next { right: calc(var(--lb-info) + 24px); }
 }
 
 @media (forced-colors: active) {

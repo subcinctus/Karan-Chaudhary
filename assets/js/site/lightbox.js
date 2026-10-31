@@ -4,10 +4,10 @@
 // (never on the critical path) and calls bindLightbox(main, { film, data }), which handles every later click.
 //
 //   Layout: a 56 px top bar (the counter "03 / 12", Info i, Close Esc), previous/next buttons (56 px, 24 px
-//   from the edges, at the foot on phones), the frame on black, letterboxed (object-fit: contain) inside the
-//   safe areas, and an info panel (the DP-first credit, the camera line, the caption or intent, the palette
-//   chips, the placeholder badge): a 360 px side panel from 1440 px, a strip over the foot of the frame
-//   below that.
+//   from the edges, beside the picture and never over it; at the foot on phones), the frame on black,
+//   letterboxed (object-fit: contain) inside the safe areas, and an info panel (the DP-first credit, the
+//   camera line, the caption or intent, the palette chips, the placeholder badge): a side panel from
+//   1024 px (300–360 px), a strip over the foot of the frame below that.
 //   Input: ← / → (no wrap), Home / End, i, Esc (the dialog's own cancel); on touch a horizontal swipe of
 //   48 px or more (and 1.5× its vertical travel). A click beside the frame closes.
 //   Motion: on open the page fades to black over 300 ms and the frame settles from 0.985 over 450 ms (expo
@@ -22,7 +22,7 @@
 
 import { isReducedMotion } from '../core/motion-pref.js';
 import { html, put, pad2, badge } from './html.js';
-import { frameItems, frameCredit, frameLabel, renderChips } from './frame-card.js';
+import { frameItems, frameCredit, frameLabel, keepDots, renderChips } from './frame-card.js';
 import { sequencesOf } from './film-facts.js';
 
 const SWIPE = 48;   // px
@@ -62,14 +62,14 @@ function markup() {
 export function bindLightbox(root, { film, data }) {
   const doc = document.documentElement;
   let dialog = null, el = {};
-  let opener = null, set = null, scope = '', idx = 0, shown = 0, owned = null, closing = false, swipe = null;
+  let opener = null, set = null, scope = '', idx = 0, shown = 0, owned = null, closing = false, swipe = null, opened = 0;
 
   /** The frames a button's scope names: the film's frames, or sequence j. */
   function setFor(name) {
-    if (name === 'frames') return { name: 'Frames', label: `Frames · ${film.title}`, items: frameItems(film) };
+    if (name === 'frames') return { name: 'Frames', label: keepDots(`Frames · ${film.title}`), items: frameItems(film) };
     const m = /^sequence-(\d+)$/.exec(name);
     const q = m ? sequencesOf(film)[Number(m[1])] : null;
-    return q ? { name: 'Sequence', label: [`Sequence${q.scene ? ` · ${q.scene}` : ''}`, q.title].join(' · '), items: q.frames, sample: q } : null;
+    return q ? { name: 'Sequence', label: keepDots([`Sequence${q.scene ? ` · ${q.scene}` : ''}`, q.title].join(' · ')), items: q.frames, sample: q } : null;
   }
 
   function build() {
@@ -98,8 +98,12 @@ export function bindLightbox(root, { film, data }) {
       else return;
       e.preventDefault();
     });
-    // A click on the black beside the frame closes; a swipe across it steps.
-    el.stage.addEventListener('click', e => { if (!swipe?.moved && !onPicture(e.clientX, e.clientY)) close(); });
+    // A click on the black beside the frame closes; a swipe across it steps. The second click of the double
+    // click that opened it (or any click in its first moments) lands here too: it is not a close.
+    el.stage.addEventListener('click', e => {
+      if (e.detail > 1 || e.timeStamp - opened < 400) return;
+      if (!swipe?.moved && !onPicture(e.clientX, e.clientY)) close();
+    });
     el.stage.addEventListener('pointerdown', e => { swipe = e.pointerType === 'mouse' ? null : { x: e.clientX, y: e.clientY, moved: false }; });
     el.stage.addEventListener('pointerup', e => {
       if (!swipe) return;
@@ -116,7 +120,7 @@ export function bindLightbox(root, { film, data }) {
     const s = setFor(button?.dataset.lightbox);
     if (!s?.items.length || dialog?.open) return;
     if (!dialog) build();
-    opener = button; set = s; scope = button.dataset.lightbox; closing = false;
+    opener = button; set = s; scope = button.dataset.lightbox; closing = false; opened = performance.now();
     dialog.setAttribute('aria-label', `${s.name}: ${film.title}`);
     el.set.textContent = s.label;
     el.total.textContent = pad2(s.items.length);
@@ -172,9 +176,9 @@ export function bindLightbox(root, { film, data }) {
     el.panel.hidden = !on;
     el.info.setAttribute('aria-expanded', String(on));
     dialog.classList.toggle('is-info', on);
-    placeTag();   // from 1440 px the picture steps aside for the panel
+    placeTag();   // from 1024 px the picture steps aside for the panel
     if (on && !isReducedMotion()) {
-      const wide = matchMedia('(min-width: 1440px)').matches;
+      const wide = matchMedia('(min-width: 1024px)').matches;
       el.panel.animate([{ transform: wide ? 'translateX(100%)' : 'translateY(100%)' }, { transform: 'none' }], { duration: 220, easing: ease(...EXPO_OUT) });
     }
   }

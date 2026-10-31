@@ -3,12 +3,13 @@
 /* Motion Prompt #083 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#083 */
 /* Motion Prompt #086 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#086 */
 /* Motion Prompt #094 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#094 */
+/* Motion Prompt #075 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#075 */
 /* Desktop motion layer styles (assets/js/site/motion/). Requires tokens.css, base.css, site.css.
    Almost everything here only applies while the layer is armed: html.motion-ready (fine pointer,
    ≥ 1024 px, motion on) or html.lenis (smooth scroll running). Without it, or without JavaScript, the
    page is the plain layout. The underline wipes at the top apply to any hover-capable screen.
    (numbers only: #086 underline 0.45 s in from the left, out to the right; #077 strip layout;
-   #083 viewfinder sizes; #094 band.) */
+   #083 viewfinder sizes; #094 band; #075 the header's 0.45 s slide.) */
 
 /* --- #086 underline wipes: draw from the left, leave to the right ---------------------------------- */
 @media (hover: hover) {
@@ -58,6 +59,9 @@ html.lenis { scroll-behavior: auto; }
 /* --- Hero exit: the black that closes over the picture --------------------------------------------- */
 .hero__shade { position: absolute; inset: 0; z-index: 1; background: var(--ink-0); opacity: 0; pointer-events: none; }
 .motion-ready .hero__stage, .motion-ready .hero__fallback { will-change: transform, clip-path; }
+/* The exit fades the call to action with the scroll (hero.js); keyboard focus coming back up from below can
+   land on it part-way out, so while it holds focus it is shown whole. */
+.motion-ready .hero__foot:has(:focus-visible) { opacity: 1 !important; transform: none !important; }
 
 /* --- Frames: the picture settles to its full frame as the gate opens (frames.js); at rest it is never
    cropped (scale 1), so the composition shown is the one delivered. -------------------------------- */
@@ -72,17 +76,22 @@ html.lenis { scroll-behavior: auto; }
   display: flex; flex-direction: column; justify-content: center;
   padding-block: clamp(76px, 9vh, 112px) clamp(20px, 3vh, 40px);
 }
-.work-rail #work .section-head {
-  grid-template-columns: minmax(0, 1fr) minmax(0, 38ch); align-items: end; column-gap: var(--s7);
-  margin-bottom: clamp(28px, 4.5vh, 64px);
+/* The work's head is set as the strip's (the lede beside the title, in mono; a short step to the strip or
+   the table) from the first paint, in both views, wherever the layer arms (as the band below): neither
+   the arm nor a switch to the Index moves it, and the table starts where the strip did. */
+@media (hover: hover) and (pointer: fine) and (min-width: 1024px) {
+  html[data-motion="on"] #work .section-head {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 38ch); align-items: end; column-gap: var(--s7);
+    margin-bottom: clamp(28px, 4.5vh, 64px);
+  }
+  html[data-motion="on"] #work .section-head__slate { grid-column: 1 / -1; }
+  html[data-motion="on"] #work .section-head__lede { justify-self: end; font-size: var(--step--1); color: var(--paper-3); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: var(--tracking-mono); line-height: 1.7; }
 }
-.work-rail #work .section-head__slate { grid-column: 1 / -1; }
-.work-rail #work .section-head__lede { justify-self: end; font-size: var(--step--1); color: var(--paper-3); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: var(--tracking-mono); line-height: 1.7; }
 .work-rail__view {
   position: relative;
   width: var(--rail-vw, 100%);
   margin-left: calc((100% - var(--rail-vw, 100%)) / 2);
-  overflow: clip;
+  overflow: clip; overflow-y: visible;   /* clipped sideways only: a focused card's ring above its gate stays whole */
 }
 .work-rail .work-grid {
   position: relative;
@@ -138,12 +147,17 @@ html.lenis { scroll-behavior: auto; }
 @media (forced-colors: active) { .kc-cursor { display: none; } }
 
 /* --- Availability band above Contact (credits.js) ----------------------------------------------- */
+/* It holds its place from the first paint wherever the layer arms (the desktop query, motion on: the
+   head script sets data-motion before then), and the layer only sets it moving. Shown at the arm, it
+   would push Contact a quarter screen down under a visitor who arrived on #contact or #credits. */
 .marquee { display: none; }
-.motion-ready .marquee {
-  display: block; overflow: clip;
-  margin-inline: calc(50% - 50vw);
-  padding-block: clamp(28px, 3vw, 56px);
-  border-bottom: 1px solid var(--line);
+@media (hover: hover) and (pointer: fine) and (min-width: 1024px) {
+  html[data-motion="on"] .marquee {
+    display: block; overflow: clip;
+    margin-inline: calc(50% - 50vw);
+    padding-block: clamp(28px, 3vw, 56px);
+    border-bottom: 1px solid var(--line);
+  }
 }
 .marquee__track { display: flex; width: max-content; will-change: transform; }
 .marquee__unit {

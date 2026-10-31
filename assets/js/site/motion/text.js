@@ -44,14 +44,14 @@ export function initText(env) {
         type: 'lines', mask: 'lines', linesClass: 'kc-line', autoSplit: true, aria: 'auto',
         onSplit(self) {
           const tl = gsap.timeline({ delay, scrollTrigger: { trigger: head, start: 'top 85%', once: true } });
-          if (slate) tl.from(slate, { autoAlpha: 0, duration: 0.45, ease: 'power1.out' }, 0);
+          if (slate) tl.from(slate, { opacity: 0, duration: 0.45, ease: 'power1.out' }, 0);
           if (rule) tl.from(rule, { scaleX: 0, transformOrigin: '0% 50%', duration: 1.1, ease: 'kc.io' }, 0);
           if (num?.chars?.length) tl.from(num.chars, { yPercent: 105, duration: 0.7, ease: 'kc.out', stagger: 0.04 }, 0.05);
           tl.from(self.lines, { yPercent: 115, duration: 1.05, ease: 'kc.out', stagger: 0.085 }, 0.06);
           if (log?.lines?.length) tl.from(log.lines, { yPercent: 115, duration: 1, ease: 'kc.out', stagger: 0.07 }, 0.22);
           const rest = others.filter(o => !o.matches('.film__logline'));
           if (rest.length) tl.from(rest, { y: 28, duration: 0.9, ease: 'kc.out', stagger: 0.06, clearProps: 'transform' }, 0.2)
-            .from(rest, { autoAlpha: 0, duration: 0.5, ease: 'power1.out', stagger: 0.06, clearProps: 'opacity,visibility' }, 0.2);
+            .from(rest, { opacity: 0, duration: 0.5, ease: 'power1.out', stagger: 0.06, clearProps: 'opacity' }, 0.2);
           return tl;
         },
       });

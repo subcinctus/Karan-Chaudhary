@@ -31,7 +31,7 @@ import {
   LIGHTING_PRESETS, PRESET_ORDER, unrealLocation, fillIntensity, ratioStops,
 } from '../assets/js/core/presets.js';
 import { FORMATS, depthOfField, fieldOfView, extractionHeight } from '../assets/js/core/optics.js';
-import { eIO, eIOs, lerp, P } from '../assets/js/core/time.js';
+import { eIO, lerp, P } from '../assets/js/core/time.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const OUT_FILE = 'previs/shotlist.json';

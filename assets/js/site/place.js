@@ -11,6 +11,7 @@
 //   was told not to restore the scroll itself: history.scrollRestoration = 'manual', set by the layer).
 //   moved(): a count of the visitor's own scrolling (wheel, keys, touch), so a programmatic aim never
 //   yanks someone who has already scrolled.
+//   A window resize keeps the place by itself (below), when the desktop layer is not armed.
 
 const root = document.documentElement;
 const CANDIDATES = 'main h1, main h2, main h3, main p, main li, main tr, main figure, main .section-head, main .work-card, main [data-reveal], main .credits__row, footer';
@@ -45,11 +46,13 @@ export function capture() {
 }
 
 /**
- * Put a captured place back. `to(y)` scrolls (window.scrollTo by default; the layer passes Lenis).
+ * Put a captured place back. `to(y)` scrolls (an instant window scroll by default, the layer passes Lenis):
+ * a kept place is a cut, never a glide, which base.css's smooth scroll-behavior would make of it (half a
+ * screen to a few thousand pixels when the pinned strip's spacer goes, ending wherever the visitor is not).
  * `rail(el)` may return a scroll position for an element that sits in a pinned box (the layer maps it
  * onto the strip), since a pinned box's rect does not say where the page is.
  */
-export function restore(a, { to = y => scrollTo(0, y), rail = null } = {}) {
+export function restore(a, { to = y => scrollTo({ top: y, behavior: 'instant' }), rail = null } = {}) {
   if (!a) return;
   if (a.top) { to(0); return; }
   if (!a.el?.isConnected) { if (Number.isFinite(a.y)) to(a.y); return; }
@@ -57,6 +60,30 @@ export function restore(a, { to = y => scrollTo(0, y), rail = null } = {}) {
   if (Number.isFinite(pinned)) { to(Math.round(pinned)); return; }
   to(Math.max(0, Math.round(scrollY + a.el.getBoundingClientRect().top - a.off)));
 }
+
+// --- Window resizes ---------------------------------------------------------------------------------
+// A resize re-wraps the page under a fixed scroll offset, and the browser's scroll anchoring does not hold
+// a place through it (a tablet turned, a window un-maximised): once the window has settled, the place the
+// visitor last came to rest on is put back, unless they have scrolled since. A resize that starts with the
+// desktop layer armed is the layer's to keep (motion/index.js), and so is one that ends with it armed.
+
+let rest = null, restMoves = 0, restT = 0, resizeT = 0, layerHad = false;
+const layer = () => root.classList.contains('motion-ready');
+addEventListener('scroll', () => {
+  clearTimeout(restT);
+  if (!resizeT) restT = setTimeout(() => { rest = capture(); restMoves = moves; }, 200);
+}, { passive: true });
+addEventListener('resize', () => {
+  clearTimeout(restT);
+  if (!resizeT) layerHad = layer();
+  clearTimeout(resizeT);
+  resizeT = setTimeout(() => {
+    resizeT = 0;
+    if (layerHad || layer() || !rest || moves !== restMoves) return;
+    restore(rest);
+    rest = capture();
+  }, 300);
+}, { passive: true });
 
 // --- Reloads ----------------------------------------------------------------------------------------
 

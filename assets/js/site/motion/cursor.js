@@ -4,13 +4,15 @@
 //  it grows into its labelled state over 0.45 s on an expo ease-out and shrinks away in 0.3 s.)
 //
 // A viewfinder that appears only over pictures: corner brackets and a centre cross around the pointer,
-// with a label under them that says what the picture does: "View — (the card's move)" on a work card,
-// "View — (the film)" on the work index's preview, "Drag — wipe" on the Colour study, "Live — lens
-// maths" on the Focus study, a shot id on a previs plan; on a film page the frame's number, a sequence
-// frame's scene and place ("Sc. 06 · 02/05"), and "Plan — lighting" on the lighting plot.
+// with a label under them that says what the picture does: "Play — reel" on the reel's poster, "Play —
+// 01:02" on a tile of its shot index, "View — (the card's move)" on a work card, "View — (the film)" on
+// the work index's preview, "Drag — wipe" on the Colour study, "Live — lens maths" on the Focus study, a
+// shot id on a previs plan; on a film page the frame's number, a sequence frame's scene and place
+// ("Sc. 06 · 02/05"), and "Plan — lighting" on the lighting plot.
 // The system cursor always stays visible (this is an addition, not a replacement); over the study
-// controls, buttons (other than the frames, which open the lightbox) and inputs the viewfinder is
-// hidden; it is aria-hidden, never focusable, and off in forced-colours mode. Transforms and opacity only.
+// controls, buttons (other than the pictures that are buttons: the frames, which open the lightbox, and
+// the reel's poster and shot tiles) and inputs the viewfinder is hidden; it is aria-hidden, never
+// focusable, and off in forced-colours mode. Transforms and opacity only.
 // The label keeps clear of what it would cover: it flips above the brackets near the bottom of the
 // window and is held inside it sideways; over a study it sits above the brackets (below them only near
 // the picture's top edge), so it never lands on the camera readouts drawn in the picture's corners; and
@@ -18,6 +20,8 @@
 // cursor then).
 
 const TARGETS = [
+  ['.reel-facade', () => 'Play — reel'],
+  ['.reel-shot', el => `Play — ${el.querySelector('.reel-shot__tc')?.textContent?.trim() || 'shot'}`],
   ['.work-card__link', el => `View — ${el.querySelector('.work-card__foot span')?.textContent?.trim() || 'film'}`],
   ['.work-index__preview [data-preview-frame]', el => `View — ${el.dataset.title || 'film'}`],
   ['.study-block--colour [data-study-host]', () => 'Drag — wipe'],
@@ -31,7 +35,7 @@ const TARGETS = [
   ['.film__pager-link', el => el.querySelector('.cam-label')?.textContent?.trim() ?? 'Next'],
 ];
 const SELECTOR = TARGETS.map(t => t[0]).join(', ');
-const QUIET = 'button:not(.still__open), input, select, textarea, label, [data-controls], .player__chrome';
+const QUIET = 'button:not(.still__open, .reel-facade, .reel-shot), input, select, textarea, label, [data-controls], .player__chrome';
 
 export function initCursor(env) {
   const { gsap, state } = env;

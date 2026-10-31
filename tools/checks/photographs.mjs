@@ -24,6 +24,7 @@
 //       15 MB (AFI's limit), saved as .artifacts/screens/fixture--photographs-*.pdf.
 
 import fs from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { pathToFileURL } from 'node:url';
 
 const ASPECT_TOLERANCE = 0.015;
@@ -71,7 +72,7 @@ async function runStatic({ pass, fail, warn, info, R, abs, exists, read, loadDat
     if (issues.length) fail(`no photographs yet: ${issues.join('; ')}`);
     else pass(`no photographs yet: ${file} says "No photographs yet." and is noindex; the home page's #photographs and its links stay hidden`);
   } else if (noindex) {
-    warn(`${file} still carries robots noindex though data/portfolio.js has photographs: drop the tag (tools/prerender.mjs should write it only while there are none)`);
+    warn(`${file} still carries robots noindex though data/portfolio.js has photographs: run npm run prerender, which writes the tag only while there are none (CI's staged copy already drops it)`);
   } else pass(`${file} has photographs and is open to search engines`);
 
   // 3. The renderers' markup, for the real data and the fixture.
@@ -100,7 +101,7 @@ async function runStatic({ pass, fail, warn, info, R, abs, exists, read, loadDat
   if (!/id="photographs-title"/.test(teaser) || !/href="photographs\.html"/.test(teaser)) bad.push('the fixture\'s home section lacks its heading id "photographs-title" or its link to photographs.html');
   if (bad.length) fail(`photographs markup: ${bad.slice(0, 6).join('; ')}`);
   else pass(`photographs markup (the real data; the fixture's ${count(fx)} photographs, its AFI set of ${count(fx, 'afi')}, with captions and the cover): relative URLs, every photograph sized, described and lazy, one figure each, captions only when asked for; the home section ${thumbs} photographs`);
-  info('The photograph counts each school asks for (AFI 8–12 with portraits, NYU ≤ 10, FAMU 10–15, Łódź 10 or 2 × 5, BFA 10–12) are checked against data/portfolio.js in the data section (tools/lib/schema.mjs).');
+  info('The photograph counts each school asks for (AFI 8–12 with portraits, NYU ≤ 10, FAMU 10–15, AFAD Łódź 10 or 2 × 5, BFA 10–12) are checked against data/portfolio.js in the data section (tools/lib/schema.mjs).');
 }
 
 // ------------------------------------------------------------------------------------------------ browser
@@ -191,6 +192,10 @@ const sectionFacts = page => page.evaluate(() => {
 
 /** The pages of a PDF: its page objects (not the /Pages tree). */
 const pdfPages = buf => (buf.toString('latin1').match(/\/Type\s*\/Page\b/g) ?? []).length;
+/** How many times a PDF's text says "FIXTURE DATA" (poppler's pdftotext), or null where pdftotext is missing. */
+function pdfStamps(file) {
+  try { return (execFileSync('pdftotext', [file, '-'], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).match(/FIXTURE DATA/g) ?? []).length; } catch { return null; }
+}
 
 async function runBrowser(api) {
   const { OPT, pass, fail, skip, info, browser, fixture, abs } = api;
@@ -332,9 +337,6 @@ async function runBrowser(api) {
 
       for (const [q, want] of [['', total(null)], ['?set=afi', total('afi')], ['?set=afi&cover=1', total('afi') + 1]]) {
         const { page: qp, errors: qerr } = q ? await openPhotographs(ctx, api, q) : { page, errors: [] };
-        // The fixture's stamp hangs off <html>, after the page, where print leaves nothing: it moves to the top of
-        // <main>, so every page of the fixture's PDF is framed "FIXTURE DATA" too.
-        await qp.evaluate(() => { const st = document.getElementById('kc-fixture-stamp'); if (st) document.querySelector('main').prepend(st); });
         await qp.evaluate(() => dispatchEvent(new Event('beforeprint')));
         await qp.waitForFunction(() => [...document.querySelectorAll('.photo__img')].every(i => i.complete && i.naturalWidth), null, { timeout: 15000 });
         const pdf = await qp.pdf({ format: 'A4' });
@@ -342,8 +344,11 @@ async function runBrowser(api) {
         const name = `photographs${q ? `-${q.slice(1).replace(/[=&]/g, '-')}` : ''}`;
         fs.writeFileSync(fixture.fixtureShot(name).replace(/\.png$/, '.pdf'), pdf);
         const what = `${want - (q.includes('cover') ? 1 : 0)} photographs${q.includes('cover') ? ' + the cover page' : ''}`;
+        // Every page of a fixture PDF says so (tools/lib/fixture.mjs stampFixture), where poppler can read it.
+        const stamps = pdfStamps(fixture.fixtureShot(name).replace(/\.png$/, '.pdf'));
+        if (stamps != null && stamps !== pages) fail(`${tag} ${q || '(every photograph)'}: "FIXTURE DATA" on ${stamps} of the PDF's ${pages} pages`);
         if (pages !== want || pdf.length >= PDF_LIMIT) fail(`${tag} ${q || '(every photograph)'}: the PDF has ${pages} page(s) for ${what} and weighs ${(pdf.length / 1e6).toFixed(2)} MB (limit ${PDF_LIMIT / 1e6} MB)`);
-        else pass(`${tag} ${q || '(every photograph)'}: the A4 PDF has ${pages} pages for ${what}, ${(pdf.length / 1e6).toFixed(2)} MB (under ${PDF_LIMIT / 1e6} MB) → .artifacts/screens/fixture--${name}.pdf`);
+        else pass(`${tag} ${q || '(every photograph)'}: the A4 PDF has ${pages} pages for ${what}, ${(pdf.length / 1e6).toFixed(2)} MB (under ${PDF_LIMIT / 1e6} MB)${stamps != null ? `, each stamped "FIXTURE DATA"` : ''} → .artifacts/screens/fixture--${name}.pdf`);
         if (q) { clean(qerr, `${tag} ${q}`); await qp.close(); }
       }
       clean(errors, tag);
@@ -362,7 +367,7 @@ async function runBrowser(api) {
       clean(errors, tag);
     } catch (e) { fail(`${tag}: ${e.message.split('\n')[0]}`); } finally { await ctx.close(); }
   }
-  info('PDF pages are counted from the file\'s /Type /Page objects; the PDFs carry the fixture\'s red "FIXTURE DATA" frame on every page.');
+  info('PDF pages are counted from the file\'s /Type /Page objects; the PDFs carry the fixture\'s red "FIXTURE DATA" frame on every page (counted with pdftotext where it is installed).');
 }
 
 export const staticSections = [{ name: 'photographs', title: 'Photographs: the page, the empty state, the renderers\' markup', run: runStatic }];

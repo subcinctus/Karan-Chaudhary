@@ -84,12 +84,12 @@ or in other code. Each file that uses them carries the element's licence line as
 | #002 | Staggered entrance | `assets/js/site/motion/reveals.js` (the per-item stagger, 0.06 s, without the back-out overshoot) |
 | #005 | Mask reveal (page layer) | `assets/js/site/motion/text.js` (headings rise behind line masks, a rule grows, opacity never changes; re-timed). The vendored #005 cell itself runs only in the title piece. |
 | #033 | Rack focus | `assets/js/pieces/focus.js` (1.6 s pull, cubic in-out, travelling corner brackets), `assets/js/pieces/title.js` (the name's focus-pull timing) |
-| #073 | Parallax layers | `assets/js/site/motion/work.js`, `assets/css/motion.css` (one layer, at the strip's edges only: a picture crossing the window's edge is pushed in ≤ 1.04× and drifts ≤ 1.8 %; on screen it is shown whole) |
+| #073 | Parallax layers | `assets/js/site/motion/work.js`, `assets/css/motion.css` (one layer, at the strip's edges only: a picture crossing the window's edge is pushed in ≤ 1.04× and drifts ≤ 1.8 %; on screen it is shown whole), `assets/css/work.css` (the phones' scroll-driven gate wipe) |
 | #074 | Fade-in on scroll | `assets/js/site/reveal.js`, `assets/css/site.css` (sharpened: 20 px, expo ease-out, once), `assets/js/site/motion/reveals.js` (desktop) |
-| #075 | Sticky header hide/show | `assets/js/site/motion/nav.js`, `assets/css/motion.css` |
-| #077 | Pinned horizontal strip | `assets/js/site/motion/work.js`, `assets/css/motion.css` (Selected work as a film strip on desktop) |
+| #075 | Sticky header hide/show | `assets/js/site/motion/nav.js`, `assets/css/motion.css`, `assets/css/transitions.css` (at a match cut, a header that had slid away slides back in) |
+| #077 | Pinned horizontal strip | `assets/js/site/motion/work.js`, `assets/css/motion.css` (Selected work as a film strip on desktop), `assets/css/work.css` (the phones' scroll-driven gate wipe) |
 | #079 | Scroll progress (timecode) | `assets/js/site/progress.js`, `assets/css/site.css` |
-| #087 | Before/after wipe | `assets/js/pieces/colour.js` |
+| #087 | Before/after wipe | `assets/js/pieces/colour.js`, `assets/js/ui/wipe.js`, `assets/css/film.css` (the film page's grade and previs wipes) |
 | #089 | Film-leader preloader | `assets/js/site/preloader.js`, `assets/css/site.css` |
 | #083 | Cursor follower | `assets/js/site/motion/cursor.js`, `assets/css/motion.css` (a viewfinder over pictures; the system cursor stays) |
 | #084 | Magnetic button | `assets/js/site/motion/magnetic.js` (damped: 0.3, ≤ 12 px, no elastic) |

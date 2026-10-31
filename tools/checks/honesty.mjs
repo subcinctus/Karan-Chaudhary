@@ -22,8 +22,12 @@ const SKIP_DIRS = new Set(['.git', 'node_modules', '.artifacts', '.cache', '_sit
 const BINARY = /\.(?:png|jpe?g|webp|avif|gif|ico|mp4|webm|mov|woff2?|ttf|otf|pdf|zip|gz|exr)$/i;
 /** A path into the tooling or the fixtures (not "devtools/" or "assets/tools/"). */
 const FIXTURE_PATH = /(?<![\w./-])(?:\.\.\/)*(?:tools|\.artifacts|fixtures?)\//g;
-/** Names only the fixtures use (tools/test/fixtures/full.mjs). */
-const FIXTURE_TEXT = /\bCrew Name [A-Z]\b|\bFixture (?:Festival|Award|Film School|Series [A-Z]|Reference [A-Z]|stand-in)\b|\bFIXTURE (?:DATA|CAPTION)\b/g;
+/**
+ * Text only the fixtures use (tools/test/fixtures/full.mjs): their names and notes say "Fixture" ("Fixture Film 1",
+ * "Fixture note: …"), their people "Crew Name A", "Director Name A". The data's own template text ("Director Name")
+ * has no letter after it; no deployed file says "Fixture" outside its comments.
+ */
+export const FIXTURE_TEXT = /\bFixture\b|\bFIXTURE\b|\b(?:Crew|Director|Production) Name [A-Z]\b/g;
 
 /** Every file under the repo root except SKIP_DIRS (dot-folders such as .claude and .github included). */
 function repoFiles(dir = '', out = []) {

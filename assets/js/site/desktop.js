@@ -11,7 +11,7 @@ import { isReducedMotion, onMotionChange } from '../core/motion-pref.js';
 export const DESKTOP = '(hover: hover) and (pointer: fine) and (min-width: 1024px)';
 
 /**
- * @param {{ page: 'home' | 'project', reveal?: object, aim?: Function }} hooks
+ * @param {{ page: 'home' | 'project', reveal?: object, aim?: Function, settled?: Promise<unknown> }} hooks
  * @returns {Promise<void|null>} resolves when the layer has armed, or null when it is not wanted now
  */
 export function loadDesktopMotion(hooks) {

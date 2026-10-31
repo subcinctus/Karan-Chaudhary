@@ -15,13 +15,15 @@
 //     "maybe two, two-and-a-half minutes" (https://sony-cinematography.com/articles/reels-for-cinematographers-part-2-a-studio-exec-s-perspective/)
 //   NYU: up to 10 images: https://tisch.nyu.edu/grad-film/admissions/portfolio-requirements-for-mfa-in-filmmaking
 //   FAMU: 10–15 photographs: https://www.famu.cz/en/departments/famu-international-fi/one-year-courses/cinematography/
-//   Łódź: 10 photographs, or two series of 5 (one colour, one black-and-white): https://www.afad.com.pl/film-school.html
+//   AFAD Łódź (the set keyed lodz; the Łódź Film School is another school, and its page sets no photograph
+//     count): 10 photographs, or two series of 5 (one colour, one black-and-white): https://www.afad.com.pl/film-school.html
 //   Beijing Film Academy: 10–12 (a third-party source): https://www.china-admissions.com/blog/beijing-film-academy-applications-open-for-intake-2024/
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { REPO_ROOT } from './server.mjs';
 import { STILL_KINDS } from '../../assets/js/pieces/still.js';
+import { filled } from '../../assets/js/site/html.js';
 
 export const FILM_KINDS = ['fiction', 'documentary', 'music-video', 'commercial', 'experimental', 'exercise'];
 export const MADE_AT = ['school', 'independent', 'commissioned'];
@@ -35,10 +37,10 @@ const PATH_KEYS = new Set(['src', 'poster', 'video', 'cv', 'href', 'image', 'ogI
 const IMAGE_KEYS = new Set(['src', 'srcset', 'image', 'img', 'poster', 'still', 'thumb', 'photo']);
 /** Photograph sets by school (sources above): ok(n, photos) for the photos tagged with the set. */
 const SETS = {
-  afi: { name: 'AFI', want: '8–12, including at least 2 formal portraits', ok: (n, ps) => n >= 8 && n <= 12 && ps.filter(p => p.portrait === true).length >= 2 },
+  afi: { name: 'AFI', want: '8–12, including "a few formal portraits" (this check asks for at least 2)', ok: (n, ps) => n >= 8 && n <= 12 && ps.filter(p => p.portrait === true).length >= 2 },
   nyu: { name: 'NYU', want: 'at most 10', ok: n => n <= 10 },
   famu: { name: 'FAMU', want: '10–15', ok: n => n >= 10 && n <= 15 },
-  lodz: { name: 'Łódź', want: '10, or two series of 5 (one colour, one black-and-white)', ok: (n, ps) => n === 10 && (new Set(ps.map(p => p.kind)).size === 1 || ps.filter(p => p.kind === 'colour').length === 5) },
+  lodz: { name: 'AFAD Łódź', want: '10, or two series of 5 (one colour, one black-and-white)', ok: (n, ps) => n === 10 && (new Set(ps.map(p => p.kind)).size === 1 || ps.filter(p => p.kind === 'colour').length === 5) },
   bfa: { name: 'Beijing Film Academy', want: '10–12', ok: n => n >= 10 && n <= 12 },
 };
 /** AFI caps the photograph PDF at 15 MB: warn above 13 MB of images, leaving room for the PDF itself. */
@@ -88,6 +90,10 @@ export function honestyIssues(data) {
       if (laurels.length) out.push(`${at}${f.slug ? ` (${f.slug})` : ''} is a sample film but lists ${laurels.join(' and ')}: laurels are real facts only (remove them, or set placeholder: false once the film is real)`);
     } else {
       for (const p of samplesIn(f, at)) out.push(`${p} is still the sample: replace or delete it (${f.slug ?? at} is marked real)`);
+      // A film marked real publishes its credits (the page, the Index, the JSON-LD): never the template's.
+      for (const k of ['director', 'production']) if (f[k] != null && !filled(f[k])) out.push(`${at}.${k} is still the template's "${f[k]}" (${f.slug ?? at} is marked real): fill it in or set it to null`);
+      if (/^\s*Sample\b/.test(f.logline ?? '')) out.push(`${at}.logline is still the sample's (${f.slug ?? at} is marked real)`);
+      (Array.isArray(f.sequences) ? f.sequences : []).forEach((q, j) => { if (/^\s*Sample\b/.test(q?.hindsight ?? '')) out.push(`${at}.sequences[${j}].hindsight is still the sample's (${f.slug ?? at} is marked real)`); });
     }
   });
   return out;
@@ -325,6 +331,7 @@ export function validateData(data, { exists = repoExists, size = repoSize, now =
     for (const k of ['title', 'lens', 'note']) if (sh[k] != null && !text(sh[k])) fail(`${at}.${k} must be text`);
   });
   if (!r.provider) info('reel: no provider yet, so the reel section and its links stay hidden');
+  else if (r.placeholder === true) warn('reel.placeholder is still true though the reel has a provider: the page tags it Sample and search engines get no VideoObject for it; set placeholder: false once it is your own reel');
 
   // --- Photographs (hidden until real, and never samples: the print view is made to be submitted)
   const ph = d.photographs;

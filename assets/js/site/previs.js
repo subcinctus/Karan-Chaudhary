@@ -6,12 +6,16 @@
 //   import { mountPrevis } from './previs.js';
 //   await mountPrevis(document.querySelector('[data-previs-grid]'), data);
 //
+// The slots are plain markup from the shot list (renderPrevisSlots, pure: it runs in Node too), so
+// tools/prerender.mjs writes them into index.html and the section has its height from the first paint;
+// mountPrevis keeps them while they match the shot list (render.js previsKey) and draws the plans in.
+//
 // Unreal → plan coordinates (shotlist axes: X forward, the subject at the origin facing −X, Y right,
 // cm): plan x = Y / 100 (screen right), plan y = −X / 100 (toward the camera). Lights come from
 // core/presets.js, the same table the shot list and the Light study are generated from, unless the shot
 // carries its own (lightsOverride: PV-030's key, raised and moved back so the orbit never sees it).
 
-import { html, put, esc, safeUrl, MOVE_NAMES as MOVES } from './render.js';
+import { html, put, esc, safeUrl, MOVE_NAMES as MOVES, previsKey } from './render.js';
 import { renderPlan } from '../ui/plot.js';
 import { LIGHTING_PRESETS } from '../core/presets.js';
 import { isReducedMotion, onMotionChange } from '../core/motion-pref.js';
@@ -85,6 +89,12 @@ function slotMarkup(shot, list, media) {
         </figcaption>
       </figure>
     </li>`;
+}
+
+/** The grid's slots for a shot list (previs/shotlist.json) and data.previs.media; '' without shots. */
+export function renderPrevisSlots(list, media = {}) {
+  const shots = Array.isArray(list?.shots) ? list.shots : [];
+  return shots.length ? html`${shots.map(s => slotMarkup(s, list, media?.[s.id]))}` : '';
 }
 
 /** Plan aim point for a key's Unreal yaw (0 = +X, toward the subject from the −X side). */
@@ -195,8 +205,9 @@ export async function mountPrevis(grid, data) {
     grid.hidden = true;
     return false;
   }
-  const media = data.previs?.media ?? {};
-  put(grid, html`${list.shots.map(s => slotMarkup(s, list, media[s.id]))}`);
+  // Slots already in the page (tools/prerender.mjs) stay, so nothing below them moves; written here otherwise.
+  const slots = renderPrevisSlots(list, data.previs?.media ?? {});
+  if (grid.dataset.previsKey !== previsKey(slots)) put(grid, slots);
   grid.hidden = false;   // plans fit their frame, so the frame must have a size first
   const plans = [];
   for (const shot of list.shots) {

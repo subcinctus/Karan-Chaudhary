@@ -172,8 +172,8 @@ everything into the deployed copy, so the live site always matches the data. The
 
 ## Photographs and print
 
-Some schools ask for still photography, kept apart from film frames: AFI, NYU, FAMU, Łódź and the
-Beijing Film Academy each want a different set (`APPLYING.md` has the numbers and sources).
+Some schools ask for still photography, kept apart from film frames: AFI, NYU, FAMU, AFAD Łódź and
+the Beijing Film Academy each want a different set (`APPLYING.md` has the numbers and sources).
 
 **Adding photographs.** Add them in series to `photographs` in `data/portfolio.js`:
 
@@ -225,6 +225,8 @@ Safari 18.2+), clicking a work card carries its frame into the film page's lead 
 the page fades through black (`assets/js/site/match-cut.js`, `assets/css/transitions.css`).
 
 - Other browsers keep the curtain transition (`assets/js/site/shutter.js`).
+- The film page holds its first paint until the film is rendered only when a card has handed its frame
+  over (`sessionStorage` `kc:vt`), so the cut lands on it; any other arrival paints the header at once.
 - There is no transition at all under reduced motion or the site's **Motion off**.
 - Film pages are fetched ahead as the pointer settles on a link (speculation rules, prefetch only).
 
@@ -287,15 +289,15 @@ The full `npm run check` adds these Chromium checks, with screenshots at 390, 76
 - the desktop motion layer: anchors land and move focus, keyboard focus stays on screen in the
   pinned work strip, the strip counter reads 01…06, a sideways swipe moves the strip, the pinned
   strip fits 1366×768 to 2560×1440, credits between the masks are fully opaque, every reveal plays,
-  "Motion off" reverts it all (no inline styles left), the visitor keeps their place across
-  1024 px and Motion off/on, phones never load it.
+  "Motion off" reverts it all (no inline styles left), the visitor keeps their place through
+  resizes to 1366 and 1100 px, across 1024 px and Motion off/on, phones never load it.
 
 **Check plugins.** Each file in `tools/checks/` adds a section to both runs:
 
 | Section | Static (also in CI) | In Chromium |
 |---|---|---|
 | `honesty` | No laurels on sample films; no sample block inside a real film; every study labelled; the colophon discloses AI use; no model identifiers in the repo; no fixture paths or names deployed; no autoplay with sound; the pointer never hidden | |
-| `seo-static` / `static-content` | Prerender markers present and in sync; the static home page reads as text (name, role, every film, "Filmography", the email); JSON-LD; speculation rules prefetch only; the sitemap | Without JavaScript the titles and email show; no layout shift when the scripts re-render |
+| `seo-static` / `static-content` | Prerender markers present and in sync; the static home page reads as text (name, role, every film, "Filmography", the email); JSON-LD; speculation rules prefetch only; the sitemap | Without JavaScript the titles and email show; no layout shift when the scripts re-render or the desktop layer arms, from the top or arriving on a section (`index.html#contact` lands under the header) |
 | `fonts` | No Google font hosts; every face vendored and hashed; faces cover the CSS and every piece; at most 3 preloads | No Google requests; the faces load within 3 s and every preload is used |
 | `film` | Film page markup holds only safe links | No frame cropped; credits; the plot's title and description; the lightbox (keys, focus, info panel, swipe); seed parity |
 | `work` | The index table and the toggle | Frames ↔ Index; the preview pane; rack focus on hover only; keyboard; print; hover previews |
@@ -314,7 +316,19 @@ include the reel and shot index, crew, laurels, real frames, wipes and photograp
   Festival"), its images are the site's own code-rendered posters, and nothing in it is ever written
   into the data or deployed.
 - **Fixture output.** Screenshots and PDFs are named `.artifacts/screens/fixture--*` and carry a red
-  "FIXTURE DATA" frame.
+  "FIXTURE DATA" frame: on every printed page, and down the whole length of a full-page capture.
+
+**Tour.** `npm run tour` (`tools/tour.mjs`) walks the site as a desktop visitor would (your data,
+motion on) and records it at 1920×1080 and 1440×900 into `.artifacts/tour/`.
+- **Output.** `tour-<w>x<h>.mp4` (H.264, BT.709), a still at every pause (`<w>x<h>/NN-<beat>.png`)
+  and `contact-<w>x<h>.jpg` with every still on one sheet.
+- **Options.** `--sizes`, `--out`, `--only <beat,…>` (hero, strip, index, studies, credits,
+  match-cut, lightbox, sequence, pager) and `--keep-webm` (Playwright's raw recording).
+- **It records in real time,** so give it the machine: `flock .artifacts/browser.lock npm run tour`
+  waits for any other browser job that holds the lock.
+- **What is the tour's own, not the site's.** The arrow (headless Chromium draws no cursor). The main
+  title shown at rest and the studies held on their posters, because software rendering draws canvases
+  at a few frames a second. Motion at about 0.88× speed (Playwright rounds each frame to 40 ms).
 
 ## Desktop motion
 

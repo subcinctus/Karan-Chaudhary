@@ -32,7 +32,7 @@ export function initNav(env) {
   const onScroll = ({ scroll, direction, velocity }) => {
     if (header?.matches(':focus-within') || root.dataset.intro === 'playing') { set(false); acc = 0; return; }
     if (scroll < past()) { set(false); acc = 0; return; }
-    acc = Math.sign(acc) === direction ? acc + Math.abs(velocity) : direction * Math.abs(velocity);
+    acc = Math.sign(acc) === direction ? acc + direction * Math.abs(velocity) : direction * Math.abs(velocity);
     if (acc > 10) set(true);
     else if (acc < -10) set(false);
   };

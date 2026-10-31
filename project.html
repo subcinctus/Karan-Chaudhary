@@ -3,9 +3,11 @@
   Film detail page: project.html?slug=<film slug from data/portfolio.js>.
   assets/js/site/project.js renders the film (camera report, credits, palette, sequence, frames,
   lighting plot, BTS, prev/next) and sets the title, description, canonical and CreativeWork JSON-LD.
-  Unknown slug → a not-found state. It loads in <head> and blocks rendering, so the film is in the page
-  at the first paint (a match cut from the index lands on it). Inside the "prerender:films" comment
-  markers, tools/prerender.mjs writes a static filmography for crawlers and visitors without JavaScript.
+  Unknown slug → a not-found state. The head script loads it, and holds the first paint for it only when
+  a match cut from the index hands a frame over (sessionStorage kc:vt), so the lead frame the cut lands
+  on is there; any other arrival paints the header at once and the film as soon as it renders. Inside
+  the "prerender:films" comment markers, tools/prerender.mjs writes a static filmography for crawlers
+  and visitors without JavaScript.
   Every URL is relative: the site is served from https://subcinctus.github.io/Karan-Chaudhary/.
 -->
 <html lang="en">
@@ -45,8 +47,9 @@
   <link rel="stylesheet" href="assets/css/lightbox.css">
   <link rel="stylesheet" href="assets/css/transitions.css">
 
-  <!-- Arriving half of the #092 shutter (never under reduced motion; a safety timer uncovers), and how
-       this page arrived (html[data-vt]: "on" under a match cut, "skipped" with Motion off, "none"). -->
+  <!-- Arriving half of the #092 shutter (never under reduced motion; a safety timer uncovers), project.js
+       (render-blocking only for a match cut's hand-off), and how this page arrived (html[data-vt]: "on"
+       under a match cut, "skipped" with Motion off, "none"). -->
   <script>
     (function () {
       var d = document.documentElement; d.classList.add('js');
@@ -63,6 +66,11 @@
         sessionStorage.removeItem('kc:shutter');
       } catch (e) { /* storage blocked */ }
       setTimeout(function () { d.classList.remove('shutter-cover', 'shutter-titled'); }, 3000);
+      // The film renders before the first paint only when the index handed a frame over: the match cut
+      // lands on it. Otherwise the header paints at once (the footer waits unseen: film.css).
+      var hold = false;
+      try { hold = !!sessionStorage.getItem('kc:vt'); } catch (e) { /* storage blocked: no hand-off */ }
+      document.write('<script type="module" src="assets/js/site/project.js"' + (hold ? ' blocking="render"' : '') + '><\/script>');
       addEventListener('pagereveal', function (e) {
         if (!e.viewTransition) { d.dataset.vt = 'none'; return; }
         if (d.dataset.motion === 'off') { e.viewTransition.skipTransition(); d.dataset.vt = 'skipped'; } else d.dataset.vt = 'on';
@@ -77,8 +85,8 @@
   <link rel="modulepreload" href="assets/js/site/render.js">
   <link rel="modulepreload" href="assets/js/site/html.js">
   <link rel="modulepreload" href="assets/js/site/film-facts.js">
+  <link rel="modulepreload" href="assets/js/site/frame-card.js">
   <link rel="modulepreload" href="assets/js/site/match-cut.js">
-  <script type="module" src="assets/js/site/project.js" blocking="render"></script>
 </head>
 <body class="site site--project">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -136,13 +144,8 @@
       <li><a href="project.html?slug=coastal-study-sample">Coastal Study</a> <span class="cam-label">05 · 2024 · Experimental short · Director of Photography</span> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span><p class="film-missing__text">Sample logline. A shoreline over one tide, framed very wide and very still until it is not.</p></li>
       <li><a href="project.html?slug=sample-commercial">Spot</a> <span class="cam-label">06 · 2023 · Commercial · Director of Photography</span> <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span><p class="film-missing__text">Sample logline. Two rooms, one product, joined by a whip pan.</p></li>
     </ol>
-    <p><a class="btn" href="index.html#work">Back to selected work</a></p><!-- /prerender:films --></section>
-    <noscript>
-      <section class="film-missing container">
-        <h1 class="film-missing__title">Selected work</h1>
-        <p class="film-missing__text">This page shows one film from Karan Chaudhary’s selected work. It needs JavaScript to read the film from the portfolio data. <a href="index.html">Back to the home page</a>.</p>
-      </section>
-    </noscript>
+    <p><a class="btn" href="index.html#work">Back to selected work</a></p><!-- /prerender:films -->
+      <noscript><p class="film-missing__text">This page shows one film from Karan Chaudhary’s selected work. It needs JavaScript to read the film from the portfolio data.</p></noscript></section>
   </main>
 
   <footer class="site-footer site-footer--slim">

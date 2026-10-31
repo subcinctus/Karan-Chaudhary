@@ -1,9 +1,10 @@
-// Dev tooling: sub-path server and MP4 faststart reader.
+// Dev tooling: sub-path server, MP4 faststart reader, ffmpeg arguments and the tour's options.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { startServer, resolveSafe } from '../lib/server.mjs';
 import { topLevelBoxes, isFaststartBuffer } from '../lib/mp4.mjs';
 import { encodeArgs } from '../lib/ffmpeg.mjs';
+import { parseArgs as tourArgs } from '../tour.mjs';
 
 test('server mounts the repo at /Karan-Chaudhary/ and is traversal-safe', async () => {
   const srv = await startServer();
@@ -43,4 +44,16 @@ test('ffmpeg args carry an explicit BT.709 matrix and tags', () => {
   assert.match(a, /-colorspace bt709 -color_primaries bt709 -color_trc bt709 -movflags \+faststart/);
   assert.match(a, /libvpx-vp9/);
   assert.match(a, /-framerate 96 /);
+});
+
+test('tour options: both desktop sizes by default; beats by number or name; nothing narrower than the desktop layout', () => {
+  const o = tourArgs([]);
+  assert.deepEqual(o.sizes, [[1920, 1080], [1440, 900]]);
+  assert.match(o.out, /[\\/]\.artifacts[\\/]tour$/);
+  assert.equal(o.only, null);
+  assert.deepEqual(tourArgs(['--only', '3,lightbox,09-pager']).only, ['3', 'lightbox', '09-pager']);
+  assert.deepEqual(tourArgs(['--sizes=1280x800']).sizes, [[1280, 800]]);
+  assert.throws(() => tourArgs(['--only', 'nope']), /no beat/);
+  assert.throws(() => tourArgs(['--sizes', '390x844']), /narrower than the desktop layout/);
+  assert.throws(() => tourArgs(['--sizes', 'big']), /not WxH/);
 });

@@ -2,9 +2,11 @@
 /* Motion Prompt #079 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#079 */
 /* Motion Prompt #089 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#089 */
 /* Motion Prompt #092 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#092 */
+/* Motion Prompt #086 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#086 */
 /* (numbers only: #074 rise-in on scroll, sharpened to 20 px / 0.5 s opacity + 0.8 s transform on an expo
    ease-out, played once; #079 scroll progress bar; #089 leader bar 180×4; #092 shutter panel, re-cut as
-   a clip-path curtain. The timing lives in assets/js/site/{reveal,progress,preloader,shutter}.js.)
+   a clip-path curtain; #086 the nav and card-title underlines, 0.45 s in from the left. The timing of
+   the first four lives in assets/js/site/{reveal,progress,preloader,shutter}.js.)
    Desktop (fine pointer, ≥ 1024 px) adds the GSAP layer in assets/js/site/motion/ + motion.css. */
 
 /* Site shell: index.html, project.html. Requires tokens.css, base.css, player.css.
@@ -14,6 +16,11 @@
    end of this file and tokens.css). */
 
 html { scroll-padding-top: 72px; }
+/* A jump into the page (index.html#contact) is held back, in its place, until the type it shows has loaded
+   (the landing script at the end of index.html; 1.5 s at most): the header stays. The hold is an opacity
+   set without a transition: with motion off every property eases over 0.01 ms (base.css), which would
+   leave the page showing for a frame, and visibility, being inherited, would ease so on every element. */
+html.is-arriving main, html.is-arriving .site-footer { opacity: 0; transition: none !important; }
 /* A modal (the frame lightbox) holds the page still under it; smooth scroll stops too (motion/smooth.js). */
 html.modal-open { overflow: hidden; }
 [hidden] { display: none !important; }
@@ -120,7 +127,7 @@ html[data-motion="off"] .progress, html[data-motion="off"] .site-header__tc { di
   color: var(--paper); text-decoration: none; white-space: nowrap;
   transition: border-color var(--dur-2) var(--ease-ui);
 }
-.site-header__contact::after { content: ""; position: absolute; inset: -4px; }   /* 44 px hit area */
+.site-header__contact::after { content: ""; position: absolute; inset: -5px; }   /* 44 px hit area (34 inside the border + 10) */
 .site-header__contact:hover { border-color: var(--tungsten); }
 /* The timecode is decoration: progress.js writes it to data-tc, so it is never page text. */
 .site-header__tc {
@@ -137,7 +144,7 @@ html[data-motion="off"] .progress, html[data-motion="off"] .site-header__tc { di
   font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: var(--tracking-mono); text-transform: uppercase; color: var(--paper-3);
   position: relative;
 }
-.site-header__motion::after { content: ""; position: absolute; inset: -4px; }   /* 44 px hit area */
+.site-header__motion::after { content: ""; position: absolute; inset: -5px; }   /* 44 px hit area, as the pill's */
 .site-header__motion:hover { color: var(--paper); border-color: var(--paper-3); }
 .site-header__motion[aria-pressed="true"] { color: var(--tungsten); border-color: var(--tungsten); }
 /* Pressed is also shown by shape, not colour alone: a filled dot before the label. */
@@ -148,11 +155,13 @@ html[data-motion="off"] .progress, html[data-motion="off"] .site-header__tc { di
 @media (forced-colors: active) {
   [data-motion-toggle][aria-pressed="true"] { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
 }
+/* The same 36 px pill as Contact beside it, with the same 44 px hit area. */
 .site-header__menu {
-  min-height: var(--target); padding: 0 var(--s4);
+  position: relative; min-height: 36px; padding: 0 var(--s4);
   border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: rgb(7 8 10 / 0.4);
   font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: var(--tracking-mono); text-transform: uppercase;
 }
+.site-header__menu::after { content: ""; position: absolute; inset: -5px; }
 .no-js .site-header__menu, html:not(.js) .site-header__menu { display: none; }
 
 @media (min-width: 900px) {
@@ -165,9 +174,10 @@ html[data-motion="off"] .progress, html[data-motion="off"] .site-header__tc { di
 }
 /* Without JavaScript the page is the HTML tools/prerender.mjs wrote: the work, about, kit, credits and
    contact read as text. What needs scripts stays out of the way: the reel's player, the live studies
-   and the previs plans (and their nav links), the motion toggle, the timecode, the hero's buttons, and
-   any section the prerender has not filled. */
+   and the previs plans (and their nav links), the motion toggle, the timecode, the hero's buttons, the
+   colophon's Replay titles button, and any section the prerender has not filled. */
 html:not(.js) [data-motion-toggle], html:not(.js) .site-header__tc, html:not(.js) .hero__foot,
+html:not(.js) [data-replay-titles],
 html:not(.js) :is(#reel, #studies, #previs),
 html:not(.js) .site-nav li:has(> a:is([href$="#reel"], [href$="#studies"], [href$="#previs"])),
 html:not(.js) [data-render]:empty, html:not(.js) main > section:has(> [data-render]:empty),
@@ -197,7 +207,9 @@ html[data-intro="playing"] .hero__cta:focus-visible { animation: none; }
   border: 1px solid var(--line-strong); border-radius: var(--radius-pill); background: transparent;
   font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: var(--tracking-mono); text-transform: uppercase;
 }
-.menu__list { margin: auto 0; padding: var(--s6) 0; list-style: none; display: grid; gap: var(--s1); }
+/* The list sits in the middle of the sheet (the nav is the flex item), the Motion pill at its foot. */
+.menu > nav { margin-block: auto; }
+.menu .menu__list { margin: 0; padding-block: var(--s6); list-style: none; display: grid; gap: var(--s1); }
 .menu__list a {
   display: flex; align-items: baseline; gap: var(--s4);
   padding: var(--s2) 0; min-height: var(--target);
@@ -447,7 +459,8 @@ html.js .hero__fallback :is(.hero__title, .hero__slate) { animation: hero-fallba
   font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: var(--tracking-mono); color: var(--paper-2);
 }
 .work-card__aspect { left: var(--s2); top: var(--s2); }
-.work-card__still-tag { right: var(--s2); bottom: var(--s2); text-transform: uppercase; font-size: 0.58rem; color: var(--paper-3); }
+/* A tag over the picture keeps 4.5:1 on its lightest pixels (white sky included): a near-opaque chip. */
+.work-card__still-tag { right: var(--s2); bottom: var(--s2); text-transform: uppercase; font-size: 0.58rem; background: rgb(7 8 10 / 0.85); }
 .work-card__link:hover .work-card__gate, .work-card__link:focus-visible .work-card__gate { outline-color: var(--paper-3); }
 .work-card__link:hover .work-card__frame, .work-card__link:focus-visible .work-card__frame { filter: none; }
 .work-card__link:focus-visible { outline: none; }
@@ -519,6 +532,9 @@ html.js .hero__fallback :is(.hero__title, .hero__slate) { animation: hero-fallba
   .study-block--focus [data-study-host] { --ar: 1.3333; }
   .study-block--colour [data-study-host] { --ar: 0.68; }
 }
+/* The empty stage (the prerendered page, until the Player builds its frame in it) is already the
+   picture's box: the frame is the stage's full width at the same aspect. */
+.study-block__stage:empty { aspect-ratio: var(--ar); }
 .study-block__panel:empty { min-height: var(--panel-min, 0px); }
 .study-block--focus { --panel-min: 776px; --ruler-min: 430px; }
 .study-block--light { --panel-min: 808px; --plan-min: 659px; }
@@ -749,10 +765,13 @@ html.js .hero__fallback :is(.hero__title, .hero__slate) { animation: hero-fallba
 .film__logline { max-width: 46ch; font-family: var(--font-display); font-style: italic; font-size: var(--step-2); line-height: 1.3; color: var(--paper-2); }
 .film__frame { aspect-ratio: var(--ar); outline: 1px solid var(--line); outline-offset: -1px; }
 .film__frame > img { object-fit: cover; }
-.film__frame-cap { position: absolute; left: var(--s3); bottom: var(--s3); z-index: 1; }
+.film__frame-cap { position: absolute; left: var(--s3); bottom: var(--s3); z-index: 1; background: rgb(7 8 10 / 0.85); }   /* on the picture: as .work-card__still-tag */
 .film__body { display: grid; gap: var(--s7); padding-block: clamp(48px, 6vw, 96px); }
 @media (min-width: 900px) { .film__body { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: clamp(48px, 6vw, 112px); } }
 .film__facts { display: grid; gap: var(--s7); align-content: start; }   /* the camera report, then the credits */
+/* From 900 px the facts column holds a role ("Director of Photography", "Production designer") on one line;
+   the report and the credits share the label width, so their values line up. */
+@media (min-width: 900px) { .film__facts .report__row { grid-template-columns: minmax(14ch, 24ch) minmax(0, 1fr); } }
 .film__h { margin: 0 0 var(--s4); font-family: var(--font-mono); font-size: var(--step--1); font-weight: 400; color: var(--tungsten); }
 .film__notes { display: grid; align-content: start; }
 .film__notes .film__h:not(:first-child) { margin-top: var(--s7); }
@@ -844,10 +863,19 @@ html[data-motion="off"] .preloader, html[data-motion="off"] .shutter { display: 
   .previs-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 
-/* Project page: the lead frame runs edge to edge, pillarboxed in black when the film's aspect would be
-   taller than the screen (a 1.33 frame is never cropped to fit a 16:10 window). */
+/* Project page: the page opens on the work. The head is set compact (the title beside its logline) and
+   the lead frame fits the first screen under it, edge to edge, pillarboxed in black when the film's
+   aspect would be taller than what is left (a 1.33 frame is never cropped to fit a 16:10 window).
+   --film-head is the head's height; without a measured one (project.js), the estimate holds the head
+   with a one-line title from 1280 to 2560 px. */
 @media (min-width: 1024px) {
+  .film__head {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: clamp(48px, 6vw, 112px); align-items: end;
+    padding-block: clamp(40px, 4vw, 80px) clamp(24px, 2.4vw, 40px);
+  }
+  .film__slate { grid-column: 1 / -1; }
+  .film__logline { font-size: var(--step-1); }
   .film__hero.container { width: 100%; display: grid; justify-items: center; background: var(--ink-0); }
-  .film__hero .film__frame { width: min(100%, calc((100svh - 72px) * var(--ar))); outline: 0; }
+  .film__hero .film__frame { width: min(100%, calc((100svh - 72px - var(--film-head, calc(10.5vw + 130px))) * var(--ar))); outline: 0; }
 }
 

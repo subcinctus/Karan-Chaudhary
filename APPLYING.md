@@ -83,7 +83,7 @@ This is your guide to using the site for film-school applications and for people
   - "If it's too fancy, if you put too much attention on the actual website, then it's suspect" (Gainor, [Sony Cine](https://sony-cinematography.com/articles/reels-for-cinematographers-part-2-a-studio-exec-s-perspective/), checked 2026-10).
   - "Simplicity is the order of the day" (Bernstein, [Sony Cine](https://sony-cinematography.com/articles/cinematographer-reels---a-director-s-perspective/), checked 2026-10).
   - "If your homepage takes more than 3 seconds, producers leave", and give "an actual working email — not a contact form" ([Boldcine](https://www.boldcine.com/university/lessons/showcasing-your-work-online), checked 2026-10).
-  - On this site, the header's Contact button leads to your email from every page, and the "Motion off" button stops every animation.
+  - On this site, a Contact button leads to your email from every page (in the header, the bar of a study page, and on the 404), and the "Motion off" button stops every animation.
 - **Mind the sound.**
   - For music, "you're always better off using something that's not recognizable" (Burnside, [Sony Cine](https://sony-cinematography.com/articles/reels-for-cinematographers-an-agent-s-perspective/), checked 2026-10).
   - "Turn the sound off. Really." (Dudley, [Stage 32](https://stage32.com/post/1039221930328072295), checked 2026-10).
@@ -105,7 +105,7 @@ names the section of `npm run check` that verifies it: `data` (the schema in `to
 | A reel of 3 minutes at most (AFI); about 1–2½ minutes (hiring) | `reel.provider`, `reel.id` / `reel.src`, `reel.runtime` | Home page, Reel section (hidden until a reel is set) | `data` fails a runtime over 3:00 and warns outside 1:00–2:30; `reel` (browser) |
 | Vimeo links (NFTS), not password protected (AFI) | `reel.provider: 'vimeo'`, `reel.id`, `reel.hash` | The reel's player | `data` (the hash's format); `reel` (the player address carries it) |
 | A dated reel (hiring) | `reel.updated` (`'YYYY-MM'`) | "Reel 2026 · updated October 2026 · 1:30" beside the reel | `data` warns after 12 months |
-| Jump to a shot; whole scenes (hiring) | `reel.shots` (`t: '0:12'`, `film`, `lens`, `note`, `thumb`) | The shot index under the reel; `index.html?t=62#reel` | `data` (times in order, inside the runtime); `reel` |
+| A shot index into the reel (seen on a DP's own site: [Ian Coad](https://www.iancoad.com/reel/explore), checked 2026-10) | `reel.shots` (`t: '0:12'`, `film`, `lens`, `note`, `thumb`) | The shot index under the reel; `index.html?t=62#reel` | `data` (times in order, inside the runtime); `reel` |
 | Say when there is no dialogue (WAI) | `reel.dialogue: false`, `reel.captions` | "No dialogue — instrumental"; the player's captions | `reel` |
 | The reel in search results | `reel.poster`, `reel.uploadDate` | JSON-LD `VideoObject` with key moments | `seo-static` |
 | Format and camera for each film (AFI) | `format`, `camera`, `lenses`, `aspect`, `frameRate` | Film page camera report; the Index view | `film`, `work` |
@@ -124,7 +124,7 @@ names the section of `npm run check` that verifies it: `data` (the schema in `to
 | Beijing Film Academy: 10–12 | `sets: ['bfa']` | `photographs.html?set=bfa` | `data` |
 | A list of 10 films (FAMU) | `person.tenFilms` (text only) | About: "Ten films" | `data` (at most 10, no images) |
 | References, never other people's frames | `references` (text only) | Film page: References | `data` fails an image in the list |
-| Contact easy to find (hiring) | `contact.email` | Header Contact button on every page; the footer | `seo-static` (the email is in the page's HTML) |
+| Contact easy to find (hiring) | `contact.email` | A Contact button on every page (the header; a study page's bar; the 404); the footer | `seo-static` (the email is in the page's HTML) |
 | The site says where AI was used | `colophon.text`, `colophon.confirmed` | Footer colophon; every study's label | `honesty` |
 
 ---
@@ -135,8 +135,9 @@ names the section of `npm run check` that verifies it: `data` (the schema in `to
    - Give each one its `alt` text and its `w` and `h` in pixels.
    - Give each one the `sets` it belongs to: `afi`, `nyu`, `famu`, `lodz`, `bfa`.
    - Mark portraits of people with `portrait: true`.
-2. **Use JPEG files.** On this site, Chrome copies a JPEG into the PDF unchanged, but turns a WebP or PNG
-   into a much larger image: in a test in October 2026, a 16 KB WebP became 283 KB inside the PDF.
+2. **Use JPEG files.** On this site, Chrome copies a JPEG into the PDF unchanged and a PNG at about its own
+   size, which for a photograph is several times a JPEG's; a WebP becomes far larger: in a test in October
+   2026, a 16 KB WebP became 283 KB inside the PDF.
    - The PDF weighs about as much as the JPEGs in it together, and AFI's limit is 15 MB. The data check
      warns when one set's images add up to more than 13 MB.
    - FAMU wants JPGs of 2000 px or less

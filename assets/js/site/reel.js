@@ -77,8 +77,9 @@ export function mountReel(frame, data) {
     player.focus();
   }
 
-  const label = `Play showreel${from ? ` from ${formatTime(from)}` : ''}${host ? ` (${host}, loads external player)` : ''}`;
+  // The button's name starts with the words it shows ("Play reel · 1:30 · Vimeo"), so a voice command finds it.
   const shown = from ? `Play from ${formatTime(from)}` : `Play reel${runtime != null ? ` · ${formatTime(runtime)}` : ''}`;
+  const label = `${shown}${host ? ` · ${host}, loads an external player` : ''}`;
   put(frame, html`
     <button class="reel-facade" type="button" aria-label="${label}" data-reel-focus>
       ${poster ? html`<img class="reel-facade__poster" src="${poster}" alt="" loading="lazy" decoding="async">` : html`<span class="reel-facade__poster reel-facade__poster--none" aria-hidden="true"></span>`}

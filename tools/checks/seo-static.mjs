@@ -8,14 +8,19 @@
 //       role, every film title, "Filmography" and the email, and none of the decoration ("Reel 1", "000",
 //       "TC 00"). The static project.html names every film.
 //     - JSON-LD parses and holds no "</": a Person (#person), an ItemList of exactly the real films, and a
-//       VideoObject exactly when the reel, its poster and its upload date exist, with Clip offsets ascending.
+//       VideoObject exactly when a real reel (not placeholder: true), its poster and its upload date exist, with
+//       Clip offsets ascending.
 //     - Speculation rules parse and never prerender (that would start a page's Players unseen).
 //     - sitemap.xml: the home page, photographs.html once it has photographs, and only the real films.
 //   browser "static-content" (the generated index.html, served in place of the committed file)
 //     - JavaScript off, 1440×900: the film titles and the email are visible and nothing overflows sideways
 //       (full-page screenshot .artifacts/screens/nojs--index--1440x900.png).
-//     - JavaScript on, at 1440×900 and 390×844, from the top and arriving on #contact: the layout shift from
-//       the first paint through main.js's re-render (and 1.5 s more) totals at most 0.02.
+//     - JavaScript on: the layout shift from the first paint through main.js's re-render and, at 1440 with
+//       motion on, the desktop layer's arm (it pins the work strip above every later section) totals at most
+//       0.02: from the top (1440 and 390), and arriving on #work, #about, #credits and #contact (1440 with
+//       motion on: every film page's Contact pill leads to index.html#contact), on #about, #credits and
+//       #contact (1440, reduced motion), and on #about and #contact (390). An arrival must also end on its
+//       target, under the header (its top within 6 px of scroll-padding-top).
 // The text helper is exported for tools/test/prerender.test.mjs.
 
 import fs from 'node:fs';
@@ -97,10 +102,11 @@ async function staticRun({ pass, fail, warn, info, R, read, exists, deployedFile
   const listed = (list?.itemListElement ?? []).map(e => e?.item?.name);
   if (JSON.stringify(listed) !== JSON.stringify(real)) errs.push(`index.html: the ItemList names ${JSON.stringify(listed)}, the real films are ${JSON.stringify(real)} (sample films never enter it)`);
   const r = data.reel ?? {};
-  const wantVideo = R.hasReel(data) && !!R.safeUrl(r.poster) && !!r.uploadDate;
+  // A reel still marked as a sample is tagged Sample on the page, and never published as a real video.
+  const wantVideo = r.placeholder !== true && R.hasReel(data) && !!R.safeUrl(r.poster) && !!r.uploadDate;
   const videos = typed(nodes, 'VideoObject');
   if (wantVideo && videos.length !== 1) errs.push(`index.html: the reel has a poster and an upload date but the JSON-LD has ${videos.length} VideoObject(s) (reel-data.js videoObjectLD)`);
-  if (!wantVideo && videos.length) errs.push('index.html: a VideoObject without a playable reel, a poster and an upload date');
+  if (!wantVideo && videos.length) errs.push(`index.html: a VideoObject without a real, playable reel with a poster and an upload date${r.placeholder === true ? ' (reel.placeholder is still true: the page tags the reel Sample)' : ''}`);
   for (const v of videos) {
     const clips = [].concat(v.hasPart ?? []).filter(c => [].concat(c?.['@type']).includes('Clip'));
     const starts = clips.map(c => Number(c.startOffset));
@@ -109,7 +115,7 @@ async function staticRun({ pass, fail, warn, info, R, read, exists, deployedFile
     if (backwards.length) errs.push(`index.html: ${backwards.length} Clip(s) end before they start`);
   }
   for (const e of errs) fail(e);
-  if (!errs.length) pass(`JSON-LD parses, holds no "</": ${nodes.map(n => [].concat(n['@type']).join('/')).filter(Boolean).join(', ')}${videos.length ? ` (${[].concat(videos[0].hasPart ?? []).length} Clips ascending)` : ` (no VideoObject: ${R.hasReel(data) ? 'no poster or upload date' : 'no reel yet'})`}; the ItemList ${real.length ? `names the ${real.length} real film(s)` : 'is left out while every film is a sample'}`);
+  if (!errs.length) pass(`JSON-LD parses, holds no "</": ${nodes.map(n => [].concat(n['@type']).join('/')).filter(Boolean).join(', ')}${videos.length ? ` (${[].concat(videos[0].hasPart ?? []).length} Clips ascending)` : ` (no VideoObject: ${!R.hasReel(data) ? 'no reel yet' : r.placeholder === true ? 'the reel is still a sample' : 'no poster or upload date'})`}; the ItemList ${real.length ? `names the ${real.length} real film(s)` : 'is left out while every film is a sample'}`);
 
   // 4. Speculation rules: prefetch only.
   let rules = 0;
@@ -138,7 +144,7 @@ async function staticRun({ pass, fail, warn, info, R, read, exists, deployedFile
   info(`${stale.length ? 'run npm run prerender to refresh the committed files' : 'tools/prerender.mjs --check passes'}; CI writes the same output into _site`);
 }
 
-async function browserRun({ pass, fail, info, browser, watch, loadData, fullPageShot, abs, OPT }) {
+async function browserRun({ pass, fail, info, browser, watch, loadData, fullPageShot, abs, OPT, DESKTOP_WAIT }) {
   if (OPT.only && !OPT.only.some(o => 'index'.includes(o))) return info('skipped: the index page is not selected (--only)');
   const { srv, browser: chromium, contextOptions } = browser();
   const data = await loadData();
@@ -160,7 +166,8 @@ async function browserRun({ pass, fail, info, browser, watch, loadData, fullPage
       await page.evaluate(() => document.fonts.ready);
       const r = await page.evaluate(({ films, email }) => {
         const shown = el => { const b = el.getBoundingClientRect(), cs = getComputedStyle(el); return b.width > 0 && b.height > 0 && cs.visibility !== 'hidden' && cs.display !== 'none'; };
-        const titles = [...document.querySelectorAll('.work-card__title')].filter(shown).map(el => el.textContent.trim());
+        // Without JavaScript the work section is the index table (work.css hides the frames grid).
+        const titles = [...document.querySelectorAll('.work-card__title, .work-index__title')].filter(shown).map(el => el.textContent.trim());
         const mail = [...document.querySelectorAll('a[href^="mailto:"]')].filter(shown).map(a => a.textContent.trim());
         return { missing: films.filter(t => !titles.includes(t)), mail: mail.includes(email), sw: document.documentElement.scrollWidth, iw: innerWidth, js: document.documentElement.classList.contains('js') };
       }, { films, email });
@@ -181,11 +188,17 @@ async function browserRun({ pass, fail, info, browser, watch, loadData, fullPage
     await ctx.close();
   }
 
-  // 2. JavaScript on: the layout shift until the scripts have rendered the same sections again. Arriving on
-  //    #contact puts prerendered content on screen while main.js replaces it, so a markup difference would
-  //    show; at 1440 that run is in reduced motion, because the desktop layer's pinned strip moves the page
-  //    by itself as it arms (not the prerender's doing).
-  const runs = [{ w: 1440, h: 900 }, { w: 390, h: 844 }, { w: 1440, h: 900, hash: '#contact', reduced: true }, { w: 390, h: 844, hash: '#contact' }];
+  // 2. JavaScript on: the layout shift until the scripts have rendered the same sections again and, on a
+  //    desktop with motion on, until the motion layer has armed: its pinned work strip adds a spacer above
+  //    every later section, so a jump into the page is only safe if it is put back in that same frame.
+  //    Arriving on a section puts prerendered content on screen while main.js replaces it, so a markup
+  //    difference would show too.
+  const runs = [
+    { w: 1440, h: 900 }, { w: 390, h: 844 },
+    ...['#work', '#studies', '#previs', '#about', '#credits', '#contact'].map(hash => ({ w: 1440, h: 900, hash })),
+    ...['#about', '#credits', '#contact'].map(hash => ({ w: 1440, h: 900, hash, reduced: true })),
+    ...['#previs', '#about', '#contact'].map(hash => ({ w: 390, h: 844, hash })),
+  ];
   for (const { w, h, hash = '', reduced = false } of runs) {
     const tag = `${w}×${h}${hash ? ` ${hash}` : ''}${reduced ? ' (reduced motion)' : ''}`;
     const ctx = await chromium.newContext(contextOptions({ w, h, reducedMotion: reduced ? 'reduce' : 'no-preference' }));
@@ -205,13 +218,23 @@ async function browserRun({ pass, fail, info, browser, watch, loadData, fullPage
     try {
       await page.goto(url + hash, { waitUntil: 'load', timeout: 45000 });
       await page.waitForFunction(() => window.__rerender != null, null, { timeout: 15000 });
+      // The desktop layer (when it applies) arms after the page: wait for it and its first idle.
+      await page.waitForFunction(DESKTOP_WAIT, null, { timeout: 8000 }).catch(() => {});
+      await page.evaluate(() => Promise.race([window.__motion?.idle, new Promise(r => setTimeout(r, 4000))])).catch(() => {});
       await page.waitForTimeout(1500);
-      const r = await page.evaluate(() => ({ shifts: window.__shifts, rerender: window.__rerender }));
+      const r = await page.evaluate(hash => {
+        let el = null;
+        try { el = hash ? document.getElementById(decodeURIComponent(hash.slice(1))) : null; } catch { /* bad hash */ }
+        const line = parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop) || 0;
+        return { shifts: window.__shifts, rerender: window.__rerender, armed: Boolean(window.__motion?.armed), top: el ? Math.round(el.getBoundingClientRect().top) : null, line };
+      }, hash);
       const cls = r.shifts.reduce((s, e) => s + e.value, 0);
       const worst = [...r.shifts].sort((a, b) => b.value - a.value).slice(0, 3).map(e => `${e.value.toFixed(4)} at ${e.at} ms ${e.what}`).join('; ');
+      const through = `main.js's re-render at ${r.rerender} ms${r.armed ? ' and the motion layer\'s arm' : ''}`;
       if (errors.length) fail(`index with JavaScript, ${tag}: ${errors.length} error(s): ${errors.slice(0, 2).join(' | ')}`);
-      if (cls > 0.02) fail(`${tag}: layout shift ${cls.toFixed(4)} > 0.02 from the first paint through main.js's re-render at ${r.rerender} ms (${worst})`);
-      else pass(`${tag}: layout shift ${cls.toFixed(4)} ≤ 0.02 from the first paint through main.js's re-render at ${r.rerender} ms and 1.5 s after (${r.shifts.length} shift(s)${worst ? `: ${worst}` : ''})`);
+      if (hash && (r.top == null || Math.abs(r.top - r.line) > 6)) fail(`${tag}: the arrival ended with ${hash} at ${r.top} px, not under the header (${r.line} px)`);
+      if (cls > 0.02) fail(`${tag}: layout shift ${cls.toFixed(4)} > 0.02 from the first paint through ${through} (${worst})`);
+      else pass(`${tag}: layout shift ${cls.toFixed(4)} ≤ 0.02 from the first paint through ${through}, and 1.5 s after${hash ? `; ${hash} lands at ${r.top} px` : ''} (${r.shifts.length} shift(s)${worst ? `: ${worst}` : ''})`);
     } catch (e) { fail(`index with JavaScript, ${tag}: ${e.message.split('\n')[0]}`); }
     await ctx.close();
   }
@@ -221,5 +244,5 @@ export const staticSections = [
   { name: 'seo-static', title: 'Static content and SEO: prerender markers and sync, page text, JSON-LD, speculation rules, sitemap', run: staticRun },
 ];
 export const browserSections = [
-  { name: 'static-content', title: 'Static content in the browser: no-JS index at 1440, layout shift through the re-render (top and #contact, 1440 and 390)', run: browserRun },
+  { name: 'static-content', title: 'Static content in the browser: no-JS index at 1440, layout shift through the re-render and the motion layer\'s arm (from the top, and arriving on a section), 1440 and 390', run: browserRun },
 ];

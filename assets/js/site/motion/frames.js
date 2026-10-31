@@ -34,7 +34,7 @@ export function initFrames(env) {
       const tl = gsap.timeline({ scrollTrigger: once(slot, 'top 88%') });
       if (frame) tl.fromTo(frame, { clipPath: SLIT_FROM }, { clipPath: OPEN, duration: 1.1, ease: 'kc.io', clearProps: 'clipPath' }, 0);
       if (inner.length) tl.from(inner, { scale: 1.1, duration: 1.4, ease: 'kc.out', clearProps: 'transform' }, 0.1);
-      if (cap) tl.from(cap.children, { y: 24, autoAlpha: 0, duration: 0.8, ease: 'kc.out', stagger: 0.05, clearProps: 'all' }, 0.3);
+      if (cap) tl.from(cap.children, { y: 24, opacity: 0, duration: 0.8, ease: 'kc.out', stagger: 0.05, clearProps: 'all' }, 0.3);
     }
     // Project page: the lead frame, the stills, the sequence and the plot's frame. The image inside
     // settles (CSS --ps) to scale 1; images that arrive later (procedural stills paint async) pick it up.

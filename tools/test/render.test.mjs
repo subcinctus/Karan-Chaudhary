@@ -145,7 +145,8 @@ test('renderProject keeps the page order, the feature blocks in their places', (
         ['crew', String(FF.renderCrew(f, d))], ['notes', '<section class="film__notes'], ['palette', 'class="palette"'],
         ['laurels', String(FF.renderLaurels(f, d))], ['enquiries', String(FF.renderEnquiries(f, d))],
         ['sequence', String(FF.renderSequenceShell(f, d))], ['frames', '<section class="film__stills'],
-        ['plot', String(FF.renderPlotShell(f, d))], ['references', String(FF.renderReferences(f, d))],
+        ['plot', String(FF.renderPlotShell(f, d))], ['grade', String(FF.renderGradeShell(f, d))],
+        ['references', String(FF.renderReferences(f, d))],
         ['bts', (f.bts ?? []).length ? '<section class="film__bts' : ''], ['pager', '<nav class="film__pager'],
       ].filter(([, s]) => s.trim());
       let at = -1;

@@ -10,7 +10,9 @@
 //       the fixture), every transition animation ends by 0.8 s, kc:shutter is never set and the page never
 //       starts covered; the hand-off image goes once the film's own still is in (desktop and phone);
 //     - an Index row's link (when the Index view exists): its preview pane's frame is the one carried;
-//     - the pager to the next film: a plain root fade (no film-still group, no hand-off);
+//     - the film page holds its first paint for project.js (blocking="render") only for that hand-off, with
+//       the lead frame named at pagereveal; the pager to the next film: a plain root fade (no film-still
+//       group, no hand-off, the first paint not held);
 //     - back to the index (back/forward cache or not): no element keeps the name;
 //     - Motion off: the card's click arrives with "none" (the index skips the transition before it is
 //       captured, so Chromium offers the film page none) and the film page's link back arrives "skipped"
@@ -76,7 +78,10 @@ const PROBE = () => {
   addEventListener('pageshow', e => { window.__persisted = e.persisted; });
   addEventListener('pagereveal', e => {
     const vt = e.viewTransition;
-    const p = window.__vt = { has: !!vt, handoff: root().classList.contains('vt-handoff'), handoffImg: !!document.querySelector('.film__handoff') };
+    // A film page holds its first paint for project.js only for a hand-off: then the lead frame is named by now.
+    const pj = document.querySelector('script[src$="site/project.js"]');
+    const p = window.__vt = { has: !!vt, handoff: root().classList.contains('vt-handoff'), handoffImg: !!document.querySelector('.film__handoff'),
+      hold: pj ? pj.getAttribute('blocking') : undefined, lead: document.querySelector('[data-film-hero]')?.style.viewTransitionName ?? null };
     if (!vt) return;
     vt.ready.then(() => {
       const anims = document.getAnimations().filter(a => String(a.effect?.pseudoElement ?? '').startsWith('::view-transition'));
@@ -166,9 +171,10 @@ async function runBrowser(api) {
       if (!a.groups?.includes('film-still') || !a.handoff || !a.handoffImg) probs.push(`groups ${JSON.stringify(a.groups)}, vt-handoff ${a.handoff}, hand-off image ${a.handoffImg}`);
       if (!(a.end <= LIMIT_MS)) probs.push(`the transition runs to ${a.end} ms`);
       if (!vt || !vt.v.startsWith(`{"slug":"${slug}","src":"data:image/jpeg;base64,`)) probs.push(`kc:vt ${JSON.stringify(vt?.v ?? null)} (want the slug and a JPEG of the card's still)`);
+      if (a.hold !== 'render' || a.lead !== 'film-still') probs.push(`at pagereveal project.js blocking ${JSON.stringify(a.hold ?? null)} and the lead frame named ${JSON.stringify(a.lead)} (want "render": the first paint waits for the frame the cut lands on)`);
       if (writes.some(x => x.k === 'kc:shutter') || a.covered) probs.push(`the shutter ran (kc:shutter ${writes.some(x => x.k === 'kc:shutter')}, arrived covered ${a.covered})`);
       if (probs.length) fail(`${tag} card → ${slug}: ${probs.join('; ')}`);
-      else pass(`${tag} card → ${slug}: html[data-vt]="on"; the card's still (a JPEG data URL) rides the "film-still" group into the lead frame; groups ${a.groups.join(', ')}; done by ${Math.round(a.end)} ms; kc:shutter never set`);
+      else pass(`${tag} card → ${slug}: html[data-vt]="on"; the first paint held for the hand-off; the card's still (a JPEG data URL) rides the "film-still" group into the lead frame; groups ${a.groups.join(', ')}; done by ${Math.round(a.end)} ms; kc:shutter never set`);
       const gone = await page.waitForFunction(() => !document.querySelector('.film__handoff'), null, { timeout: 15000 }).then(() => true, () => false);
       if (!gone) fail(`${tag}: the hand-off image is still in the lead frame 15 s after arriving`);
       else pass(`${tag}: the hand-off image leaves once the film's own still is painted`);
@@ -176,7 +182,8 @@ async function runBrowser(api) {
       if (vp === desktop) {
         const b = await follow(page, errors, 'a.film__pager-link--next');
         if (b.vt !== 'on' || b.ready !== 'ran' || b.groups?.includes('film-still') || b.handoff) fail(`${tag} pager: html[data-vt]="${b.vt}", transition ${b.ready}, groups ${JSON.stringify(b.groups)}, vt-handoff ${b.handoff} (want a plain root fade)`);
-        else pass(`${tag} pager → next film: a plain root fade (groups ${b.groups.join(', ')}), no shared frame`);
+        else if (b.hold !== null) fail(`${tag} pager: project.js blocking ${JSON.stringify(b.hold ?? null)} (want none: only a hand-off holds the first paint)`);
+        else pass(`${tag} pager → next film: a plain root fade (groups ${b.groups.join(', ')}), no shared frame, the first paint not held`);
         await departing(errors, async () => {
           await page.goBack({ waitUntil: 'load' });
           await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => {});

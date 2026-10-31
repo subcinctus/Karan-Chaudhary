@@ -1,6 +1,7 @@
 // tools/prerender.mjs: the static pages crawlers and visitors without JavaScript read. It must be
-// idempotent, escape everything, change nothing outside its markers (and the two hidden flags and the
-// JSON-LD script), write JSON-LD that parses and cannot close its <script>, and list only real films.
+// idempotent, escape everything, change nothing outside its markers (and the two hidden flags, the
+// JSON-LD script and photographs.html's robots noindex), write JSON-LD that parses and cannot close its
+// <script>, and list only real films.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -16,11 +17,17 @@ import { REPO_ROOT } from '../lib/server.mjs';
 
 const pages = readPages();
 const LD = /<script\b[^>]*\sid="ld-person"[^>]*>[\s\S]*?<\/script>/i;
-/** A page with everything the prerender may write blanked out: marker contents, the JSON-LD, the two hidden flags. */
-const outside = s => s
+const NOINDEX = /^[ \t]*<meta name="robots" content="noindex">\r?\n/m;
+/**
+ * A page with everything the prerender may write blanked out: marker contents, the JSON-LD, the two hidden
+ * flags, and on photographs.html the robots noindex.
+ */
+const outside = (s, file) => s
   .replace(/(<!--\s*prerender:([\w-]+)\s*-->)[\s\S]*?(<!--\s*\/prerender:\2\s*-->)/g, '$1$3')
   .replace(LD, '<ld>')
-  .replace(/(<section\b[^>]*\sid="(?:reel|photographs)"[^>]*?)\s+hidden(?=[\s>])/g, '$1');
+  .replace(/(<section\b[^>]*\sid="(?:reel|photographs)"[^>]*?)\s+hidden(?=[\s>])/g, '$1')
+  .replace(/(<section\b[^>]*\sid="(?:reel|photographs)"[^>]*?)\s+aria-labelledby="[^"]*"/g, '$1')
+  .replace(file === 'photographs.html' ? NOINDEX : /(?!)/, '');
 const sectionTag = (html, id) => new RegExp(`<section\\b[^>]*\\sid="${id}"[^>]*>`).exec(html)[0];
 const ldOf = html => jsonLdBlocks(LD.exec(html)[0])[0];
 /** The entities html.js esc() writes. */
@@ -58,7 +65,7 @@ test('only the marker contents, the hidden flags and the JSON-LD change', () => 
   for (const d of [data, fixtureData()]) {
     for (const [file, content] of generate(d, pages)) {
       if (!file.endsWith('.html')) continue;
-      assert.equal(outside(content), outside(pages.get(file)), file);
+      assert.equal(outside(content, file), outside(pages.get(file), file), file);
     }
   }
   // Markers on lines of their own keep them; inline markers stay inline.
@@ -79,6 +86,19 @@ test('the home sections that wait for material are hidden until the data has it'
   assert.match(shown, /<li><a href="#reel">Reel<\/a><\/li>/);
   // And back: the flag returns when the material goes.
   assert.match(sectionTag(generate(data, new Map([['index.html', shown]])).get('index.html'), 'reel'), /\shidden>/);
+});
+
+test('photographs.html is noindex while it has no photographs, and indexable once it has', () => {
+  if (!pages.has('photographs.html')) return;
+  const empty = generate(data, pages).get('photographs.html');
+  assert.match(empty, /<meta name="viewport"[^>]*>\n( *)<meta name="robots" content="noindex">\n/, 'on its own line after the viewport tag');
+  const full = generate(fixtureData(), pages).get('photographs.html');
+  assert.doesNotMatch(full, /name="robots"/);
+  // And back, byte for byte, when the photographs go.
+  assert.equal(generate(data, new Map([['photographs.html', full]])).get('photographs.html'), empty);
+  assert.throws(() => generate(data, new Map([['photographs.html', full.replace(/<meta name="viewport"[^>]*>\n/, '')]])), /no <meta name="viewport">/);
+  // The other pages never carry it: their films are noindexed one by one, at run time (project.js).
+  for (const file of ['index.html', 'project.html']) assert.doesNotMatch(generate(fixtureData(), pages).get(file), NOINDEX, file);
 });
 
 test('a malicious film title, name and e-mail are escaped in the pages and the JSON-LD', () => {

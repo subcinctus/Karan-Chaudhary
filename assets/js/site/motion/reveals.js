@@ -27,12 +27,12 @@ export function initReveals(env) {
       els.push(...targetsOf(el));
     }
     if (!els.length) return;
-    gsap.set(els, { autoAlpha: 0, y: 40 });
+    gsap.set(els, { opacity: 0, y: 40 });
     batches.push(...ScrollTrigger.batch(els, {
       start: 'top 88%', once: true,
       onEnter: batch => {
         gsap.to(batch, { y: 0, duration: 0.95, ease: 'kc.out', stagger: 0.06, overwrite: 'auto', clearProps: 'transform' });
-        gsap.to(batch, { autoAlpha: 1, duration: 0.5, ease: 'power1.out', stagger: 0.06, clearProps: 'opacity,visibility' });
+        gsap.to(batch, { opacity: 1, duration: 0.5, ease: 'power1.out', stagger: 0.06, clearProps: 'opacity' });
       },
     }));
   }

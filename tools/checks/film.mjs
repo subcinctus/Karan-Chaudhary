@@ -4,15 +4,17 @@
 //           no root-relative or script URL, for the real data and for the fixture.
 //   browser film, on the first sample film that has a sequence and a plot, at every --viewports size:
 //     - no console errors; no frame is cropped: every .frame img box is within 1.5 % of its natural aspect;
-//     - the crew block's "Photographed by" line and DP row; the plot SVG's title and desc (and a plan that
-//       fits: its view stays under 30 m across); the sample badges ("Sample sequence", "Sample plot",
-//       "Placeholder still") visible.
+//     - the crew block's "Photographed by" line and DP row; the plot SVG named by its title and described by
+//       its desc (and a plan that fits: its view stays under 30 m across); the sample badges ("Sample
+//       sequence", "Sample plot", "Placeholder still") visible.
 //     At the desktop and the phone sizes, the lightbox: frame 02 opens it at "02 / 0N", focus on Close,
 //     html.modal-open, the live region; → / ← (no wrap), Home / End, i (the info panel and its DP-first
-//     credit), a swipe on phones; Esc closes, html.modal-open goes, focus is back on the button that opened
-//     it; Lenis stopped while it is open (desktop); no object URL left behind; the sequence opens its own
-//     set. Under Motion off it opens and steps without animating. Once: the work card on the index, the lead
-//     frame and frame 01 show one procedural image (a 24 × 10 luminance signature; frame 02 is the control).
+//     credit), a swipe on phones; the previous/next buttons (and from 1024 px the info panel) never cover
+//     the picture; Esc closes, html.modal-open goes, focus is back on the button that opened it; Lenis
+//     stopped while it is open (desktop); no object URL left behind; the sequence opens its own set; a double
+//     click on a frame leaves it open (desktop). Under Motion off it opens and steps without animating.
+//     Once: the work card on the index, the lead frame and frame 01 show one procedural image (a 24 × 10
+//     luminance signature; frame 02 is the control).
 //   A fixture run (tools/lib/fixture.mjs: real-still stand-ins, crew names, camera lines, palettes, srcset,
 //   a real sequence and plot, laurels, references, a grade and a previs comparison) renders it all, with
 //   "fixture--film…" screenshots; its wipes sit after the plot and move by mouse, keyboard and a touch tap,
@@ -107,7 +109,7 @@ const pageFacts = page => page.evaluate(() => {
   return {
     credit: document.querySelector('.film__credit')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
     rows: [...document.querySelectorAll('.film__crew .report__row')].map(r => [r.querySelector('dt')?.textContent.trim(), r.querySelector('dd')?.textContent.trim()]),
-    plot: svg ? { title: svg.querySelector('title')?.textContent ?? '', desc: svg.querySelector('desc')?.textContent ?? '', rings: svg.querySelectorAll('circle').length, width: vb[2] ?? 0, labelled: svg.getAttribute('aria-labelledby') ?? '' } : null,
+    plot: svg ? { title: svg.querySelector('title')?.textContent ?? '', desc: svg.querySelector('desc')?.textContent ?? '', rings: svg.querySelectorAll('circle').length, width: vb[2] ?? 0, labelled: svg.getAttribute('aria-labelledby') ?? '', described: svg.getAttribute('aria-describedby') ?? '', titleId: svg.querySelector('title')?.id ?? '', descId: svg.querySelector('desc')?.id ?? '' } : null,
     badges: Object.fromEntries(['Sample sequence', 'Sample plot', 'Placeholder still', 'Sample'].map(t => [t, [...document.querySelectorAll('.badge-sample')].filter(b => b.textContent.trim() === t).some(seen)])),
   };
 });
@@ -129,6 +131,27 @@ const lightboxState = page => page.evaluate(() => {
   };
 });
 
+/**
+ * The lightbox's chrome over its picture: ['next 22×56 px', …] for the previous/next buttons and (with
+ * `info`) the info panel where they cover the picture (contained in its box, so it may be letterboxed).
+ */
+const chromeOverPicture = (page, { info = false } = {}) => page.evaluate(info => {
+  const img = document.querySelector('dialog.lightbox[open] .lightbox__img');
+  if (!img?.naturalWidth) return ['no picture shown'];
+  const r = img.getBoundingClientRect(), k = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
+  const w = img.naturalWidth * k, h = img.naturalHeight * k, p = { left: r.left + (r.width - w) / 2, top: r.top + (r.height - h) / 2 };
+  p.right = p.left + w; p.bottom = p.top + h;
+  const over = [];
+  for (const [what, sel] of [['previous', '.lightbox__nav--prev'], ['next', '.lightbox__nav--next'], ...(info ? [['info', '.lightbox__info']] : [])]) {
+    const el = document.querySelector(`dialog.lightbox[open] ${sel}`);
+    if (!el?.getClientRects().length) continue;
+    const b = el.getBoundingClientRect();
+    const ow = Math.min(b.right, p.right) - Math.max(b.left, p.left), oh = Math.min(b.bottom, p.bottom) - Math.max(b.top, p.top);
+    if (ow > 0.5 && oh > 0.5) over.push(`${what} ${Math.round(ow)}×${Math.round(oh)} px`);
+  }
+  return over;
+}, info);
+
 /** Track object URLs from page start: [live URLs created after the mark that no <img> uses]. */
 const URL_TRACKER = () => {
   const made = new Set(), gone = new Set();
@@ -142,6 +165,8 @@ const URL_TRACKER = () => {
 };
 
 const counterOf = (i, n) => `${String(i).padStart(2, '0')} / ${String(n).padStart(2, '0')}`;
+/** Text as the page reads it back: every run of white space (the labels' no-break spaces too) one space. */
+const fold = s => String(s).replace(/\s+/g, ' ').trim();
 
 async function runBrowser(api) {
   const { OPT, pass, fail, skip, info, browser, watch, settle, loadData, fixture, read, exists, fullPageShot } = api;
@@ -191,9 +216,9 @@ async function runBrowser(api) {
         const p = facts.plot;
         const want = `Lighting plot: ${film.title}${film.lightingPlot.scene ? `, ${film.lightingPlot.scene}` : ''}`;
         if (!p) fail(`${tag}: no .film-plot__svg`);
-        else if (p.title !== want || p.desc.length < 40 || !p.labelled.includes('desc')) fail(`${tag}: plot SVG title "${p.title}" (want "${want}"), desc ${p.desc.length} chars, aria-labelledby "${p.labelled}"`);
+        else if (p.title !== want || p.desc.length < 40 || p.labelled !== p.titleId || p.described !== p.descId) fail(`${tag}: plot SVG title "${p.title}" (want "${want}"), desc ${p.desc.length} chars, aria-labelledby "${p.labelled}" (want the title's id alone), aria-describedby "${p.described}" (want the desc's id)`);
         else if (!p.rings || !(p.width > 0 && p.width < 30)) fail(`${tag}: the plan did not fit: ${p.rings} rings, a view ${p.width.toFixed(1)} m across (a label too long for its place zooms the plan out)`);
-        else pass(`${tag}: plot SVG has title "${p.title}" and a ${p.desc.length}-character desc; the plan spans ${p.width.toFixed(1)} m`);
+        else pass(`${tag}: plot SVG named by its title "${p.title}" and described by its ${p.desc.length}-character desc; the plan spans ${p.width.toFixed(1)} m`);
       }
       const wanted = ['Placeholder still', ...(sequence?.placeholder ? ['Sample sequence'] : []), ...(film.lightingPlot?.placeholder ? ['Sample plot'] : []), ...(film.placeholder ? ['Sample'] : [])];
       const hidden = wanted.filter(t => !facts.badges[t]);
@@ -226,10 +251,24 @@ async function runBrowser(api) {
       const a = (await lightboxState(page)).animations;
       await page.keyboard.press('ArrowRight');
       const b = (await lightboxState(page)).animations;
+      // With Info open the picture steps aside (from 1024 px); its "Placeholder still" tag goes with it, even
+      // though Motion off gives every change a 0.01 ms transition.
+      await page.waitForFunction(() => document.querySelector('dialog.lightbox[open] .lightbox__img')?.naturalWidth > 0, null, { timeout: 20000 }).catch(() => {});
+      await page.keyboard.press('i');
+      await page.waitForTimeout(300);
+      const tagOff = await page.evaluate(() => {
+        const t = document.querySelector('dialog.lightbox[open] .lightbox__tag'), img = document.querySelector('dialog.lightbox[open] .lightbox__img');
+        if (!t || t.hidden || !img?.naturalWidth) return null;
+        const r = img.getBoundingClientRect(), k = Math.min(r.width / img.naturalWidth, r.height / img.naturalHeight);
+        const pb = r.top + (r.height + img.naturalHeight * k) / 2, tb = t.getBoundingClientRect().bottom;
+        return Math.round(pb - tb);   // the tag's foot sits 12 px above the picture's
+      });
       await page.keyboard.press('Escape');
       await page.waitForFunction(() => !document.querySelector('dialog.lightbox[open]'), null, { timeout: 3000 });
       if (a || b) fail(`${tag}: the lightbox animates under Motion off (${a} animation(s) on open, ${b} on →)`);
       else pass(`${tag}: the lightbox opens, steps and closes without animating`);
+      if (tagOff != null && Math.abs(tagOff - 12) > 2) fail(`${tag}: with Info open the "Placeholder still" tag sits ${tagOff} px above the picture's foot (want 12, inside the picture)`);
+      else if (tagOff != null) pass(`${tag}: with Info open the "Placeholder still" tag stays at the picture's foot`);
       clean(errors, tag);
     } catch (e) { fail(`${tag}: ${e.message.split('\n')[0]}`); } finally { await ctx.close(); }
   }
@@ -279,7 +318,7 @@ async function runBrowser(api) {
         rows: Object.fromEntries([...document.querySelectorAll('.film__crew .report__row')].map(r => [r.querySelector('dt').textContent.trim(), r.querySelector('dd').textContent.trim()])),
         laurels: [...document.querySelectorAll('.film__laurel-title')].map(e => e.textContent.trim()),
         refs: document.querySelectorAll('.film__ref').length,
-        lines: [...document.querySelectorAll('.stills .still__line')].map(e => e.textContent.trim()),
+        lines: [...document.querySelectorAll('.stills .still__line')].map(e => e.textContent.replace(/\s+/g, ' ').trim()),
         chips: [...document.querySelectorAll('.stills .chips')].map(e => e.children.length),
         srcset: [...document.querySelectorAll('.stills img[srcset]')].length,
         seq: [...document.querySelectorAll('.sequence .frame img')].length,
@@ -310,7 +349,7 @@ async function runBrowser(api) {
       await page.keyboard.press('i');
       await page.waitForTimeout(700);
       const st = await lightboxState(page);
-      if (!st.info?.shown || !st.info.text.includes(FC.frameCredit(ff, fx)) || !st.info.text.includes(reals[0].line)) fail(`${tag}: lightbox info panel reads "${st.info?.text}" (want the credit "${FC.frameCredit(ff, fx)}" and the camera line)`);
+      if (!st.info?.shown || !st.info.text.includes(fold(FC.frameCredit(ff, fx))) || !st.info.text.includes(reals[0].line)) fail(`${tag}: lightbox info panel reads "${st.info?.text}" (want the credit "${FC.frameCredit(ff, fx)}" and the camera line)`);
       else pass(`${tag}: lightbox info panel: "${FC.frameCredit(ff, fx)}" and "${reals[0].line}"`);
       await page.screenshot({ path: fixture.fixtureShot(`lightbox-info--${w}x${h}`) });
       await page.keyboard.press('Escape');
@@ -411,12 +450,18 @@ async function lightbox(page, { tag, touch, n, film, sequence, smoothHolds, api 
     else pass(`${tag}: a swipe of 80 px steps back, one of 30 px does nothing`);
   }
 
+  // The previous/next buttons stand beside the picture, never over it; from 1024 px the info panel too.
+  const bare = await chromeOverPicture(page);
   await page.keyboard.press('i');
   await page.waitForTimeout(400);
   const si = await lightboxState(page);
-  const credit = FC.frameCredit(film, data);
+  const credit = fold(FC.frameCredit(film, data));
   if (si.info?.expanded !== 'true' || !si.info.shown || !si.info.text.startsWith(credit)) fail(`${tag}: i: info panel ${JSON.stringify(si.info)} (want it shown, starting "${credit}")`);
   else pass(`${tag}: i opens the info panel: "${si.info.text.slice(0, 90)}"`);
+  const wide = await page.evaluate(() => matchMedia('(min-width: 1024px)').matches);
+  const withInfo = await chromeOverPicture(page, { info: wide });
+  if (bare.length || withInfo.length) fail(`${tag}: the lightbox's chrome covers the picture: ${[...bare, ...withInfo.map(o => `${o} (info open)`)].join(', ')}`);
+  else pass(`${tag}: the previous/next buttons${wide ? ' and the info panel' : ''} stay clear of the picture, with the info open and closed`);
 
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => !document.querySelector('dialog.lightbox[open]'), null, { timeout: 3000 }).catch(() => {});
@@ -442,6 +487,26 @@ async function lightbox(page, { tag, touch, n, film, sequence, smoothHolds, api 
     const s3 = await lightboxState(page);
     if (s2.label !== `Sequence: ${film.title}` || s2.counter !== counterOf(m, m) || s3.focus?.scope !== 'sequence-0') fail(`${tag}: sequence lightbox: label "${s2.label}", End → "${s2.counter}" (want "${counterOf(m, m)}"), focus back on ${JSON.stringify(s3.focus)}`);
     else pass(`${tag}: the sequence opens its own set ("${s2.label}", End → "${s2.counter}") and focus returns to its frame`);
+  }
+
+  // A double click on a frame opens it and leaves it open: near the frame's top edge, its second click
+  // lands on the black above the letterboxed picture, which closes only as a click of its own.
+  if (!touch) {
+    const at = await page.evaluate(() => {
+      const b = document.querySelector('.stills [data-lightbox="frames"][data-lightbox-index="1"]');
+      const y = b.getBoundingClientRect().top + scrollY - 100;
+      if (window.__motion?.lenis) window.__motion.lenis.scrollTo(y, { immediate: true, force: true }); else scrollTo(0, y);
+      const r = b.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + 8 };
+    });
+    await page.waitForTimeout(300);
+    await page.mouse.dblclick(at.x, at.y);
+    await page.waitForTimeout(500);
+    const d = await lightboxState(page);
+    await page.keyboard.press('Escape');
+    await page.waitForFunction(() => !document.querySelector('dialog.lightbox[open]'), null, { timeout: 3000 }).catch(() => {});
+    if (!d.open || d.counter !== counterOf(2, n)) fail(`${tag}: a double click near the top of frame 02 left the lightbox ${d.open ? `at "${d.counter}"` : 'closed (its second click closed it)'}`);
+    else pass(`${tag}: a double click near the top of frame 02 opens the lightbox once and leaves it open ("${d.counter}")`);
   }
 }
 

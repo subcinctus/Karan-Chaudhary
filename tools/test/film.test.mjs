@@ -19,11 +19,11 @@ const film = (over = {}) => ({ ...structuredClone(data.films[0]), ...over });
 const rows = markup => [...String(markup).matchAll(/<dt>([^<]*)<\/dt><dd>([^<]*)<\/dd>/g)].map(m => [m[1], m[2]]);
 const PERSON = data.person.name;
 
-test('frameCredit: "TITLE (YEAR) — DP name · Dir. name", the director left out while it is template text', () => {
+test('frameCredit: "TITLE (YEAR) — DP name · Dir. name", the director left out while it is template text; the dot bound to the word before it', () => {
   const f = film();
   assert.equal(FC.frameCredit(f, data), `UNTITLED SHORT I (2026) — DP ${PERSON}`);
-  assert.equal(FC.frameCredit(film({ director: 'Name Surname' }), data), `UNTITLED SHORT I (2026) — DP ${PERSON} · Dir. Name Surname`);
-  assert.equal(FC.frameCredit(film({ year: null, director: 'Name Surname' }), data), `UNTITLED SHORT I — DP ${PERSON} · Dir. Name Surname`);
+  assert.equal(FC.frameCredit(film({ director: 'Name Surname' }), data), `UNTITLED SHORT I (2026) — DP ${PERSON}\u00a0· Dir. Name Surname`);
+  assert.equal(FC.frameCredit(film({ year: null, director: 'Name Surname' }), data), `UNTITLED SHORT I — DP ${PERSON}\u00a0· Dir. Name Surname`);
   assert.equal(FC.frameCredit(film({ role: 'Camera Operator' }), data), `UNTITLED SHORT I (2026) — Camera Operator ${PERSON}`);
   assert.equal(FC.frameCredit(film({ role: 'Cinematographer' }), data), `UNTITLED SHORT I (2026) — DP ${PERSON}`);
 });
@@ -99,7 +99,7 @@ test('sequence normalisation: edit order, at most 8 frames, safe sources, seeds 
   assert.equal(q.placeholder, true);
   assert.equal(FF.sequencesOf(film({ sequences: [{ placeholder: false, title: 'Real', frames: [{ src: 'a.jpg', alt: 'a' }, { kind: 'insert', alt: 'b' }] }] }))[0].placeholder, true, 'a procedural frame keeps the Sample badge');
   const out = String(FF.renderSequenceShell(f, data));
-  assert.match(out, /<p class="cam-label film__h">Sequence · Sc\. 07 · INT\. ROOM · DAY<\/p>/);
+  assert.match(out, /<p class="cam-label film__h">Sequence\u00a0· Sc\. 07\u00a0· INT\. ROOM\u00a0· DAY<\/p>/, 'no line starts with a dot');
   assert.match(out, /data-lightbox="sequence-0" data-lightbox-index="1" aria-label="Open frame 2 of 8 full screen: b"/);
   assert.match(out, /data-label="Sc\. 07 · 02\/08"/);
   assert.match(out, />Sample sequence</);
@@ -139,6 +139,8 @@ test('plot arguments: Super 35 field of view at the film\'s aspect, role over Ke
   ]);
   const shell = String(FF.renderPlotShell(night, data));
   assert.match(shell, /<title id="film-plot-svg-title">Lighting plot: Night Exterior, Sc\. 03 · EXT\. BUS STOP · NIGHT<\/title><desc id="film-plot-svg-desc">/);
+  assert.match(shell, /role="img" aria-labelledby="film-plot-svg-title" aria-describedby="film-plot-svg-desc">/, 'named by the title, described by the desc (never both in the name)');
+  assert.match(shell, /id="plot-title">Lighting plot · Sc\. 03 · EXT\. BUS STOP · NIGHT</, 'the head\'s dots bound to the word before them');
   assert.match(shell, />Sample plot</);
   assert.match(shell, /data-lightbox="frames" data-lightbox-index="0"/, 'the plot\'s frame opens the lightbox on that frame');
 });
@@ -186,7 +188,7 @@ test('frame cards: a button per frame, its caption, chips and srcset; real still
   const sample = String(FC.renderFrameCards(film()));
   assert.equal(sample.match(/<button class="still__open"/g).length, 3);
   assert.match(sample, /data-lightbox="frames" data-lightbox-index="2" aria-label="Open frame 3 of 3 full screen: Placeholder still for Untitled Short I: close silhouette"/);
-  assert.match(sample, /<span class="still__line">Frame 01 · window shaft · 2\.39:1<\/span>\s*<span class="badge-sample">Placeholder still<\/span>/);
+  assert.match(sample, /<span class="still__line">Frame 01\u00a0· window shaft\u00a0· 2\.39:1<\/span>\s*<span class="badge-sample">Placeholder still<\/span>/);
   assert.equal((sample.match(/<span class="chips"[^>]*>(?:<i style="background:#[0-9A-F]{6}"><\/i>){5}<\/span>/gi) ?? []).length, 3, 'five chips from the film palette');
   assert.match(sample, /data-paint="0"/);
 
@@ -199,8 +201,8 @@ test('frame cards: a button per frame, its caption, chips and srcset; real still
   const out = String(FC.renderFrameCards(reals));
   assert.match(out, /<span class="frame" style="--ar:1\.5"><img src="media\/a\.jpg" srcset="media\/a-1400\.jpg 1400w, media\/a\.jpg 2800w" sizes="100vw" alt="Frame A"/);
   assert.match(out, /<span class="frame" style="--ar:2\.39"><img src="media\/b\.jpg" alt="Frame B"/, 'no aspect: the film\'s');
-  assert.match(out, /<span class="still__line">Sc\.04 · 40 mm · T2\.0<\/span>/);
-  assert.match(out, /<span class="still__line">Frame 02 · 2\.39:1<\/span>/, 'no camera line: the frame number and aspect');
+  assert.match(out, /<span class="still__line">Sc\.04\u00a0· 40 mm\u00a0· T2\.0<\/span>/, 'a dot is bound to the word before it');
+  assert.match(out, /<span class="still__line">Frame 02\u00a0· 2\.39:1<\/span>/, 'no camera line: the frame number and aspect');
   assert.doesNotMatch(out, /Placeholder still|data-paint/);
   assert.equal(out.match(/<span class="chips"[^>]*>(.*?)<\/span>/)[1].match(/<i /g).length, 6);
 });

@@ -4,11 +4,14 @@
 // renderers' output (render.js, html.js and the feature modules: pure string builders that run in Node)
 // between each pair of "prerender:NAME" / "/prerender:NAME" comment markers, so a text fetch reads the
 // whole page and the scripts' re-render moves nothing. It also
+//   - fills the previs grid with the plans' slots from the shot list (previs/shotlist.json, previs.js
+//     renderPrevisSlots), so the section has its height from the first paint (previs.js draws the plans in);
 //   - sets `hidden` on the home sections that wait for material (#reel, #photographs), as pruneSections() does;
 //   - replaces <script type="application/ld+json" id="ld-person"> with the JSON-LD @graph (site/ld.js),
 //     escaped as render.js setJsonLd() escapes it;
 //   - writes a static filmography into project.html (hidden under html.js: project.js renders the film);
-//   - fills photographs.html once that page exists;
+//   - fills photographs.html once that page exists, and keeps it out of search engines (robots noindex)
+//     while it has no photographs;
 //   - writes sitemap.xml: the home page, photographs.html once it has photographs, and the real films.
 // Nothing else in a page changes, and a second run changes nothing.
 //
@@ -26,14 +29,16 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { REPO_ROOT } from './lib/server.mjs';
 import * as R from '../assets/js/site/render.js';
 import { renderPhotographsSection, renderPhotographsPage } from '../assets/js/site/photographs.js';
+import { renderPrevisSlots } from '../assets/js/site/previs.js';
 import { siteLD } from '../assets/js/site/ld.js';
 
 /** The header nav and the menu sheet on a page other than the home page (links to index.html#…). */
 const AWAY = { nav: d => R.renderNav(d, { base: 'index.html' }), menu: d => R.renderMenu(d, { base: 'index.html' }) };
 
 /**
- * The prerendered pages: what fills each marker (marker name → renderer of the data). Every marker in
- * `markers` must be in the page; an `optional` one may be; any other marker name is an error.
+ * The prerendered pages: what fills each marker (marker name → renderer of the data, and of what generate()
+ * read besides: { shotlist }). Every marker in `markers` must be in the page; an `optional` one may be; any
+ * other marker name is an error.
  */
 export const PAGES = {
   'index.html': {
@@ -41,7 +46,8 @@ export const PAGES = {
     markers: {
       nav: d => R.renderNav(d), menu: d => R.renderMenu(d),
       reel: d => R.renderReel(d), work: d => R.renderWork(d), photographs: d => renderPhotographsSection(d),
-      studies: d => R.renderStudies(d), previs: d => R.renderPrevisShell(d), about: d => R.renderAbout(d),
+      studies: d => R.renderStudies(d), previs: (d, o) => R.renderPrevisShell(d, { slots: renderPrevisSlots(o?.shotlist, d.previs?.media) }),
+      about: d => R.renderAbout(d),
       kit: d => R.renderKit(d), credits: d => R.renderCredits(d), contact: d => R.renderContact(d),
       colophon: d => R.renderColophon(d),
     },
@@ -83,7 +89,7 @@ function layout(src, pair, body) {
 }
 
 /** Write each marker's renderer output between its markers. */
-function fill(file, src, spec, data) {
+function fill(file, src, spec, data, o = {}) {
   const pairs = markers(file, src);
   const names = pairs.map(p => p.name);
   const missing = Object.keys(spec.markers).filter(n => !names.includes(n));
@@ -94,22 +100,40 @@ function fill(file, src, spec, data) {
   let out = '', at = 0;
   for (const p of pairs) {
     let body;
-    try { body = String(renderers[p.name](data) ?? '').trim(); } catch (e) { throw new Error(`${file}: prerender:${p.name}: the renderer threw ${e.message}`); }
+    try { body = String(renderers[p.name](data, o) ?? '').trim(); } catch (e) { throw new Error(`${file}: prerender:${p.name}: the renderer threw ${e.message}`); }
     out += src.slice(at, p.from) + layout(src, p, body);
     at = p.to;
   }
   return out + src.slice(at);
 }
 
-/** Set or clear the boolean `hidden` attribute on the element with this id (its opening tag only). */
+/**
+ * Set or clear the boolean `hidden` attribute on the element with this id (its opening tag only). A shown
+ * section is named by its head's title (`${id}-title`, which exists only then), as main.js names it.
+ */
 function setHidden(file, src, id, hide) {
   const m = new RegExp(`<[a-z][\\w-]*\\b[^>]*\\sid="${id}"[^>]*>`, 'i').exec(src);
   if (!m) throw new Error(`${file}: no element with id="${id}"`);
   const attr = /\shidden(?:="(?:hidden)?")?(?=[\s/>])/i;
-  let tag = m[0];
-  if (!hide) tag = tag.replace(attr, '');
+  let tag = m[0].replace(/\saria-labelledby="[^"]*"/i, '');
+  if (!hide) tag = tag.replace(attr, '').replace(/\s*>$/, ` aria-labelledby="${id}-title">`);
   else if (!attr.test(tag)) tag = tag.replace(/\s*>$/, ' hidden>');
   return src.slice(0, m.index) + tag + src.slice(m.index + m[0].length);
+}
+
+/**
+ * photographs.html stays out of search engines while it has no photographs: a robots noindex on its own
+ * line after the viewport tag, removed once there are photographs (Google does not render a page whose
+ * HTML says noindex, so the runtime toggle in photographs-main.js alone would never let it in).
+ */
+function setNoindex(file, src, on) {
+  const tag = /^[ \t]*<meta name="robots" content="noindex">\r?\n/m;
+  if (!on) return src.replace(tag, '');
+  if (tag.test(src)) return src;
+  const vp = /^([ \t]*)<meta name="viewport"[^>]*>\r?\n/m.exec(src);
+  if (!vp) throw new Error(`${file}: no <meta name="viewport"> to put robots after`);
+  const at = vp.index + vp[0].length;
+  return `${src.slice(0, at)}${vp[1]}<meta name="robots" content="noindex">\n${src.slice(at)}`;
 }
 
 /** The JSON-LD the page carries, as render.js setJsonLd() writes it (`<` escaped, so it cannot close the tag). */
@@ -155,21 +179,29 @@ ${urls.map(([loc, extra]) => `  <url><loc>${xml(loc)}</loc>${extra}</url>`).join
 `;
 }
 
+/** The previs shot list previs.js fetches (data.previs.shotlist, else previs/shotlist.json), or null without one. */
+export function readShotlist(data, root = REPO_ROOT) {
+  const rel = R.safeUrl(data?.previs?.shotlist) ?? 'previs/shotlist.json';
+  try { return JSON.parse(fs.readFileSync(path.join(root, rel), 'utf8')); } catch { return null; }
+}
+
 /**
  * Prerender the pages. `files` maps a page name (a key of PAGES) to its current HTML (a Map or an object);
- * returns a Map of every file to write: each page given, and sitemap.xml. Pure: reads and writes nothing.
+ * returns a Map of every file to write: each page given, and sitemap.xml. Writes nothing; it reads only the
+ * previs shot list, unless one is passed (`{ shotlist }`, null for none).
  */
-export function generate(data, files) {
+export function generate(data, files, { shotlist = readShotlist(data) } = {}) {
   const pages = files instanceof Map ? files : new Map(Object.entries(files));
   const out = new Map();
   for (const [file, src] of pages) {
     const spec = PAGES[file];
     if (!spec) throw new Error(`${file}: not a prerendered page (${Object.keys(PAGES).join(', ')})`);
-    let html = fill(file, src, spec, data);
+    let html = fill(file, src, spec, data, { shotlist });
     if (file === 'index.html') {
       for (const [id, hide] of Object.entries(R.hiddenSections(data))) html = setHidden(file, html, id, hide);
       html = setLd(file, html, data);
     }
+    if (file === 'photographs.html') html = setNoindex(file, html, !R.hasPhotographs(data));
     out.set(file, html);
   }
   out.set('sitemap.xml', sitemap(data, { photographs: pages.has('photographs.html') }));

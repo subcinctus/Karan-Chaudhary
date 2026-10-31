@@ -6,8 +6,9 @@
 // renderReel() places it under the reel. main.js calls mountReelIndex(#reel, reel, data) with the
 // API mountReel() returned ({ focus(), playFrom(s) }).
 //
-//   <ol class="reel-index" aria-label="Shot index"> … <button class="reel-shot" data-reel-t="62"
-//     aria-label="Play the reel from 1:02 — Untitled Short I, 40 mm"> … </button> … </ol>
+//   <ol class="reel-index" aria-label="Shot index"> … <button class="reel-shot" data-reel-t="62"> … </button> … </ol>
+// A tile is named by what it shows, after a hidden "Play the reel from": "Play the reel from 01:02 Untitled
+// Short I 40 mm · …", so the words on screen are the words a voice command can use.
 
 import { html, safeUrl, srcsetOf, featuredStill, hasReel } from './html.js';
 import { reelShots, formatTime } from './reel-data.js';
@@ -18,12 +19,11 @@ const SIZES = '(min-width: 1100px) 25vw, (min-width: 720px) 33vw, 50vw';
 function tile(s) {
   const still = s.thumb ? { src: s.thumb } : featuredStill(s.film);
   const src = safeUrl(still?.src), set = srcsetOf(still);
-  const at = formatTime(s.t);
   return html`
     <li class="reel-index__item">
-      <button class="reel-shot" type="button" data-reel-t="${s.t}" aria-label="${`Play the reel from ${at}${s.title ? ` — ${s.title}` : ''}${s.lens ? `, ${s.lens}` : ''}`}">
+      <button class="reel-shot" type="button" data-reel-t="${s.t}">
         <span class="reel-shot__frame frame" aria-hidden="true">${src ? html`<img src="${src}"${set ? html` srcset="${set}" sizes="${SIZES}"` : ''} alt="" loading="lazy" decoding="async">` : ''}</span>
-        <span class="reel-shot__tc">${formatTime(s.t, { pad: true })}</span>
+        <span class="visually-hidden">Play the reel from </span><span class="reel-shot__tc">${formatTime(s.t, { pad: true })}</span>
         ${s.title ? html`<span class="reel-shot__title">${s.title}</span>` : ''}
         ${s.lens || s.note ? html`<span class="reel-shot__meta">${[s.lens, s.note].filter(Boolean).join(' · ')}</span>` : ''}
       </button>

@@ -19,7 +19,7 @@ import { html, safeUrl, badge, hasPhotographs, scFor, sectionHead } from './html
 import { hashString } from '../core/prng.js';
 
 /** The school sets a photograph can be tagged with (photo.sets), as ?set= names them. */
-export const SETS = { afi: 'AFI', nyu: 'NYU', famu: 'FAMU', lodz: 'Łódź', bfa: 'Beijing Film Academy' };
+export const SETS = { afi: 'AFI', nyu: 'NYU', famu: 'FAMU', lodz: 'AFAD Łódź', bfa: 'Beijing Film Academy' };
 const KINDS = { colour: 'Colour', bw: 'B&W' };
 const count = n => `${n} photograph${n === 1 ? '' : 's'}`;
 

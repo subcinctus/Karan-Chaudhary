@@ -164,7 +164,7 @@ export function initWorkRail(env) {
       return gsap.timeline({ paused: true, delay })
         .fromTo(gates, { clipPath: 'inset(0% 100% 0% 0%)' }, { clipPath: 'inset(0% 0% 0% 0%)', duration: 1, ease: 'kc.io', stagger: 0.08, clearProps: 'clipPath' }, 0)
         .from(fr, { scale: 1.2, duration: 1.3, ease: 'kc.out', stagger: 0.08, clearProps: 'scale,transform' }, 0.05)
-        .from(texts, { y: 20, autoAlpha: 0, duration: 0.8, ease: 'kc.out', stagger: 0.025, clearProps: 'all' }, 0.25);
+        .from(texts, { y: 20, opacity: 0, duration: 0.8, ease: 'kc.out', stagger: 0.025, clearProps: 'all' }, 0.25);
     };
     const go = (list, tl) => () => painted(list.map(c => c.querySelector('.work-card__frame'))).then(() => { if (alive) tl.play(); });
     const firstTl = enter(first, env.delay(box));

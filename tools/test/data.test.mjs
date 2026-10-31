@@ -94,6 +94,9 @@ test('reel: over 3:00 fails, outside 1:00–2:30 warns, an old "updated" warns, 
   assert.ok(has(reel({ uploadDate: '2026-02-30' }).fails, /uploadDate "2026-02-30" must be a date/));
   assert.ok(has(reel({ hash: 'abc/def' }).fails, /reel\.hash/));
   assert.ok(has(reel({ hash: 'abcdef1234' }).warns, /only Vimeo uses it/));
+  // A playable reel still marked as the sample: the page tags it Sample, search engines get no VideoObject.
+  assert.ok(has(reel({ placeholder: true }).warns, /^reel\.placeholder is still true though the reel has a provider/));
+  assert.ok(!has(check(real).warns, /reel\.placeholder/), 'no provider yet: nothing to say');
   const d = fixtureData();
   const [a, b] = d.reel.shots;
   d.reel.shots = [b, a, { t: '1:30' }, { t: 'soon' }, { t: '1:40', film: 'no-such-film' }];
@@ -108,7 +111,7 @@ test('reel: over 3:00 fails, outside 1:00–2:30 warns, an old "updated" warns, 
 
 test('photographs: per-school counts warn, a film frame or a sample photograph fails, sizes add up', () => {
   const sets = (d, id) => d.photographs.series.flatMap(s => s.photos).filter(p => p.sets?.includes(id));
-  // The fixture is inside every school's numbers: AFI 8 with 2 portraits, the others 10 (Łódź 5 + 5).
+  // The fixture is inside every school's numbers: AFI 8 with 2 portraits, the others 10 (AFAD Łódź 5 + 5).
   let d = fixtureData();
   assert.equal(sets(d, 'afi').length, 8);
   assert.deepEqual(check(d).warns, []);
@@ -118,13 +121,13 @@ test('photographs: per-school counts warn, a film frame or a sample photograph f
   d = fixtureData();
   for (const p of sets(d, 'afi')) p.portrait = false;
   assert.ok(has(check(d).warns, /^photographs set afi: 8 photo\(s\), 0 portrait\(s\)/));
-  // NYU at most 10, FAMU 10–15, Beijing 10–12, Łódź 10 as one kind or 5 + 5.
+  // NYU at most 10, FAMU 10–15, Beijing 10–12, AFAD Łódź 10 as one kind or 5 + 5.
   d = fixtureData();
   d.photographs.series[0].photos.push({ src: 'media/studies/light/poster.webp', alt: 'Extra.', w: 864, h: 1080, sets: ['nyu', 'famu', 'lodz', 'bfa'] });
   const eleven = check(d).warns;
   assert.ok(has(eleven, /^photographs set nyu: 11 photo\(s\); NYU asks for at most 10/), show(eleven));
   assert.ok(!has(eleven, /set famu/) && !has(eleven, /set bfa/), show(eleven));
-  assert.ok(has(eleven, /^photographs set lodz: 11 photo\(s\); Łódź asks for 10, or two series of 5/), show(eleven));
+  assert.ok(has(eleven, /^photographs set lodz: 11 photo\(s\); AFAD Łódź asks for 10, or two series of 5/), show(eleven));
   d = fixtureData();
   d.photographs.series[1].photos[0].sets = ['afi', 'nyu'];
   const nine = check(d).warns;
@@ -132,7 +135,7 @@ test('photographs: per-school counts warn, a film frame or a sample photograph f
   d = fixtureData();
   d.photographs.series[1].photos[0].sets = ['afi', 'nyu', 'famu', 'bfa'];
   d.photographs.series[0].photos.push({ src: 'media/studies/light/poster.webp', alt: 'Extra.', w: 864, h: 1080, sets: ['lodz'] });
-  assert.ok(has(check(d).warns, /^photographs set lodz: 10 photo\(s\); Łódź asks for 10, or two series of 5/), 'a 6 + 4 split is neither form');
+  assert.ok(has(check(d).warns, /^photographs set lodz: 10 photo\(s\); AFAD Łódź asks for 10, or two series of 5/), 'a 6 + 4 split is neither form');
   // More than 13 MB of images in one set warns (AFI caps the PDF at 15 MB): 8 × 1.4 MB passes, 10 do not.
   const big = check(fixtureData(), { size: () => 1.4e6 }).warns;
   assert.ok(!has(big, /set afi: about/), show(big));

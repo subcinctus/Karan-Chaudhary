@@ -22,10 +22,18 @@ import { mountFilmExtras } from './film-facts.js';
 
 const films = data.films ?? [];
 
+/** "Logline. Short fiction, 2026. Director of Photography: Name." from the parts the film has (else the site's). */
+function describe(film, site) {
+  const name = data.person?.name;
+  const parts = [film.logline, [film.format, film.year].filter(Boolean).join(', '), film.role && name && `${film.role}: ${name}`]
+    .map(s => String(s ?? '').trim()).filter(Boolean);
+  return parts.length ? parts.map(s => (/[.!?…]$/.test(s) ? s : `${s}.`)).join(' ') : site.description;
+}
+
 function setMeta(film) {
   const site = data.site ?? {};
   const title = film ? `${film.title} — ${data.person?.name ?? ''}, ${film.role ?? 'Cinematographer'}` : `Film not found — ${data.person?.name ?? ''}`;
-  const desc = film ? `${film.logline ?? ''} ${film.format ?? ''}, ${film.year ?? ''}. ${film.role ?? ''}: ${data.person?.name ?? ''}.`.trim() : site.description;
+  const desc = film ? describe(film, site) : site.description;
   document.title = title;
   const set = (sel, attr, v) => document.querySelector(sel)?.setAttribute(attr, v);
   set('meta[name="description"]', 'content', desc);
@@ -106,6 +114,12 @@ async function boot() {
   const next = films[(index + 1) % films.length];
   R.put(main, R.renderProject(film, data, { prev: films.length > 1 ? prev : null, next: films.length > 1 ? next : null, index }));
   const hero = main.querySelector('[data-film-hero]');
+  // The lead frame fits the first screen under the head (site.css --film-head): the head's height, measured
+  // now (so a match cut lands on the frame's final size) and again whenever it changes (type, the window).
+  const head = main.querySelector('.film__head');
+  const fit = () => main.style.setProperty('--film-head', `${head.offsetHeight}px`);
+  fit();
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fit).observe(head);
   const lead = R.featuredStill(film), leadImg = hero.querySelector('img');
   // Synchronously, before the first paint: a match cut from the index lands on this lead frame.
   const handoff = takeHandoff(film.slug, hero) ?? null;

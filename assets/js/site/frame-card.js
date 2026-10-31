@@ -21,6 +21,8 @@ export const frameSeed = (film, i) => hashString(`${film?.slug ?? ''}${i}`);
 export const sequenceSeed = (film, i) => hashString(`${film?.slug ?? ''}seq${i}`);
 /** 'window-shaft' → 'window shaft'. */
 export const kindLabel = kind => String(kind ?? '').replace(/-/g, ' ');
+/** Bind every " · " to the word before it (a no-break space), so no line of a label starts with the dot. */
+export const keepDots = s => String(s ?? '').replace(/ · /g, '\u00a0· ');
 
 /** True when the owner photographed the film (the role is DP or cinematographer). */
 export const isOwnDP = film => /director of photography|cinematograph/i.test(film?.role ?? 'Director of Photography');
@@ -53,7 +55,7 @@ export function frameCredit(film, data) {
   const title = `${String(film?.title ?? '').toUpperCase()}${film?.year ? ` (${film.year})` : ''}`;
   const own = name ? (isOwnDP(film) ? `DP ${name}` : `${film.role} ${name}`) : '';
   const dir = filled(film?.director);
-  return [title, [own, dir && `Dir. ${dir}`].filter(Boolean).join(' · ')].filter(Boolean).join(' — ');
+  return [title, keepDots([own, dir && `Dir. ${dir}`].filter(Boolean).join(' · '))].filter(Boolean).join(' — ');
 }
 
 /** 5–6 palette chips, 10×10 px (decorative: the film's palette is listed in words above). */
@@ -63,7 +65,7 @@ export function renderChips(palette) {
 }
 
 /** What a frame's caption says on its first line: the camera line, or the placeholder label. */
-export const frameLabel = (item, i) => item.line ?? `Frame ${pad2(i + 1)}${item.kind ? ` · ${kindLabel(item.kind)}` : ''} · ${aspectLabel(item.aspect)}`;
+export const frameLabel = (item, i) => keepDots(item.line ?? `Frame ${pad2(i + 1)}${item.kind ? ` · ${kindLabel(item.kind)}` : ''} · ${aspectLabel(item.aspect)}`);
 
 /**
  * One frame's caption: the camera line (or "Frame 01 · window shaft · 2.39:1" and the "Placeholder still"

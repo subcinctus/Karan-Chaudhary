@@ -109,6 +109,8 @@ a:hover { text-decoration-color: var(--tungsten); }
   text-transform: uppercase;
   letter-spacing: var(--tracking-display);
 }
+/* The study label (home study blocks and studies/*.html) breaks into even lines, never "not ⏎ camera work". */
+.study-block__kind { text-wrap: balance; }
 
 /* Letterbox frame: content clipped to a delivery aspect, with an optional aspect label. */
 .frame {

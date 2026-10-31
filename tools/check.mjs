@@ -7,7 +7,6 @@
 //
 // Options
 //   --media                 always run the ffprobe checks (fail if ffprobe is missing)
-//   --allow-offline-fonts   Google Fonts failures are warnings, not failures
 //   --only <text>           browser: only pages whose name contains <text> (comma list allowed). A value that
 //                           names a section (built-in or plugin, e.g. honesty) instead runs only the sections
 //                           named: --only work,index runs the work section on the index page.
@@ -40,7 +39,6 @@ const val = (f, d) => { const i = argv.indexOf(f); return i >= 0 && argv[i + 1] 
 const OPT = {
   browser: !has('--no-browser'),
   media: has('--media'),
-  offlineFonts: has('--allow-offline-fonts'),
   only: val('--only', null)?.split(',').filter(Boolean) ?? null,
   viewports: val('--viewports', has('--desktop') ? '1440x900,1512x982@2,1728x1117@2,1920x1080,2560x1440' : '390x844,768x1024,1440x900,1920x1080')
     .split(',').map(s => s.split(/[x@]/).map(Number)).map(([w, h, dpr = 1]) => [w, h, dpr]),
@@ -559,22 +557,19 @@ async function browserSetup() {
   return PW;
 }
 
-const FONT_HOSTS = /^https:\/\/fonts\.(googleapis|gstatic)\.com\//;
-/** Attach error collection; classifies Google Fonts failures (warnings with --allow-offline-fonts). */
+/** Attach error collection: page errors, console errors, failed requests and HTTP errors from the site. */
 function watch(page, srv, { expect404 = null } = {}) {
-  const errors = [], fontIssues = [];
+  const errors = [];
   page.on('pageerror', e => errors.push(`pageerror: ${e.message.split('\n')[0]}`));
   page.on('console', m => {
     if (m.type() !== 'error') return;
     const t = m.text(), u = m.location()?.url ?? '';
-    if (FONT_HOSTS.test(u) || /fonts\.(googleapis|gstatic)\.com/.test(t)) fontIssues.push(`console: ${t}`);
-    else if (expect404 && /404/.test(t) && /Failed to load resource/.test(t) && (!u || u.startsWith(expect404))) { /* the 404 page itself */ }
+    if (expect404 && /404/.test(t) && /Failed to load resource/.test(t) && (!u || u.startsWith(expect404))) { /* the 404 page itself */ }
     else errors.push(`console: ${t}`);
   });
   page.on('requestfailed', r => {
     const u = r.url(), why = r.failure()?.errorText ?? '';
-    if (FONT_HOSTS.test(u)) fontIssues.push(`requestfailed: ${u} ${why}`);
-    else if (/ERR_ABORTED/.test(why) && /\.(mp4|webm)(\?|$)/.test(u)) { /* media preload cancelled by the browser */ }
+    if (/ERR_ABORTED/.test(why) && /\.(mp4|webm)(\?|$)/.test(u)) { /* media preload cancelled by the browser */ }
     else errors.push(`requestfailed: ${u} ${why}`);
   });
   page.on('response', r => {
@@ -583,7 +578,7 @@ function watch(page, srv, { expect404 = null } = {}) {
     if (expect404 && u.split('#')[0] === expect404) return;
     errors.push(`HTTP ${r.status()}: ${u.slice(srv.origin.length)}`);
   });
-  return { errors, fontIssues };
+  return { errors };
 }
 
 async function pagesToVisit() {
@@ -606,8 +601,9 @@ async function settle(page, p, { reduced }) {
   if (p.study) await page.waitForFunction(() => window.READY === true || window.STAGE_ERROR != null || document.querySelector('[data-stage-host]')?.dataset.state === 'error', null, { timeout: 45000 }).catch(() => {});
   if (p.path.startsWith('index')) await page.waitForFunction(() => !document.documentElement.classList.contains('is-preloading'), null, { timeout: 6000 }).catch(() => {});
   // The desktop motion layer (fine pointer, ≥ 1024 px, motion on) loads after the page: wait for it
-  // to arm before screenshots, so they show the page as a visitor sees it, not mid-import.
-  if (!p.study && !p.is404) {
+  // to arm before screenshots, so they show the page as a visitor sees it, not mid-import. The studies,
+  // the 404 and photographs.html (a calm print view) never load it.
+  if (!p.study && !p.is404 && p.name !== 'photographs') {
     await page.waitForFunction(DESKTOP_WAIT, null, { timeout: 6000 }).catch(() => {});
     await page.evaluate(() => Promise.race([window.__motion?.idle, new Promise(r => setTimeout(r, 4000))])).catch(() => {});
   }
@@ -657,7 +653,6 @@ async function checkScreens() {
   const dir = R('.artifacts/screens');
   fs.mkdirSync(dir, { recursive: true });
   const reducedFindings = [], redraws = [];
-  const fontNotes = new Set();
   let errPages = 0, overflowPages = 0;
   for (const p of pages) {
     for (const [w, h, dpr] of OPT.viewports) {
@@ -668,7 +663,7 @@ async function checkScreens() {
         const ctx = await browser.newContext(contextOptions({ w, h, dpr }));
         const page = await ctx.newPage();
         const url = srv.url + p.path;
-        const { errors, fontIssues } = watch(page, srv, { expect404: p.is404 ? url : null });
+        const { errors } = watch(page, srv, { expect404: p.is404 ? url : null });
         try {
           const res = await page.goto(url, { waitUntil: 'load', timeout: 45000 });
           if (p.is404 && res?.status() !== 404) errors.push(`expected HTTP 404 for ${p.path}, got ${res?.status()}`);
@@ -684,8 +679,6 @@ async function checkScreens() {
             if (home !== '/Karan-Chaudhary/') fail(`404: home link computes to ${JSON.stringify(home)}, expected "/Karan-Chaudhary/" under the sub-path`);
           }
         } catch (e) { errors.push(`navigation: ${e.message.split('\n')[0]}`); }
-        for (const f of fontIssues) fontNotes.add(f.slice(0, 160));
-        if (fontIssues.length && !OPT.offlineFonts) errors.push(...fontIssues.slice(0, 2).map(f => `${f} (pass --allow-offline-fonts when offline)`));
         if (errors.length) { errPages++; fail(`${tag}: ${errors.length} error(s): ${[...new Set(errors)].slice(0, 4).join(' | ')}`); }
         await ctx.close();
       }
@@ -695,7 +688,7 @@ async function checkScreens() {
         const ctx = await browser.newContext(contextOptions({ w, h, dpr, reducedMotion: 'reduce' }));
         const page = await ctx.newPage();
         const url = srv.url + p.path;
-        const { errors, fontIssues } = watch(page, srv, { expect404: p.is404 ? url : null });
+        const { errors } = watch(page, srv, { expect404: p.is404 ? url : null });
         // Record every intro class the page ever sets on <html>, from before the first inline script runs,
         // so a preloader or shutter that flashes and is removed again is still caught.
         await page.addInitScript(() => {
@@ -746,7 +739,6 @@ async function checkScreens() {
           if (issues.length) fail(`${tag} reduced motion: ${issues.join('; ')}`);
           await fullPageShot(page, path.join(dir, `${tag}--full.png`), w);
           screenCount++;
-          if (fontIssues.length && !OPT.offlineFonts) errors.push(fontIssues[0]);
           rec('INFO', `${tag}: ${r.players.length} player(s) ${r.players.map(pl => `${pl.id}:${pl.state}/${pl.frames}`).join(' ') || ''}`.trim(), 'reduced');
         } catch (e) { errors.push(`navigation: ${e.message.split('\n')[0]}`); }
         if (errors.length) { errPages++; fail(`${tag} reduced motion: ${[...new Set(errors)].slice(0, 3).join(' | ')}`); }
@@ -755,7 +747,6 @@ async function checkScreens() {
       console.log(`  ...  ${tag} (${((Date.now() - tPage) / 1000).toFixed(1)} s)`);
     }
   }
-  if (fontNotes.size) (OPT.offlineFonts ? warn : info)(`Google Fonts unreachable on ${fontNotes.size} request(s): ${[...fontNotes][0]}`);
   for (const f of reducedFindings) warn(f);
   if (redraws.length) fail(`reduced motion: ${redraws.length} static player(s) drew the resolved frame more than once (spec: exactly 1; the Player skips a redraw of the frame already on the canvas, so a second frame means a size or param change after the first draw): ${redraws.join(', ')}`);
   if (!errPages) pass(`${pages.length} pages × ${OPT.viewports.length} viewports: zero console/page errors and failed requests`);
@@ -779,11 +770,11 @@ async function checkDeterminism() {
     const open = async (W, H) => {
       const ctx = await browser.newContext(contextOptions({ w: W, h: H }));
       const page = await ctx.newPage();
-      const { errors, fontIssues } = watch(page, srv);
+      const { errors } = watch(page, srv);
       await page.goto(`${srv.url}${f}?record&w=${W}&h=${H}&fps=${FPS}&seed=1`, { waitUntil: 'load', timeout: 45000 });
       await page.waitForFunction(() => window.READY === true || window.STAGE_ERROR != null, null, { timeout: 60000 });
       const m = await page.evaluate(() => ({ err: window.STAGE_ERROR ?? null, meta: window.__meta ?? null, n: window.N_FRAMES }));
-      return { ctx, page, errors, fontIssues, m };
+      return { ctx, page, errors, m };
     };
     const hashAt = (page, t) => page.evaluate(t => {
       window.__seek(t);
@@ -818,7 +809,7 @@ async function checkDeterminism() {
           if ((a.m.meta?.describe ?? '') !== (b.m.meta?.describe ?? '')) describeBad = `describe() differs between loads: "${String(a.m.meta?.describe).slice(0, 50)}" vs "${String(b.m.meta?.describe).slice(0, 50)}"`;
         }
         if (errs.length) fail(`${id} (record mode, ${L.name}): ${errs.slice(0, 3).join(' | ')}`);
-        if (L.full && a.m.meta && a.m.meta.fontsOk === false) (OPT.offlineFonts ? warn : fail)(`${id}: canvas fonts did not load in record mode (fallback fonts${OPT.offlineFonts ? '' : '; pass --allow-offline-fonts when offline'})`);
+        if (L.full && a.m.meta && a.m.meta.fontsOk === false) fail(`${id}: canvas fonts did not load in record mode (fallback fonts; the faces come from assets/css/fonts.css)`);
         if (L.full && (!Number.isInteger(a.m.n) || a.m.n < 1)) fail(`${id}: N_FRAMES ${a.m.n} is not a positive integer`);
         if (a.m.meta?.layout && a.m.meta.layout !== L.name) warn(`${id}: a ${L.W}×${L.H} record reports layout "${a.m.meta.layout}", expected "${L.name}"`);
         if (mismatch) fail(`${id} (${L.name} ${L.W}×${L.H}): not deterministic: ${mismatch}`);
@@ -1102,8 +1093,10 @@ async function checkMotion() {
       if (!again) fail(`${tag}: switching motion back on did not re-arm the layer`);
       else pass(`${tag}: switching motion back on re-arms it`);
 
-      // 5. The visitor keeps their place: at #about, crossing 1024 px and back, and Motion off and on,
-      // leave the same block under the header (the pin spacer comes and goes above it).
+      // 5. The visitor keeps their place: at #about, resizing within the desktop range (1366, 1100 px),
+      // crossing 1024 px and back, and Motion off and on leave the same block under the header (the pin
+      // spacer comes and goes above it). A kept place is a cut (place.js restore), so it lands within a
+      // few pixels; a glide would end wherever it ended.
       if (again) {
         const under = () => page.evaluate(() => {
           const el = [...document.querySelectorAll('main h2, main h3, main p')].find(e => { const r = e.getBoundingClientRect(); return r.height && r.top >= 60; });
@@ -1113,6 +1106,8 @@ async function checkMotion() {
         await page.mouse.move(w * 0.9, h * 0.5); await page.mouse.wheel(0, 100); await page.waitForTimeout(1000);
         const a = await under();
         const trail = [];
+        // Inside the desktop range the layer stays armed while the page re-wraps (motion/index.js puts the place back).
+        for (const rw of [1366, 1100]) { await page.setViewportSize({ width: rw, height: h }); await page.waitForTimeout(1200); trail.push([`${rw} px`, await under()]); }
         await page.setViewportSize({ width: 1000, height: h }); await page.waitForTimeout(1200); trail.push(['1000 px', await under()]);
         await page.setViewportSize({ width: w, height: h });
         await page.waitForFunction(() => window.__motion?.armed === true, null, { timeout: 8000 }).catch(() => {});
@@ -1121,9 +1116,9 @@ async function checkMotion() {
         await page.evaluate(() => document.querySelector('[data-motion-toggle]').click());
         await page.waitForFunction(() => window.__motion?.armed === true, null, { timeout: 8000 }).catch(() => {});
         await page.waitForTimeout(700); trail.push(['Motion on', await under()]);
-        const lost = trail.filter(([, u]) => !u || u.t !== a?.t || Math.abs(u.top - a.top) > 120);
+        const lost = trail.filter(([, u]) => !u || u.t !== a?.t || Math.abs(u.top - a.top) > 24);
         if (!a || lost.length) fail(`${tag}: lost the visitor's place (from "${a?.t}" at ${a?.top} px): ${lost.map(([k, u]) => `${k} → "${u?.t}" at ${u?.top} px`).join('; ')}`);
-        else pass(`${tag}: keeps the visitor's place across 1024 px and Motion off/on ("${a.t}" stays under the header, ±${Math.max(...trail.map(([, u]) => Math.abs(u.top - a.top)))} px)`);
+        else pass(`${tag}: keeps the visitor's place through resizes to 1366 and 1100 px, across 1024 px and Motion off/on ("${a.t}" stays under the header, ±${Math.max(...trail.map(([, u]) => Math.abs(u.top - a.top)))} px)`);
       }
     } catch (e) { fail(`${tag}: ${e.message.split('\n')[0]}`); }
     if (errors.length) fail(`${tag}: ${errors.length} error(s): ${[...new Set(errors)].slice(0, 3).join(' | ')}`);
@@ -1295,7 +1290,7 @@ const api = {
   abs: R, exists, read, walk, deployedFiles, splitComments, lineOf, loadData, decode, metaContent,
   browser: () => PW,                                  // { srv, browser, contextOptions } in browser sections
   watch, settle, pagesToVisit, scrollThrough, fullPageShot, stripFits, DESKTOP_QUERY, DESKTOP_WAIT,
-  fixture: await importOr('tools/lib/fixture.mjs'),  // fixtureData, routeFixture, stampFixture, ensureTestClip
+  fixture: await importOr('tools/lib/fixture.mjs'),  // fixtureData, routeFixture, stampFixture, fixtureShot, ensureTestClip, ensureTestWebm
 };
 
 // ---------------------------------------------------------------- main

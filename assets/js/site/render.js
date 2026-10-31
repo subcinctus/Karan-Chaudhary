@@ -13,9 +13,10 @@ import {
   hasReel, hasPrevisMedia, featuredStill, cleanPalette, paletteBackground, MOVE_NAMES, STUDY_LABEL,
 } from './html.js';
 import { renderWorkToggle, renderWorkIndex } from './work-index.js';
-import { renderCrew, renderLaurels, renderReferences, renderEnquiries, renderSequenceShell, renderPlotShell } from './film-facts.js';
+import { renderCrew, renderLaurels, renderReferences, renderEnquiries, renderSequenceShell, renderPlotShell, renderGradeShell } from './film-facts.js';
 import { reelLabel, renderReelFallback } from './reel-data.js';
 import { renderReelIndex } from './reel-index.js';
+import { hashString } from '../core/prng.js';
 
 export * from './html.js';
 
@@ -64,7 +65,8 @@ export function pruneSections(data) {
 
 // --- Index sections ---------------------------------------------------------------------
 
-/** The reel, its label and its shot index; nothing at all until there is a playable reel. */
+/** The reel, its label and its shot index; nothing at all until there is a playable reel. The runtime is
+ *  said once in the head's label (reelLabel) and on the play button, not again in the caption. */
 export function renderReel(data) {
   if (!hasReel(data)) return '';
   const r = data.reel ?? {};
@@ -72,18 +74,21 @@ export function renderReel(data) {
     ${sectionHead({ sc: scFor(data, 'reel'), label: 'Showreel', title: r.title || 'Showreel', id: 'reel-title', aside: reelLabel(r) })}
     <div class="reel" data-reveal>
       <div class="reel__frame frame" style="--ar:${16 / 9}" data-reel-frame>${renderReelFallback(data)}</div>
-      <p class="reel__meta cam-label"><span>Showreel${r.runtime ? ` · ${r.runtime}` : ''}</span><span>Cinematography by ${data.person?.name ?? ''}</span>${badge(r, data)}</p>
+      <p class="reel__meta cam-label"><span>Cinematography by ${data.person?.name ?? ''}</span>${badge(r, data)}</p>
     </div>
     ${renderReelIndex(data)}`;
 }
 
-/** Film card for the Selected work grid. The frame hosts the shot-language card (or a still). */
+/**
+ * Film card for the Selected work grid. The frame hosts the shot-language card (or a still). The link is
+ * named by the title and described by its foot line (the move, and SAMPLE while the film is a sample).
+ */
 export function renderFilmCard(film, i, data) {
   const pal = cleanPalette(film.palette);
   const href = `project.html?slug=${encodeURIComponent(film.slug)}`;
   return html`
     <li class="work-card" data-reveal style="--ar:${Number(film.aspect) || 1.78}">
-      <a class="work-card__link" href="${href}" aria-labelledby="film-${film.slug}-title" data-film="${film.slug}">
+      <a class="work-card__link" href="${href}" aria-labelledby="film-${film.slug}-title" aria-describedby="film-${film.slug}-foot" data-film="${film.slug}">
         <div class="work-card__gate">
           <div class="work-card__frame frame" data-card-frame style="background:${paletteBackground(pal)}">
             <span class="work-card__aspect" aria-hidden="true">${aspectLabel(film.aspect)}</span>
@@ -93,7 +98,7 @@ export function renderFilmCard(film, i, data) {
           <p class="work-card__slate cam-label"><span>${pad2(i + 1)}</span><span>${[film.year, film.format].filter(Boolean).join(' · ')}</span></p>
           <h3 class="work-card__title" id="film-${film.slug}-title">${film.title}</h3>
           <p class="work-card__role">${film.role}${filled(film.director) ? html` <span class="work-card__dir">· dir. ${film.director}</span>` : ''}</p>
-          <p class="work-card__foot cam-label"><span>${film.move ? `${film.move} ${MOVE_NAMES[film.move] ?? ''}`.trim() : ''}</span>${badge(film, data)}</p>
+          <p class="work-card__foot cam-label" id="film-${film.slug}-foot"><span>${film.move ? `${film.move} ${MOVE_NAMES[film.move] ?? ''}`.trim() : ''}</span>${badge(film, data)}</p>
         </div>
       </a>
     </li>`;
@@ -106,7 +111,7 @@ export function renderWork(data) {
   const span = years.length ? `${Math.min(...years)}–${Math.max(...years)}` : '';
   return html`
     ${sectionHead({ sc: scFor(data, 'work'), label: 'Selected work', title: 'Selected work', id: 'work-title', aside: `${films.length} films${span ? ` · ${span}` : ''}`,
-      lede: 'Each frame is cropped to the aspect ratio the film was delivered in. Hover or focus a card to see the camera move that defines it.', tools: renderWorkToggle(data) })}
+      lede: 'Each film is framed in the aspect ratio it was delivered in. Hover or focus one for the camera move that defines it.', tools: renderWorkToggle(data) })}
     <ol class="work-grid" role="list">${films.map((f, i) => renderFilmCard(f, i, data))}</ol>
     ${renderWorkIndex(data)}
     <p class="work-note cam-label" data-reveal>Camera moves: Motion Prompt #027 #030 #031 #032 #033 #043 by Shohei Ohtaki (MIT).</p>`;
@@ -154,12 +159,21 @@ export function renderStudies(data) {
     ${studies.map(s => renderStudy(s, data))}`;
 }
 
-export function renderPrevisShell(data) {
+/** A short key of the previs slots' markup: previs.js keeps the slots already in the page while it matches. */
+export const previsKey = slots => hashString(String(slots)).toString(36);
+
+/**
+ * The previs head and grid. The slots come from the shot list (previs/shotlist.json, through previs.js
+ * renderPrevisSlots), which tools/prerender.mjs reads: given them, the grid has its height from the first
+ * paint and previs.js only draws the plans into it, so nothing below moves (an arrival on #previs or
+ * #about). Without them the grid waits, hidden, for previs.js to write them.
+ */
+export function renderPrevisShell(data, { slots = '' } = {}) {
   const p = data.previs ?? {};
   return html`
     ${sectionHead({ sc: scFor(data, 'previs'), label: 'Previs', title: String(p.heading || 'Virtual production / Previs').replace(/ \//g, ' /'), id: 'previs-title', aside: 'Unreal Engine · Sequencer',
       lede: hasPrevisMedia(data) ? p.intro : (p.introPending || p.intro) })}
-    <ol class="previs-grid" role="list" data-previs-grid hidden></ol>`;
+    ${String(slots) ? html`<ol class="previs-grid" role="list" data-previs-grid data-previs-key="${previsKey(slots)}">${slots}</ol>` : html`<ol class="previs-grid" role="list" data-previs-grid hidden></ol>`}`;
 }
 
 export function renderAbout(data) {
@@ -244,6 +258,12 @@ export function renderContact(data) {
   const cv = safeUrl(c.cv);
   const p = data.person ?? {};
   const band = [p.availability, p.role, p.name].filter(Boolean);
+  const links = [
+    c.phone && html`<li><a href="${safeUrl(`tel:${String(c.phone).replace(/[^+\d]/g, '')}`, { allowMail: true }) ?? '#contact'}">${c.phone}</a></li>`,
+    c.representation && html`<li>${c.representation}</li>`,
+    ...socials.map(s => html`<li><a href="${s.href}" rel="me noopener">${s.label}</a></li>`),
+    cv && html`<li><a href="${cv}">CV (PDF)</a></li>`,
+  ].filter(Boolean);
   return html`
     ${band.length ? html`<div class="marquee" data-marquee aria-hidden="true"><div class="marquee__track"><span class="marquee__unit">${band.map(t => html`<span>${t}</span><i>·</i>`)}</span></div></div>` : ''}
     <div class="contact" data-reveal>
@@ -251,12 +271,7 @@ export function renderContact(data) {
       <h2 class="contact__title" id="contact-title">${c.heading || 'Contact'}</h2>
       <p class="contact__avail">${data.person?.availability}${filled(data.person?.base) ? ` · ${data.person.base}` : ''}</p>
       ${mail ? html`<p class="contact__mail"><a href="${mail}">${c.email}</a></p>` : ''}
-      <ul class="contact__links" role="list">
-        ${c.phone ? html`<li><a href="${safeUrl(`tel:${String(c.phone).replace(/[^+\d]/g, '')}`, { allowMail: true }) ?? '#contact'}">${c.phone}</a></li>` : ''}
-        ${c.representation ? html`<li>${c.representation}</li>` : ''}
-        ${socials.map(s => html`<li><a href="${s.href}" rel="me noopener">${s.label}</a></li>`)}
-        ${cv ? html`<li><a href="${cv}">CV (PDF)</a></li>` : ''}
-      </ul>
+      ${links.length ? html`<ul class="contact__links" role="list">${links}</ul>` : ''}
       ${badge(c, data, 'Sample contact')}
     </div>`;
 }
@@ -363,6 +378,7 @@ export function renderProject(film, data, { prev, next, index }) {
         <ul class="stills" role="list" data-stills></ul>
       </section>
       ${renderPlotShell(film, data)}
+      ${renderGradeShell(film, data)}
       ${renderReferences(film, data)}
       ${bts.length ? html`
         <section class="film__bts container" aria-labelledby="bts-title">
@@ -502,10 +518,15 @@ export function initAnchorAim() {
   return aim;
 }
 
-/** Jump to location.hash once JS-rendered content exists (the browser tried before it did). */
+/**
+ * Jump to location.hash once JS-rendered content exists (the browser tried before it did). A cut, never a
+ * glide: base.css's smooth scroll-behavior would ease down from the top for half a second, still in flight
+ * when the desktop layer arms and puts the work strip's pin spacer above the target, and that frame
+ * would show the page a screen away from where the layer aims it (a layout shift of a whole screen).
+ */
 export function settleHash() {
   if (!location.hash) return;
   let el = null;
   try { el = document.querySelector(decodeURIComponent(location.hash)); } catch { return; }
-  el?.scrollIntoView({ block: 'start' });
+  el?.scrollIntoView({ block: 'start', behavior: 'instant' });
 }

@@ -190,7 +190,7 @@ export function creativeWorkLD(film, data) {
     name: film.title, genre: film.format, dateCreated: film.year ? String(film.year) : undefined,
     abstract: film.logline, url: absUrl(data, `project.html?slug=${encodeURIComponent(film.slug)}`),
     contributor: { '@type': 'Person', name: p.name, jobTitle: film.role, url: data.site?.url },
-    ...(film.director && !film.placeholder ? { director: { '@type': 'Person', name: film.director } } : {}),
+    ...(filled(film.director) && !film.placeholder ? { director: { '@type': 'Person', name: film.director } } : {}),
     ...(film.placeholder ? { creativeWorkStatus: 'Sample placeholder' } : {}),
   };
 }

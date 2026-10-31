@@ -27,9 +27,7 @@
 //   Screenshots: .artifacts/screens/work--index--{1440x900,390x844}.png.
 
 import fs from 'node:fs';
-import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { FFMPEG, BT709_TAGS, YUV709, hasFfmpeg, run } from '../lib/ffmpeg.mjs';
 
 const HEADINGS = ['No', 'Year', 'Title', 'Director', 'Production / Platform', 'Format', 'Aspect', 'Camera / Lens', 'Premiere'];
 const ASPECT_TOLERANCE = 0.015;
@@ -125,6 +123,17 @@ async function desktop(api, { films }) {
     await page.goto(srv.url + 'index.html', { waitUntil: 'load', timeout: 45000 });
     if (!(await armedNow(page))) return fail(`${tag}: the desktop layer did not arm within 15 s`);
     await idle(page);
+
+    // 0. A block waiting for its entrance is transparent, never visibility: hidden (motion/*.js animate
+    //    opacity): nothing leaves the Tab order or the accessibility tree, and Tab from the hero's call to
+    //    action reaches the toggle before the first card.
+    const hid = await page.evaluate(() => [...document.querySelectorAll('main a[href], main button, footer a[href], footer button')]
+      .filter(e => e.getClientRects().length && getComputedStyle(e).visibility === 'hidden').map(e => e.textContent.trim().replace(/\s+/g, ' ').slice(0, 30)));
+    await page.focus('.hero__cta');
+    const order = [];
+    for (let i = 0; i < 2; i++) { await page.keyboard.press('Tab'); order.push(await page.evaluate(() => document.activeElement?.dataset.view ?? String(document.activeElement?.className ?? ''))); }
+    if (hid.length || order.join() !== 'frames,index') fail(`${tag}: at arm ${hid.length} link(s) or button(s) are visibility: hidden (${hid.slice(0, 4).join(', ')}); Tab from the call to action reached ${order.join(' → ')}`);
+    else pass(`${tag}: at arm no link or button is visibility: hidden, and Tab from the call to action reaches Frames, then Index, before the first card`);
 
     // 1. Frames → Index, from inside the pinned strip (the toggle is in the pinned box).
     await page.evaluate(() => {
@@ -380,23 +389,9 @@ async function withFixture(api) {
   } catch (e) { fail(`${tag}: ${e.message.split('\n')[0]}`); } finally { await ctx.close(); }
 }
 
-/** The 20 s testsrc2 clip as VP9 (the reel check's recipe and file), made once; null without ffmpeg. */
-async function previewClip(abs) {
-  const rel = '.artifacts/fixtures/reel.webm', out = abs(rel);
-  if (fs.existsSync(out) && fs.statSync(out).size > 0) return rel;
-  if (!hasFfmpeg()) return null;
-  fs.mkdirSync(path.dirname(out), { recursive: true });
-  const tmp = out.replace(/\.webm$/, `.${process.pid}.tmp.webm`);
-  await run(FFMPEG, ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=640x360:rate=24', '-t', '20',
-    '-vf', YUV709, '-c:v', 'libvpx-vp9', '-deadline', 'realtime', '-cpu-used', '8', '-b:v', '400k', '-g', '24',
-    ...BT709_TAGS, '-an', tmp]);
-  fs.renameSync(tmp, out);
-  return rel;
-}
-
 async function previews(api, { films }) {
-  const { pass, fail, skip, browser, fixture, abs } = api;
-  const clip = await previewClip(abs).catch(() => null);
+  const { pass, fail, skip, browser, fixture } = api;
+  const clip = await fixture.ensureTestWebm().catch(() => null);   // the VP9 test clip: this Chromium has no H.264 decoder
   if (!clip) return skip('hover previews: skipped (no ffmpeg to make the test clip)');
   const { srv, browser: chromium, contextOptions } = browser();
   const slug = films[0].slug, tag = 'fixture hover preview 1440×900';

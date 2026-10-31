@@ -12,7 +12,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Karan Chaudhary — Cinematographer</title>
-  <meta name="description" content="Cinematographer / director of photography. Reel, selected work, and light, lens and colour studies rendered live in code.">
+  <meta name="description" content="Cinematographer / director of photography. Selected work, and light, lens and colour studies rendered live in code.">
   <link rel="canonical" href="https://subcinctus.github.io/Karan-Chaudhary/">
   <meta name="theme-color" content="#0C0D10">
   <meta name="color-scheme" content="dark">
@@ -21,7 +21,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Karan Chaudhary">
   <meta property="og:title" content="Karan Chaudhary — Cinematographer">
-  <meta property="og:description" content="Cinematographer / director of photography. Reel, selected work, and light, lens and colour studies rendered live in code.">
+  <meta property="og:description" content="Cinematographer / director of photography. Selected work, and light, lens and colour studies rendered live in code.">
   <meta property="og:url" content="https://subcinctus.github.io/Karan-Chaudhary/">
   <meta property="og:image" content="https://subcinctus.github.io/Karan-Chaudhary/media/og/og-title.jpg">
   <meta property="og:image:width" content="1200">
@@ -29,7 +29,7 @@
   <meta property="og:image:alt" content="Karan Chaudhary, Cinematographer: the main title, a name revealed in a letterboxed frame.">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Karan Chaudhary — Cinematographer">
-  <meta name="twitter:description" content="Cinematographer / director of photography. Reel, selected work, and light, lens and colour studies rendered live in code.">
+  <meta name="twitter:description" content="Cinematographer / director of photography. Selected work, and light, lens and colour studies rendered live in code.">
   <meta name="twitter:image" content="https://subcinctus.github.io/Karan-Chaudhary/media/og/og-title.jpg">
 
   <link rel="icon" href="assets/icons/favicon.svg" type="image/svg+xml">
@@ -52,6 +52,7 @@
   <link rel="stylesheet" href="assets/css/motion.css">
   <link rel="stylesheet" href="assets/css/work.css">
   <link rel="stylesheet" href="assets/css/reel.css">
+  <link rel="stylesheet" href="assets/css/photographs.css" media="screen">
   <link rel="stylesheet" href="assets/css/transitions.css">
   <link rel="stylesheet" href="assets/css/print.css" media="print">
   <link rel="modulepreload" href="assets/js/site/main.js">
@@ -93,7 +94,7 @@
        Prefetch only, never prerender (that would start the page's Players unseen). -->
   <script type="speculationrules">{"prefetch":[{"where":{"or":[{"href_matches":"project.html*"},{"href_matches":"photographs.html*"}]},"eagerness":"moderate"}]}</script>
 
-  <script type="application/ld+json" id="ld-person">{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"https://subcinctus.github.io/Karan-Chaudhary/#person","name":"Karan Chaudhary","jobTitle":"Cinematographer","hasOccupation":{"@type":"Occupation","name":"Director of Photography"},"url":"https://subcinctus.github.io/Karan-Chaudhary/","image":"https://subcinctus.github.io/Karan-Chaudhary/media/og/og-title.jpg","knowsAbout":["Cinematography","Lighting","Colour grading","Previsualization"],"sameAs":[]},{"@type":"WebSite","@id":"https://subcinctus.github.io/Karan-Chaudhary/#website","url":"https://subcinctus.github.io/Karan-Chaudhary/","name":"Karan Chaudhary","description":"Cinematographer / director of photography. Reel, selected work, and light, lens and colour studies rendered live in code.","inLanguage":"en","publisher":{"@id":"https://subcinctus.github.io/Karan-Chaudhary/#person"}}]}</script>
+  <script type="application/ld+json" id="ld-person">{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"https://subcinctus.github.io/Karan-Chaudhary/#person","name":"Karan Chaudhary","jobTitle":"Cinematographer","hasOccupation":{"@type":"Occupation","name":"Director of Photography"},"url":"https://subcinctus.github.io/Karan-Chaudhary/","image":"https://subcinctus.github.io/Karan-Chaudhary/media/og/og-title.jpg","knowsAbout":["Cinematography","Lighting","Colour grading","Previsualization"],"sameAs":[]},{"@type":"WebSite","@id":"https://subcinctus.github.io/Karan-Chaudhary/#website","url":"https://subcinctus.github.io/Karan-Chaudhary/","name":"Karan Chaudhary","description":"Cinematographer / director of photography. Selected work, and light, lens and colour studies rendered live in code.","inLanguage":"en","publisher":{"@id":"https://subcinctus.github.io/Karan-Chaudhary/#person"}}]}</script>
 </head>
 <body class="site site--home">
   <a class="skip-link" href="#main">Skip to content</a>
@@ -155,9 +156,8 @@
       </div>
       <div class="hero__stage" data-hero-stage></div>
       <div class="hero__foot">
-        <a class="btn hero__cta" href="#reel" data-watch-reel><span class="btn__play" aria-hidden="true"></span>Watch reel</a>
+        <a class="btn hero__cta" href="#work" data-watch-reel>Selected work <span aria-hidden="true">↓</span></a>
         <button class="btn btn--ghost hero__skip" type="button" data-skip-intro hidden>Skip intro <kbd>Esc</kbd></button>
-        <a class="hero__down cam-label" href="#work">Selected work <span aria-hidden="true">↓</span></a>
       </div>
     </section>
 
@@ -167,15 +167,15 @@
       </section>
     </noscript>
 
-    <section class="section section--reel" id="reel" aria-labelledby="reel-title" hidden><div class="container" data-render="reel"><!-- prerender:reel --><!-- /prerender:reel --></div></section>
+    <section class="section section--reel" id="reel" hidden><div class="container" data-render="reel"><!-- prerender:reel --><!-- /prerender:reel --></div></section>
     <section class="section section--work" id="work" aria-labelledby="work-title"><div class="container" data-render="work"><!-- prerender:work --><header class="section-head" data-reveal>
       <div class="section-head__slate cam-label"><span>Sc. 01</span><span class="section-head__rule" aria-hidden="true"></span><span>Selected work</span><span class="section-head__aside">6 films · 2023–2026</span><div class="section-head__tools"><div class="work-view" role="group" aria-label="Selected work view"><button class="work-view__btn" type="button" data-view="frames" aria-pressed="true">Frames</button><button class="work-view__btn" type="button" data-view="index" aria-pressed="false">Index</button></div></div></div>
       <h2 class="section-head__title" id="work-title">Selected work</h2>
-      <p class="section-head__lede">Each frame is cropped to the aspect ratio the film was delivered in. Hover or focus a card to see the camera move that defines it.</p>
+      <p class="section-head__lede">Each film is framed in the aspect ratio it was delivered in. Hover or focus one for the camera move that defines it.</p>
     </header>
     <ol class="work-grid" role="list">
     <li class="work-card" data-reveal style="--ar:2.39">
-      <a class="work-card__link" href="project.html?slug=untitled-short-01" aria-labelledby="film-untitled-short-01-title" data-film="untitled-short-01">
+      <a class="work-card__link" href="project.html?slug=untitled-short-01" aria-labelledby="film-untitled-short-01-title" aria-describedby="film-untitled-short-01-foot" data-film="untitled-short-01">
         <div class="work-card__gate">
           <div class="work-card__frame frame" data-card-frame style="background:radial-gradient(60% 80% at 68% 58%, #C77B3B55 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, #E8C49A40 0%, transparent 70%), linear-gradient(180deg, #0E1A24 0%, #1F3B4D 62%, #0E1A24 100%)">
             <span class="work-card__aspect" aria-hidden="true">2.39:1</span>
@@ -185,12 +185,12 @@
           <p class="work-card__slate cam-label"><span>01</span><span>2026 · Short fiction</span></p>
           <h3 class="work-card__title" id="film-untitled-short-01-title">Untitled Short I</h3>
           <p class="work-card__role">Director of Photography</p>
-          <p class="work-card__foot cam-label"><span>#027 Dolly in</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
+          <p class="work-card__foot cam-label" id="film-untitled-short-01-foot"><span>#027 Dolly in</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
         </div>
       </a>
     </li>
     <li class="work-card" data-reveal style="--ar:1.85">
-      <a class="work-card__link" href="project.html?slug=night-exterior-sample" aria-labelledby="film-night-exterior-sample-title" data-film="night-exterior-sample">
+      <a class="work-card__link" href="project.html?slug=night-exterior-sample" aria-labelledby="film-night-exterior-sample-title" aria-describedby="film-night-exterior-sample-foot" data-film="night-exterior-sample">
         <div class="work-card__gate">
           <div class="work-card__frame frame" data-card-frame style="background:radial-gradient(60% 80% at 68% 58%, #D98E3255 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, #F2C46D40 0%, transparent 70%), linear-gradient(180deg, #0B0C10 0%, #2B2A33 62%, #0B0C10 100%)">
             <span class="work-card__aspect" aria-hidden="true">1.85:1</span>
@@ -200,12 +200,12 @@
           <p class="work-card__slate cam-label"><span>02</span><span>2025 · Short fiction</span></p>
           <h3 class="work-card__title" id="film-night-exterior-sample-title">Night Exterior</h3>
           <p class="work-card__role">Director of Photography</p>
-          <p class="work-card__foot cam-label"><span>#033 Rack focus</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
+          <p class="work-card__foot cam-label" id="film-night-exterior-sample-foot"><span>#033 Rack focus</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
         </div>
       </a>
     </li>
     <li class="work-card" data-reveal style="--ar:2.39">
-      <a class="work-card__link" href="project.html?slug=sample-music-video" aria-labelledby="film-sample-music-video-title" data-film="sample-music-video">
+      <a class="work-card__link" href="project.html?slug=sample-music-video" aria-labelledby="film-sample-music-video-title" aria-describedby="film-sample-music-video-foot" data-film="sample-music-video">
         <div class="work-card__gate">
           <div class="work-card__frame frame" data-card-frame style="background:radial-gradient(60% 80% at 68% 58%, #B4436C55 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, #E6A5B840 0%, transparent 70%), linear-gradient(180deg, #120E16 0%, #3A2140 62%, #120E16 100%)">
             <span class="work-card__aspect" aria-hidden="true">2.39:1</span>
@@ -215,12 +215,12 @@
           <p class="work-card__slate cam-label"><span>03</span><span>2025 · Music video</span></p>
           <h3 class="work-card__title" id="film-sample-music-video-title">Music Video</h3>
           <p class="work-card__role">Director of Photography</p>
-          <p class="work-card__foot cam-label"><span>#030 Orbit</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
+          <p class="work-card__foot cam-label" id="film-sample-music-video-foot"><span>#030 Orbit</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
         </div>
       </a>
     </li>
     <li class="work-card" data-reveal style="--ar:1.33">
-      <a class="work-card__link" href="project.html?slug=untitled-documentary-sample" aria-labelledby="film-untitled-documentary-sample-title" data-film="untitled-documentary-sample">
+      <a class="work-card__link" href="project.html?slug=untitled-documentary-sample" aria-labelledby="film-untitled-documentary-sample-title" aria-describedby="film-untitled-documentary-sample-foot" data-film="untitled-documentary-sample">
         <div class="work-card__gate">
           <div class="work-card__frame frame" data-card-frame style="background:radial-gradient(60% 80% at 68% 58%, #8C7A5B55 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, #C9B79C40 0%, transparent 70%), linear-gradient(180deg, #16130F 0%, #4A3F31 62%, #16130F 100%)">
             <span class="work-card__aspect" aria-hidden="true">1.33:1</span>
@@ -230,12 +230,12 @@
           <p class="work-card__slate cam-label"><span>04</span><span>2024 · Documentary short</span></p>
           <h3 class="work-card__title" id="film-untitled-documentary-sample-title">Untitled Documentary</h3>
           <p class="work-card__role">Cinematographer</p>
-          <p class="work-card__foot cam-label"><span>#032 Dolly zoom</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
+          <p class="work-card__foot cam-label" id="film-untitled-documentary-sample-foot"><span>#032 Dolly zoom</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
         </div>
       </a>
     </li>
     <li class="work-card" data-reveal style="--ar:2.76">
-      <a class="work-card__link" href="project.html?slug=coastal-study-sample" aria-labelledby="film-coastal-study-sample-title" data-film="coastal-study-sample">
+      <a class="work-card__link" href="project.html?slug=coastal-study-sample" aria-labelledby="film-coastal-study-sample-title" aria-describedby="film-coastal-study-sample-foot" data-film="coastal-study-sample">
         <div class="work-card__gate">
           <div class="work-card__frame frame" data-card-frame style="background:radial-gradient(60% 80% at 68% 58%, #6F8C9655 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, #B8C9CC40 0%, transparent 70%), linear-gradient(180deg, #0D1316 0%, #2C3E46 62%, #0D1316 100%)">
             <span class="work-card__aspect" aria-hidden="true">2.76:1</span>
@@ -245,12 +245,12 @@
           <p class="work-card__slate cam-label"><span>05</span><span>2024 · Experimental short</span></p>
           <h3 class="work-card__title" id="film-coastal-study-sample-title">Coastal Study</h3>
           <p class="work-card__role">Director of Photography</p>
-          <p class="work-card__foot cam-label"><span>#031 Crane up</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
+          <p class="work-card__foot cam-label" id="film-coastal-study-sample-foot"><span>#031 Crane up</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
         </div>
       </a>
     </li>
     <li class="work-card" data-reveal style="--ar:1.78">
-      <a class="work-card__link" href="project.html?slug=sample-commercial" aria-labelledby="film-sample-commercial-title" data-film="sample-commercial">
+      <a class="work-card__link" href="project.html?slug=sample-commercial" aria-labelledby="film-sample-commercial-title" aria-describedby="film-sample-commercial-foot" data-film="sample-commercial">
         <div class="work-card__gate">
           <div class="work-card__frame frame" data-card-frame style="background:radial-gradient(60% 80% at 68% 58%, #E0A45855 0%, transparent 60%), radial-gradient(30% 40% at 70% 56%, #F3D9B140 0%, transparent 70%), linear-gradient(180deg, #101114 0%, #33363D 62%, #101114 100%)">
             <span class="work-card__aspect" aria-hidden="true">1.78:1</span>
@@ -260,7 +260,7 @@
           <p class="work-card__slate cam-label"><span>06</span><span>2023 · Commercial</span></p>
           <h3 class="work-card__title" id="film-sample-commercial-title">Spot</h3>
           <p class="work-card__role">Director of Photography</p>
-          <p class="work-card__foot cam-label"><span>#043 Whip pan</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
+          <p class="work-card__foot cam-label" id="film-sample-commercial-foot"><span>#043 Whip pan</span><span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample</span></p>
         </div>
       </a>
     </li></ol>
@@ -287,7 +287,7 @@
       </div>
     </div>
     <p class="work-note cam-label" data-reveal>Camera moves: Motion Prompt #027 #030 #031 #032 #033 #043 by Shohei Ohtaki (MIT).</p><!-- /prerender:work --></div></section>
-    <section class="section section--photographs" id="photographs" aria-labelledby="photographs-title" hidden><div class="container" data-render="photographs"><!-- prerender:photographs --><!-- /prerender:photographs --></div></section>
+    <section class="section section--photographs" id="photographs" hidden><div class="container" data-render="photographs"><!-- prerender:photographs --><!-- /prerender:photographs --></div></section>
     <section class="section section--studies" id="studies" aria-labelledby="studies-title"><div class="container" data-render="studies"><!-- prerender:studies --><header class="section-head" data-reveal>
       <p class="section-head__slate cam-label"><span>Sc. 02</span><span class="section-head__rule" aria-hidden="true"></span><span>Studies</span><span class="section-head__aside">Rendered live</span></p>
       <h2 class="section-head__title" id="studies-title">Focus / Light / Colour</h2>
@@ -350,7 +350,85 @@
       <h2 class="section-head__title" id="previs-title">Virtual production / Previs</h2>
       <p class="section-head__lede">Six shots planned for Unreal Engine: lens, stop, focus and lighting are set on the plans below; the renders are pending.</p>
     </header>
-    <ol class="previs-grid" role="list" data-previs-grid hidden></ol><!-- /prerender:previs --></div></section>
+    <ol class="previs-grid" role="list" data-previs-grid data-previs-key="q5d4y0">
+    <li class="previs-slot" data-reveal data-shot="PV-010">
+      <figure class="previs-slot__fig">
+        <div class="previs-slot__frame frame" style="--ar:2.39">
+          <p class="previs-slot__corner previs-slot__corner--tl" aria-hidden="true">PV-010 · Plan view</p><p class="previs-slot__corner previs-slot__corner--tr" aria-hidden="true">#027 Dolly in</p><svg class="previs-slot__plan" id="previs-plan-PV-010" data-plan preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <figcaption class="previs-slot__cap">
+          <p class="previs-slot__title"><span class="previs-slot__id">PV-010</span> Push in</p>
+          <p class="previs-slot__slate cam-label"><span class="previs-slot__line previs-slot__line--lead">#027 · Dolly in · 4.2 s</span><span class="previs-slot__line">S35 · 24mm · T2.8 · ⌀ 8.0→2.2 m</span><span class="previs-slot__line">Rembrandt #101 · 3200K key · 4300K WB</span></p>
+          <p class="previs-slot__tags"><span class="tag">Previs pending: Unreal / Sequencer</span></p>
+          <p class="previs-slot__notes">The camera travels 5.8 m forward over 0.5–3.4 s on a fixed 24 mm; focus tracks the head 8.0 → 2.2 m. The post and the rock pass out of frame; the head grows 3.6× while the colonnade 10 m behind grows only 1.5×.</p>
+        </figcaption>
+      </figure>
+    </li>
+    <li class="previs-slot" data-reveal data-shot="PV-020">
+      <figure class="previs-slot__fig">
+        <div class="previs-slot__frame frame" style="--ar:2.39">
+          <p class="previs-slot__corner previs-slot__corner--tl" aria-hidden="true">PV-020 · Plan view</p><p class="previs-slot__corner previs-slot__corner--tr" aria-hidden="true">#033 Rack focus</p><svg class="previs-slot__plan" id="previs-plan-PV-020" data-plan preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <figcaption class="previs-slot__cap">
+          <p class="previs-slot__title"><span class="previs-slot__id">PV-020</span> Pull to the face</p>
+          <p class="previs-slot__slate cam-label"><span class="previs-slot__line previs-slot__line--lead">#033 · Rack focus · 4.2 s</span><span class="previs-slot__line">S35 · 24mm · T1.4 · ⌀ 2.0→9.0 m</span><span class="previs-slot__line">Low-key #114 · 3200K key · 4300K WB</span></p>
+          <p class="previs-slot__tags"><span class="tag">Previs pending: Unreal / Sequencer</span></p>
+          <p class="previs-slot__notes">Nothing moves but focus. A bare 2700 K practical 2 m from the lens, 0.75 m left, holds focus first, then focus pulls to the head at 9 m over 1.0–2.6 s. At T1.4 the practical blooms into a 9-blade disc as the face sharpens.</p>
+        </figcaption>
+      </figure>
+    </li>
+    <li class="previs-slot" data-reveal data-shot="PV-030">
+      <figure class="previs-slot__fig">
+        <div class="previs-slot__frame frame" style="--ar:2.39">
+          <p class="previs-slot__corner previs-slot__corner--tl" aria-hidden="true">PV-030 · Plan view</p><p class="previs-slot__corner previs-slot__corner--tr" aria-hidden="true">#030 Orbit</p><svg class="previs-slot__plan" id="previs-plan-PV-030" data-plan preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <figcaption class="previs-slot__cap">
+          <p class="previs-slot__title"><span class="previs-slot__id">PV-030</span> Around the light</p>
+          <p class="previs-slot__slate cam-label"><span class="previs-slot__line previs-slot__line--lead">#030 · Orbit · 4.2 s</span><span class="previs-slot__line">S35 · 24mm · T2.8 · ⌀ 6.0 m</span><span class="previs-slot__line">Split #100 · 3200K key · 3200K WB</span></p>
+          <p class="previs-slot__tags"><span class="tag">Previs pending: Unreal / Sequencer</span></p>
+          <p class="previs-slot__notes">A 109° arc at 6 m. The camera is parented to a pivot at the head and the pivot yaw is keyed (+54.4° → −54.4°), so the path is a true arc. Under split light the move carries the face from its lit half to its shadow half; for this shot the key is raised to 35° and moved back to 3.5 m, so it never enters the frame.</p>
+        </figcaption>
+      </figure>
+    </li>
+    <li class="previs-slot" data-reveal data-shot="PV-040">
+      <figure class="previs-slot__fig">
+        <div class="previs-slot__frame frame" style="--ar:2.39">
+          <p class="previs-slot__corner previs-slot__corner--tl" aria-hidden="true">PV-040 · Plan view</p><p class="previs-slot__corner previs-slot__corner--tr" aria-hidden="true">#032 Dolly zoom</p><svg class="previs-slot__plan" id="previs-plan-PV-040" data-plan preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <figcaption class="previs-slot__cap">
+          <p class="previs-slot__title"><span class="previs-slot__id">PV-040</span> The room leans in</p>
+          <p class="previs-slot__slate cam-label"><span class="previs-slot__line previs-slot__line--lead">#032 · Dolly zoom · 4.2 s</span><span class="previs-slot__line">S35 · 9.6→24mm · T4 · ⌀ 3.2→8.0 m</span><span class="previs-slot__line">Butterfly #102 · 5600K key · 5600K WB</span></p>
+          <p class="previs-slot__tags"><span class="tag">Previs pending: Unreal / Sequencer</span></p>
+          <p class="previs-slot__notes">The camera pulls back 4.8 m while the lens zooms 9.6 → 24 mm in step. The head holds its size; the colonnade behind it closes in by about 1.8×. T4 keeps the background readable.</p>
+        </figcaption>
+      </figure>
+    </li>
+    <li class="previs-slot" data-reveal data-shot="PV-050">
+      <figure class="previs-slot__fig">
+        <div class="previs-slot__frame frame" style="--ar:2.39">
+          <p class="previs-slot__corner previs-slot__corner--tl" aria-hidden="true">PV-050 · Plan view</p><p class="previs-slot__corner previs-slot__corner--tr" aria-hidden="true">#031 Crane up</p><svg class="previs-slot__plan" id="previs-plan-PV-050" data-plan preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <figcaption class="previs-slot__cap">
+          <p class="previs-slot__title"><span class="previs-slot__id">PV-050</span> Rise and reveal</p>
+          <p class="previs-slot__slate cam-label"><span class="previs-slot__line previs-slot__line--lead">#031 · Crane up · 4.2 s</span><span class="previs-slot__line">S35 · 24mm · T2.8 · ⌀ 8.0→9.9 m</span><span class="previs-slot__line">Backlight #097 · 3200K key · 5600K WB</span></p>
+          <p class="previs-slot__tags"><span class="tag">Previs pending: Unreal / Sequencer</span></p>
+          <p class="previs-slot__notes">The camera rises 1.4 → 9 m and creeps 1.5 m forward while tilting down to about −44°. The tilt under-follows the subject (0.86×), so the head sinks toward the lower third as the floor and the backlight pool fill the frame. Keys are baked every 3 frames.</p>
+        </figcaption>
+      </figure>
+    </li>
+    <li class="previs-slot" data-reveal data-shot="PV-060">
+      <figure class="previs-slot__fig">
+        <div class="previs-slot__frame frame" style="--ar:2.39">
+          <p class="previs-slot__corner previs-slot__corner--tl" aria-hidden="true">PV-060 · Plan view</p><p class="previs-slot__corner previs-slot__corner--tr" aria-hidden="true">#043 Whip pan</p><svg class="previs-slot__plan" id="previs-plan-PV-060" data-plan preserveAspectRatio="xMidYMid meet"></svg>
+        </div>
+        <figcaption class="previs-slot__cap">
+          <p class="previs-slot__title"><span class="previs-slot__id">PV-060</span> Whip to the profile</p>
+          <p class="previs-slot__slate cam-label"><span class="previs-slot__line previs-slot__line--lead">#043 · Whip pan · 4.2 s</span><span class="previs-slot__line">S35 · 24mm · T2.8 · ⌀ 7.0 m</span><span class="previs-slot__line">Rim #098 · 4300K WB</span></p>
+          <p class="previs-slot__tags"><span class="tag">Previs pending: Unreal / Sequencer</span></p>
+          <p class="previs-slot__notes">Camera A holds the head just left of centre, whips 26° right in 0.4 s, and the cut to camera B (the profile, from the subject&#39;s left) lands on frame 50, where the blur peaks; B swings in from 26° left and settles by 2.5 s. Rendered at a 360° shutter with 9 temporal samples, the Motion Prompt blur.</p>
+        </figcaption>
+      </figure>
+    </li></ol><!-- /prerender:previs --></div></section>
     <section class="section section--about" id="about" aria-labelledby="about-title"><div class="container" data-render="about"><!-- prerender:about --><header class="section-head" data-reveal>
       <p class="section-head__slate cam-label"><span>Sc. 04</span><span class="section-head__rule" aria-hidden="true"></span><span>About &amp; approach</span></p>
       <h2 class="section-head__title" id="about-title">About</h2>
@@ -456,20 +534,15 @@
       <h2 class="contact__title" id="contact-title">Let’s make something.</h2>
       <p class="contact__avail">Available for shorts and music videos</p>
       <p class="contact__mail"><a href="mailto:hello@example.com">hello@example.com</a></p>
-      <ul class="contact__links" role="list">
-        
-        
-        
-        
-      </ul>
+      
       <span class="badge-sample" title="Placeholder content: replace it in data/portfolio.js">Sample contact</span>
     </div><!-- /prerender:contact --></div>
     <div class="container" data-render="colophon"><!-- prerender:colophon --><div class="colophon">
       <div class="colophon__text">
         <p class="cam-label">Colophon · How this site was made</p>
-        <p class="colophon__lead">The main title, the studies, the film-card moves and the previs plans on this page are rendered live in your browser from code written with Claude Opus 5.5. Concept, shot design, lens and lighting choices by Karan Chaudhary.</p>
+        <p class="colophon__lead">The main title, the studies, the film-card moves, the placeholder frames, the lighting plots and the previs plans on this site are rendered live in your browser from code written with Claude Opus 5.5. Concept, shot design, lens and lighting choices by Karan Chaudhary.</p>
         <p class="colophon__flag"><span class="badge-sample" title="The owner has not yet confirmed this disclosure: data/portfolio.js colophon.confirmed">To confirm</span></p>
-        <ul class="colophon__credits" role="list"><li>Camera moves and the title reveal ported from Motion Prompt (MIT) by Shohei Ohtaki: #005 #027 #030 #031 #032 #033 #043. Lighting, lens, colour, grain and web-behaviour numbers rebuilt (no code copied) from #002 #073 #074 #075 #077 #079 #083 #084 #086 #087 #089 #092 #094 #097 #098 #100 #101 #102 #105 #112 #114 #115 #117 #118. <a href="THIRD-PARTY-NOTICES.md">Third-party notices</a> · <a href="https://showheyohtaki.github.io/motion-prompt/" rel="noopener">Motion Prompt</a></li><li>Inspired by the Awesome Opus 5.5 Videos collection. No media from the collection is used on this site. <a href="https://github.com/yihui-dev/awesome-opus5-5-videos" rel="noopener">The collection</a></li><li>Type: Cormorant Garamond, Inter Tight and IBM Plex Mono (SIL Open Font License), served by Google Fonts.</li><li>Page motion on desktop: GSAP 3.15.0 (GSAP Standard No Charge License) and Lenis 1.3.27 (MIT), served from this site.</li><li>Previs: Epic Games’ Unreal Engine with the Unreal Engine Skills plugin for Claude Code, referenced by the previs workflow, not included in this site.</li></ul>
+        <ul class="colophon__credits" role="list"><li>Camera moves and the title reveal ported from Motion Prompt (MIT) by Shohei Ohtaki: #005 #027 #030 #031 #032 #033 #043. Lighting, lens, colour, grain and web-behaviour numbers rebuilt (no code copied) from #002 #073 #074 #075 #077 #079 #083 #084 #086 #087 #089 #092 #094 #097 #098 #100 #101 #102 #105 #112 #114 #115 #117 #118. <a href="THIRD-PARTY-NOTICES.md">Third-party notices</a> · <a href="https://showheyohtaki.github.io/motion-prompt/" rel="noopener">Motion Prompt</a></li><li>Inspired by the Awesome Opus 5.5 Videos collection. No media from the collection is used on this site. <a href="https://github.com/yihui-dev/awesome-opus5-5-videos" rel="noopener">The collection</a></li><li>Type: Cormorant Garamond, Inter Tight and IBM Plex Mono (SIL Open Font License), served from this site.</li><li>Page motion on desktop: GSAP 3.15.0 (GSAP Standard No Charge License) and Lenis 1.3.27 (MIT), served from this site.</li><li>Previs: Epic Games’ Unreal Engine with the Unreal Engine Skills plugin for Claude Code, referenced by the previs workflow, not included in this site.</li></ul>
       </div>
       <div class="colophon__tools">
         <button class="btn btn--ghost" type="button" data-replay-titles>Replay titles</button>
@@ -479,6 +552,38 @@
     </div><!-- /prerender:colophon --></div>
   </footer>
 
+  <!-- A jump into the page (index.html#contact) lands before the first paint: the sections are already in
+       the HTML, so nothing that arrives later above the target (main.js's render, the previs plans, the
+       desktop layer's pinned strip) moves it under the visitor, and the browser's own (smooth) scroll to
+       the fragment finds it in place. Until the type it shows has loaded (1.5 s at most) the page is held
+       back (html.is-arriving, site.css): a face swapping in view would move its lines. It shows a frame
+       after the faces have been laid out, never in the frame they swap in (that would count as a shift).
+       Held back, the page gives the browser nothing to anchor its scroll to, so a face that re-sets the
+       sections above the target would carry it off its place: it is put back in that same frame (a
+       ResizeObserver runs after layout, before paint) until the page shows or the visitor scrolls.
+       main.js lands it again if this could not. -->
+  <script>
+    (function () {
+      var d = document.documentElement, t = null;
+      try {
+        t = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+        if (!t || !t.getClientRects().length) return;   // no such section, or a hidden one (no reel yet)
+        t.scrollIntoView({ block: 'start', behavior: 'instant' });
+      } catch (e) { return; /* a malformed hash, or a browser without 'instant' */ }
+      if (!document.fonts) return;
+      var ro = typeof ResizeObserver === 'function' ? new ResizeObserver(function () { t.scrollIntoView({ block: 'start', behavior: 'instant' }); }) : null;
+      var stop = function () { if (ro) ro.disconnect(); ro = null; };
+      var show = function () { d.classList.remove('is-arriving'); stop(); };
+      var twoFrames = function (f) { requestAnimationFrame(function () { requestAnimationFrame(f); }); };
+      for (var s = ro && document.querySelector('main').firstElementChild; s; s = s.nextElementSibling) ro.observe(s);
+      ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(function (k) { addEventListener(k, stop, { once: true, passive: true }); });
+      d.classList.add('is-arriving');
+      // Two frames in, the first layouts have asked for every face the page shows: then once those have loaded
+      // and a frame has been laid out with them.
+      twoFrames(function () { document.fonts.ready.then(function () { twoFrames(show); }, show); });
+      setTimeout(show, 1500);
+    })();
+  </script>
   <script type="module" src="assets/js/site/main.js"></script>
 </body>
 </html>

@@ -68,7 +68,8 @@ export function renderRuler(svg, params) {
   svg.setAttribute('width', W);
   svg.setAttribute('height', H);
   svg.setAttribute('role', 'img');
-  svg.setAttribute('aria-labelledby', `${svg.id || 'dof-ruler'}-t ${svg.id || 'dof-ruler'}-d`);
+  svg.setAttribute('aria-labelledby', `${svg.id || 'dof-ruler'}-t`);
+  svg.setAttribute('aria-describedby', `${svg.id || 'dof-ruler'}-d`);
   const sharpNames = L.subjects.filter(s => s.sharp).map(s => s.name.toLowerCase());
   svg.append(
     svgEl('title', { id: `${svg.id || 'dof-ruler'}-t` }, 'Depth-of-field ruler'),

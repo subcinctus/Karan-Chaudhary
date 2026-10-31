@@ -1,12 +1,17 @@
+/* Motion Prompt #075 · MIT License (c) 2026 Shohei Ohtaki · https://showheyohtaki.github.io/motion-prompt/#075 */
+/* (numbers only: #075's header slide, 0.45 s on (.4, 0, .1, 1), for the header's own group below.) */
+
 /* Match cut: cross-document View Transitions between the index and the film pages
    (assets/js/site/match-cut.js names the shared frame "film-still"; html[data-vt] is set by each page's
    head script). index.html and project.html.
 
    The old page fades to ink in 300 ms, the new one fades in over 450 ms after it, and the work card's
    still travels to the film's lead frame in 650 ms on the site's expo in-out: 0.75 s in all, under the
-   0.8 s that a transition (which blocks input while it runs) should take. The header holds still (a 0 s
-   group). The card and the lead frame may differ in aspect (a real still keeps its own on the film
-   page): both views fill the moving frame, the old one contained and the new one covering it, clipped
+   0.8 s that a transition (which blocks input while it runs) should take. The header keeps its place:
+   where it shows on both pages its group has nowhere to go, and where it had slid away on the way down
+   (motion/nav.js) it slides back in, as on the way up, rather than snap in on the first frame. The card
+   and the lead frame may differ in aspect (a real still keeps its own on the film page): both views
+   fill the moving frame, the old one contained and the new one covering it, clipped
    (Jake Archibald, https://jakearchibald.com/2024/view-transitions-handling-aspect-ratio-changes/).
    With the hand-off (html.vt-handoff) the film page already shows the card's still, so the new view
    simply sits over the old one, no cross-fade. A film page to the next (the pager) shares no frame: a
@@ -19,7 +24,7 @@
 }
 
 .site-header { view-transition-name: site-header; }
-::view-transition-group(site-header) { animation-duration: 0s; }
+::view-transition-group(site-header) { animation-duration: 450ms; animation-timing-function: cubic-bezier(.4, 0, .1, 1); }
 
 ::view-transition-old(root) { animation: 300ms cubic-bezier(.4, 0, .1, 1) both kc-vt-out; }
 ::view-transition-new(root) { animation: 450ms cubic-bezier(.16, 1, .3, 1) 300ms both kc-vt-in; }

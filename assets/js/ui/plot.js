@@ -105,7 +105,8 @@ export function renderPlan(svg, { camera = {}, cameras = [], path = null, subjec
   const descText = labels.desc ?? describePlan(cam, sub, L) + describeExtras(cams.slice(1), P, sub);
   const tid = svg.id ? `${svg.id}-title` : null, did = svg.id ? `${svg.id}-desc` : null;
   svg.append(s('title', { id: tid }, titleText), s('desc', { id: did }, descText));
-  if (tid) svg.setAttribute('aria-labelledby', `${tid} ${did}`);
+  // Named by the title, described by the desc (both in the name, a screen reader would read the desc twice).
+  if (tid) { svg.setAttribute('aria-labelledby', tid); svg.setAttribute('aria-describedby', did); }
 
   const stroke = { 'vector-effect': 'non-scaling-stroke', fill: 'none' };
   // Every label carries a thin ink halo (painted under the glyphs), so a camera path or a frustum edge

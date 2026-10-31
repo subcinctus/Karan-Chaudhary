@@ -43,7 +43,7 @@ export function initCredits(env) {
       gsap.from(s.chars, { yPercent: 110, duration: 1, ease: 'kc.out', stagger: 0.03, scrollTrigger: { trigger: el, start: 'top 88%', once: true } });
     }
     const by = roll.querySelector('.credits__end > .credits__role');
-    if (by && env.enters(by)) gsap.from(by, { y: 16, autoAlpha: 0, duration: 0.8, ease: 'kc.out', clearProps: 'all', scrollTrigger: { trigger: by, start: 'top 90%', once: true } });
+    if (by && env.enters(by)) gsap.from(by, { y: 16, opacity: 0, duration: 0.8, ease: 'kc.out', clearProps: 'all', scrollTrigger: { trigger: by, start: 'top 90%', once: true } });
   }
 
   // The band.

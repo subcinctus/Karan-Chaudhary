@@ -102,6 +102,7 @@ test('videoObjectLD: null without a reel, a poster and an upload date; otherwise
   for (const over of [{ poster: null }, { uploadDate: null }, { provider: null }, { poster: '/abs.jpg' }]) {
     assert.equal(RD.videoObjectLD(fixtureData({ reel: over })), null, JSON.stringify(over));
   }
+  assert.equal(RD.videoObjectLD(fixtureData({ reel: { placeholder: true } })), null, 'a reel still marked as the sample is never published as a real video');
   const v = RD.videoObjectLD(fx);
   const site = fx.site.url;
   assert.equal(v['@type'], 'VideoObject');
@@ -163,7 +164,9 @@ test('renderReelIndex: hidden without a reel; tiles from the owner\'s thumbs or 
   const out = String(renderReelIndex(fx));
   assert.match(out, /<ol class="reel-index" role="list" aria-label="Shot index">/);
   assert.equal(out.match(/<button class="reel-shot" type="button" data-reel-t="/g).length, 6);
-  assert.match(out, /data-reel-t="8" aria-label="Play the reel from 0:08 — [^"]+, 50 mm"/);
+  // A tile is named by what it shows, after a hidden "Play the reel from" (WCAG 2.5.3: the visible words are in the name).
+  assert.match(out, /data-reel-t="8">\s*<span class="reel-shot__frame frame" aria-hidden="true">[\s\S]*?<\/span>\s*<span class="visually-hidden">Play the reel from <\/span><span class="reel-shot__tc">00:08<\/span>\s*<span class="reel-shot__title">[^<]+<\/span>\s*<span class="reel-shot__meta">50 mm/);
+  assert.doesNotMatch(out, /class="reel-shot"[^>]*aria-label/);
   assert.match(out, /<span class="reel-shot__tc">00:08<\/span>/);
   assert.match(out, /<p class="visually-hidden" aria-live="polite" data-reel-live><\/p>/);
   for (const s of fx.reel.shots) assert.ok(out.includes(`src="${s.thumb}"`), s.thumb);

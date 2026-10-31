@@ -171,10 +171,28 @@
 .study__motion {
   min-height: var(--target); padding: 0 var(--s4);
   border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
-  background: transparent;
+  background: transparent; white-space: nowrap;
   font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: var(--tracking-mono); text-transform: uppercase;
 }
 .study__motion[aria-pressed="true"] { border-color: var(--tungsten); color: var(--tungsten); }
+/* Contact, one click away from a study too: a pill like the Motion toggle beside it (as the site header's). */
+.study__contact {
+  margin-left: auto; display: inline-flex; align-items: center; min-height: var(--target); padding: 0 var(--s4);
+  border: 1px solid var(--line-strong); border-radius: var(--radius-pill);
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: var(--tracking-mono); text-transform: uppercase;
+  color: var(--paper); text-decoration: none; white-space: nowrap;
+  transition: border-color var(--dur-2) var(--ease-ui);
+}
+.study__contact:hover { border-color: var(--tungsten); }
+/* Phones: the name breaks onto two lines before a pill does; under 360 px it takes a line of its own. */
+@media (max-width: 479px) {
+  .study__bar { gap: var(--s2); }
+  .study__contact, .study__motion { padding-inline: var(--s3); }
+}
+@media (max-width: 359px) {
+  .study__bar { flex-wrap: wrap; }
+  .study__home { flex-basis: 100%; }
+}
 
 .study__main { padding: var(--s6) var(--gutter) var(--s8); }
 .study__head { display: grid; gap: var(--s2); margin-bottom: var(--s5); }

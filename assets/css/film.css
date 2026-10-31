@@ -10,6 +10,11 @@
    placeholder painted to fit), and a real sequence frame, whose aspect the data does not give, is
    letterboxed inside the film's gate at its own. */
 
+/* Until project.js renders the film, main holds only the static filmography (hidden under html.js): an
+   arrival without a match cut paints the header first, and the footer waits unseen rather than jump
+   down the screen as the film arrives. */
+html.js .site--project main:has(> .film-static) ~ .site-footer { visibility: hidden; }
+
 /* --- Frame cards ---------------------------------------------------------------------------------- */
 
 /* The frame is the button that opens the lightbox. */
@@ -19,8 +24,8 @@
 }
 .still__open .frame { display: block; outline: 1px solid var(--line); outline-offset: -1px; transition: outline-color var(--dur-2) var(--ease-out); }
 .still__open:hover .frame { outline-color: var(--paper-3); }
-.still__open:focus-visible { outline: none; }
-.still__open:focus-visible .frame { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+/* The ring is the button's (its box is the frame's): the frame's entrance clips the frame, never the button. */
+.still__open:focus-visible { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
 .still__open .frame:not([data-paint]) > img { object-fit: contain; }
 .sequence .frame:not([data-paint]) { display: grid; place-items: center; }
 .sequence .frame:not([data-paint]) > img { position: static; width: auto; height: auto; max-width: 100%; max-height: 100%; }
@@ -84,9 +89,13 @@
 .film-plot__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin-bottom: var(--s4); }
 .film-plot__head .film__h { margin: 0; }
 .film-plot__grid { display: grid; gap: var(--s6); }
+/* The columns and gaps of the film's body (site.css .film__body), so the plan stands on the notes' line;
+   the frame rides beside the taller plan and legend instead of leaving a hole under itself. */
 @media (min-width: 900px) {
-  .film-plot__grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: clamp(32px, 4vw, 96px); align-items: start; }
+  .film-plot__grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: clamp(48px, 6vw, 112px); align-items: start; }
+  .film-plot__shot { position: sticky; top: 96px; }
 }
+@media (min-width: 1440px) { .film-plot__grid { column-gap: clamp(96px, 8vw, 224px); } }
 .film-plot__shot { margin: 0; display: grid; gap: var(--s3); }
 .film-plot__plan { display: grid; gap: var(--s4); align-content: start; min-width: 0; }
 .film-plot__svg {
@@ -100,7 +109,7 @@
 
 @media (forced-colors: active) {
   .still__open .frame, .film-plot__svg { border: 1px solid CanvasText; }
-  .still__open:focus-visible .frame { outline: 3px solid Highlight; }
+  .still__open:focus-visible { outline: 3px solid Highlight; }
   .chips { display: none; }
 }
 

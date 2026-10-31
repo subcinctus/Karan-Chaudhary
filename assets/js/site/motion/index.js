@@ -12,7 +12,9 @@
 // Curves (the same numbers as tokens.css): kc.out = expo out (.16, 1, .3, 1) for entrances, kc.io =
 // expo in-out (.77, 0, .175, 1) for wipes and curtains, kc.ui = (.4, 0, .1, 1) for chrome. Durations
 // 0.45–1.1 s, staggers ≤ 0.09 s with each group landing within ~0.4 s. Only transform, opacity and
-// clip-path are animated. One rAF: gsap.ticker drives Lenis and every ScrollTrigger.
+// clip-path are animated; opacity, never visibility, so a block waiting for its entrance stays in the Tab
+// order and the accessibility tree (and plays at once when keyboard focus enters it). One rAF:
+// gsap.ticker drives Lenis and every ScrollTrigger.
 //
 //   const { initMotion } = await import('./motion/index.js');
 //   initMotion({ page: 'home', reveal, aim });   // reveal: site/reveal.js API (suspend/resume)
@@ -51,16 +53,26 @@ const freshIdle = () => new Promise(r => { resolveIdle = r; });
 let pending = null;
 let railMemo = null;
 // The place the visitor last came to rest on (a scroll that has stopped for 200 ms; never one caused by
-// a window resize, which re-wraps the page under a fixed scroll offset).
-let lastPlace = null, restT = 0, resizing = 0;
+// a window resize, which re-wraps the page under a fixed scroll offset), and their scroll count then.
+let lastPlace = null, lastMoves = 0, restT = 0, resizing = 0;
+const atRest = () => { lastPlace = grab(); lastMoves = moved(); };
 addEventListener('scroll', () => {
   clearTimeout(restT); restT = 0;
   if (resizing) return;
-  restT = setTimeout(() => { restT = 0; if (!resizing) lastPlace = grab(); }, 200);
+  restT = setTimeout(() => { restT = 0; if (!resizing) atRest(); }, 200);
 }, { passive: true });
 addEventListener('resize', () => {
   clearTimeout(restT); restT = 0; clearTimeout(resizing);
-  resizing = setTimeout(() => { resizing = 0; }, 400);
+  resizing = setTimeout(() => {
+    resizing = 0;
+    // A resize inside the desktop range leaves the layer armed while the page re-wraps under it: put back
+    // the place it was at rest on (crossing 1024 px reverts or arms the layer, which keeps it itself).
+    if (!state.armed || !lastPlace || moved() !== lastMoves) return;
+    const p = lastPlace;
+    ScrollTrigger.refresh();
+    restore(p, { to: toSmooth, rail: el => railPlace(el, p.rail, p.off) });
+    atRest();
+  }, 400);
 }, { passive: true });
 // A reload is restored by place.js from the place it saved, not by the browser: the browser would put
 // back a scroll offset measured with the strip's pin spacer into a page that does not have it yet.
@@ -166,7 +178,7 @@ function arm() {
     if (env.page === 'home') run('work', initWorkRail);
     // The rest one module per frame, so arming never becomes one long task; each runs inside the
     // matchMedia context (ctx.add), so a revert still undoes it. A revert mid-way stops the queue.
-    const steps = [['text', initText], ['frames', initFrames], ['reveals', initReveals]];
+    const steps = [['text', initText], ['frames', initFrames], ['reveals', initReveals], ['focus', focusEnters]];
     if (env.page === 'home') steps.push(['credits', initCredits]);
     steps.push(['cursor', initCursor], ['magnetic', initMagnetic], ['layout', watchLayout]);
     let alive = true;
@@ -181,7 +193,7 @@ function arm() {
       // Heights settled (fonts, splits, pin): put the visitor's place (or a first jump) back again.
       settle();
       state.armed = true;
-      lastPlace = grab();
+      atRest();
       requestAnimationFrame(() => requestAnimationFrame(idleNow));
     };
     ScrollTrigger.refresh();
@@ -229,6 +241,28 @@ function watchLayout(env) {
   return () => { ro.disconnect(); clearTimeout(t); };
 }
 
+/**
+ * Keyboard focus never rests on something unseen. Focus scrolls a block below the window up past its
+ * trigger line, but not one already low in it (the Index table's first row, under the toggle): an
+ * entrance still waiting there plays as soon as focus enters it.
+ */
+function focusEnters(env) {
+  const { gsap, ctx } = env;
+  const top = t => { let a = t; while (a.parent && a.parent !== gsap.globalTimeline) a = a.parent; return a; };
+  const onFocus = e => {
+    for (let el = e.target; el && el !== document.body; el = el.parentElement) {
+      if (el.style.opacity !== '0') continue;
+      const own = gsap.getTweensOf(el).map(top);
+      if (own.some(a => a.scrollTrigger?.vars.scrub)) continue;   // tied to the scroll (the hero's exit): focus scrolls it back
+      const waiting = own.filter(a => a.progress() < 1);
+      if (waiting.length) for (const a of waiting) a.play();
+      else ctx.add(() => gsap.to(el, { opacity: 1, y: 0, duration: 0.5, ease: 'kc.out', clearProps: 'opacity,transform' }));
+    }
+  };
+  document.addEventListener('focusin', onFocus);
+  return () => document.removeEventListener('focusin', onFocus);
+}
+
 /** New [data-reveal] content (e.g. the previs plans) arrived after arming. */
 function onContent(e) {
   if (!mm || !state.scanners.length) return;   // not armed, or the scanners have not run yet (they will see it)
@@ -238,7 +272,8 @@ function onContent(e) {
 }
 
 /**
- * @param {{ page?: 'home' | 'project', reveal?: { suspend: Function, resume: Function } }} o
+ * @param {{ page?: 'home' | 'project', reveal?: { suspend: Function, resume: Function }, settled?: Promise<unknown> }} o
+ *   settled: the page's late content (the home page's previs plans) is in
  * @returns {Promise<void>} resolves once the first arm has run (or was skipped)
  */
 export async function initMotion(o = {}) {
@@ -252,12 +287,16 @@ export async function initMotion(o = {}) {
     get timings() { return { ...state.timings }; },   // ms per module at the last arm (diagnostics)
     arm: () => { idle = freshIdle(); arm(); return idle; },
   };
-  // Line splits measure text: wait for the display face (never longer than 1.5 s).
+  // Line splits measure text: wait for the display face, and for the page's late content (o.settled), never
+  // longer than 1.5 s; then for a frame that has painted it. Arming in the very frame the previs plans grow
+  // their section would also slide that section down by the pinned strip's new spacer, and a section that
+  // moves both ways at once counts as shifting, even under the header (a visitor who arrived on #about).
   const fonts = document.fonts ? Promise.race([
     document.fonts.ready,
     Promise.all([document.fonts.load('400 1em "Cormorant Garamond"'), document.fonts.load('400 1em "IBM Plex Mono"')]),
   ]).catch(() => {}) : Promise.resolve();
-  await Promise.race([fonts, new Promise(r => setTimeout(r, 1500))]);
+  await Promise.race([Promise.all([fonts, o.settled]), new Promise(r => setTimeout(r, 1500))]);
+  await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
   // A refresh re-measures the pinned strip by lifting its box out of the pin spacer and back, and an
   // element moved in the DOM loses focus (a card link, the Selected work toggle): give it back.
   let focused = null;

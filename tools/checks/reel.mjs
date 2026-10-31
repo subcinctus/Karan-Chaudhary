@@ -16,31 +16,12 @@
 //       carries #t= or start=, texttrack or cc_load_policy, and never modestbranding; ?t=62 labels the facade
 //       "Play from 1:02" and the player starts there.
 
-import fs from 'node:fs';
-import path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { FFMPEG, BT709_TAGS, YUV709, hasFfmpeg, run } from '../lib/ffmpeg.mjs';
 
-/** The test reel as VP9: Playwright's Chromium cannot decode the H.264 clip ensureTestClip() makes. */
-const WEBM = '.artifacts/fixtures/reel.webm';
 const VIMEO = { provider: 'vimeo', id: '123456789', hash: 'abcdef1234', src: null, captions: { lang: 'en', label: 'English', src: null } };
 const YOUTUBE = { provider: 'youtube', id: 'FIXTUREyt01', hash: null, src: null, captions: { lang: 'en', label: 'English', src: null } };
 const STUB = '<!doctype html><title>Player stub</title><body style="margin:0;background:#000">';
 const EMBED_HOST = /^https:\/\/(player\.vimeo\.com|www\.youtube-nocookie\.com|www\.youtube\.com|vimeo\.com)\//;
-
-/** The 20 s testsrc2 pattern as a 640×360 VP9 WebM with a keyframe every second, made once (git-ignored). */
-async function ensureWebm(abs) {
-  const out = abs(WEBM);
-  if (fs.existsSync(out) && fs.statSync(out).size > 0) return WEBM;
-  if (!hasFfmpeg()) return null;
-  fs.mkdirSync(path.dirname(out), { recursive: true });
-  const tmp = out.replace(/\.webm$/, `.${process.pid}.tmp.webm`);
-  await run(FFMPEG, ['-y', '-loglevel', 'error', '-f', 'lavfi', '-i', 'testsrc2=size=640x360:rate=24', '-t', '20',
-    '-vf', YUV709, '-c:v', 'libvpx-vp9', '-deadline', 'realtime', '-cpu-used', '8', '-b:v', '400k', '-g', '24',
-    ...BT709_TAGS, '-an', tmp]);
-  fs.renameSync(tmp, out);
-  return WEBM;
-}
 
 /** Root-relative and script URLs in markup: attributes, every srcset candidate. */
 function badUrls(markup) {
@@ -92,7 +73,7 @@ const reelFacts = page => page.evaluate(() => {
     navHidden: [...document.querySelectorAll('.site-nav a[href$="#reel"]')].every(a => a.closest('li')?.hidden),
     aside: reel?.querySelector('.section-head__aside')?.textContent.trim() ?? '',
     note: reel?.querySelector('.reel-note')?.textContent.trim() ?? '',
-    shots: [...(reel?.querySelectorAll('.reel-shot') ?? [])].map(b => ({ t: Number(b.dataset.reelT), label: b.getAttribute('aria-label'), img: b.querySelector('img')?.getAttribute('src') ?? null, tc: b.querySelector('.reel-shot__tc')?.textContent })),
+    shots: [...(reel?.querySelectorAll('.reel-shot') ?? [])].map(b => ({ t: Number(b.dataset.reelT), label: b.textContent.replace(/\s+/g, ' ').trim(), img: b.querySelector('img')?.getAttribute('src') ?? null, tc: b.querySelector('.reel-shot__tc')?.textContent })),
     facade: reel?.querySelector('.reel-facade__label')?.textContent.trim() ?? '',
     players: reel?.querySelectorAll('video, iframe').length ?? 0,
     overflow: document.documentElement.scrollWidth > innerWidth + 1,
@@ -192,8 +173,9 @@ async function runBrowser(api) {
   }
 
   // --- A video file: the label, the note, the shot index, seeking, focus, the live region, captions.
+  //     It plays the VP9 copy of the test clip (tools/lib/fixture.mjs ensureTestWebm).
   let clip = null;
-  try { clip = await ensureWebm(abs); } catch (e) { fail(`test clip: ${e.message.split('\n')[0]}`); }
+  try { clip = await fixture.ensureTestWebm(); } catch (e) { fail(`test clip: ${e.message.split('\n')[0]}`); }
   if (!clip) skip('skipped: video file reel (no ffmpeg to make the test clip)');
   const fx = clip ? fixture.fixtureData({ reel: { src: clip } }) : null;
   const shots = fx ? RD.reelShots(fx) : [];
@@ -205,7 +187,7 @@ async function runBrowser(api) {
       const media = [];
       page.on('response', r => { if (r.url().endsWith(clip)) media.push(r.status()); });
       const f = await reelFacts(page);
-      const want = { aside: RD.reelLabel(fx.reel), labels: shots.map(s => `Play the reel from ${RD.formatTime(s.t)}${s.title ? ` — ${s.title}` : ''}${s.lens ? `, ${s.lens}` : ''}`) };
+      const want = { aside: RD.reelLabel(fx.reel), labels: shots.map(s => ['Play the reel from', RD.formatTime(s.t, { pad: true }), s.title, [s.lens, s.note].filter(Boolean).join(' · ')].filter(Boolean).join(' ')) };
       const probs = [];
       if (f.hidden) probs.push('#reel is hidden');
       if (f.aside !== want.aside) probs.push(`label "${f.aside}" (want "${want.aside}")`);
