@@ -189,3 +189,16 @@ two things that are **not** included in this repository:
 The Motion Prompt plugin is also referenced in `.claude/settings.json` (marketplace
 `showheyohtaki/motion-prompt`); it is not vendored. Any Unreal renders committed under
 `media/previs/` are original output of this project's own previs scenes.
+
+## agent-desktop skills (Apache-2.0)
+
+`.claude/skills/agent-desktop`, `agent-desktop-macos`, `agent-desktop-windows` and
+`agent-desktop-linux` are unmodified copies of the agent skills from **agent-desktop** by Vercel Labs:
+<https://github.com/vercel-labs/agent-desktop> (commit `893a414`), licensed under the
+Apache License 2.0 (<https://www.apache.org/licenses/LICENSE-2.0>). They were installed with
+`npx skills add`; `skills-lock.json` records their source and hashes.
+
+The skills drive the `agent-desktop` CLI, which is **not** included in this repository. Install it on
+the machine that runs Claude Code with `npm install -g agent-desktop`. On macOS, grant Accessibility
+permission (`agent-desktop permissions --guide`). Snapshots, screenshots and clipboard reads can
+contain private desktop content, so keep them out of commits and public logs.

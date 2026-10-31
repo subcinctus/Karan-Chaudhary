@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "agent-desktop": {
+      "source": "vercel-labs/agent-desktop",
+      "sourceType": "github",
+      "skillPath": "skills/agent-desktop/SKILL.md",
+      "computedHash": "b3648a030865ddf707cb5878a53299a4a87c7549c2f6f461dc178ddd3b252e19"
+    },
+    "agent-desktop-linux": {
+      "source": "vercel-labs/agent-desktop",
+      "sourceType": "github",
+      "skillPath": "skills/agent-desktop-linux/SKILL.md",
+      "computedHash": "5fc964ff9f0865cefa92f4b591604075682bf4d0501e6f7944fd82f744b9e5bf"
+    },
+    "agent-desktop-macos": {
+      "source": "vercel-labs/agent-desktop",
+      "sourceType": "github",
+      "skillPath": "skills/agent-desktop-macos/SKILL.md",
+      "computedHash": "65a47f710197e5450621bad261e546ba72d88a21ca1423ca6cc9d68d7a13735a"
+    },
+    "agent-desktop-windows": {
+      "source": "vercel-labs/agent-desktop",
+      "sourceType": "github",
+      "skillPath": "skills/agent-desktop-windows/SKILL.md",
+      "computedHash": "8a2561dcf4a36c8dc54893322203964ed0cd21cabd57b0f3c11ffeb58c472481"
+    }
+  }
+}
