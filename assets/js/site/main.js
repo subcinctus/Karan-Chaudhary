@@ -416,12 +416,12 @@ function boot() {
       .then(ok => {
         if (ok) { reveal.scan(grid); window.dispatchEvent(new CustomEvent('kc:content', { detail: { scope: grid } })); }
         // An arrival on #about (etc.) aimed before the plans existed: the plans have just pushed it a few
-        // screens down. Put it back before this frame paints (unless the visitor has scrolled since), then
-        // aim again once any scroll has settled.
+        // screens down. Put it back before this frame paints, then aim again once any scroll has settled;
+        // neither once the visitor has scrolled (place.js moved()): they have left the target on purpose.
         let target = null;
         try { target = location.hash ? document.querySelector(decodeURIComponent(location.hash)) : null; } catch { /* bad hash */ }
         if (recalled) reapply();
-        else if (target) { if (!moved()) R.settleHash(); aim(target); }
+        else if (target && !moved()) { R.settleHash(); aim(target); }
       })
       .catch(err => { console.info('[previs] unavailable', err?.message ?? err); grid.hidden = true; });
   }

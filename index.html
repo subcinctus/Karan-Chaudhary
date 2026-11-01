@@ -560,7 +560,8 @@
        after the faces have been laid out, never in the frame they swap in (that would count as a shift).
        Held back, the page gives the browser nothing to anchor its scroll to, so a face that re-sets the
        sections above the target would carry it off its place: it is put back in that same frame (a
-       ResizeObserver runs after layout, before paint) until the page shows or the visitor scrolls.
+       ResizeObserver runs after layout, before paint) until the page shows. A visitor who acts (a key,
+       the wheel, a touch, a click) ends the hold at once: nothing they reach is ever invisible.
        main.js lands it again if this could not. -->
   <script>
     (function () {
@@ -576,7 +577,7 @@
       var show = function () { d.classList.remove('is-arriving'); stop(); };
       var twoFrames = function (f) { requestAnimationFrame(function () { requestAnimationFrame(f); }); };
       for (var s = ro && document.querySelector('main').firstElementChild; s; s = s.nextElementSibling) ro.observe(s);
-      ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(function (k) { addEventListener(k, stop, { once: true, passive: true }); });
+      ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(function (k) { addEventListener(k, show, { once: true, passive: true }); });
       d.classList.add('is-arriving');
       // Two frames in, the first layouts have asked for every face the page shows: then once those have loaded
       // and a frame has been laid out with them.

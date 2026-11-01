@@ -56,13 +56,14 @@
   position: absolute; z-index: 2; top: 50%; transform: translateY(-50%);
   width: 56px; height: 56px; padding: 0; display: grid; place-items: center;
   border: 1px solid var(--line-strong); border-radius: 50%; background: rgb(7 8 10 / 0.55); color: var(--paper);
-  transition: border-color var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out), opacity var(--dur-2) var(--ease-out);
+  transition: border-color var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
 }
 .lightbox__nav--prev { left: max(24px, env(safe-area-inset-left)); }
 .lightbox__nav--next { right: max(24px, env(safe-area-inset-right)); }
 .lightbox__nav:hover { border-color: var(--tungsten); color: var(--tungsten); }
-.lightbox__nav[aria-disabled="true"] { opacity: 0.28; cursor: default; }
-.lightbox__nav[aria-disabled="true"]:hover { border-color: var(--line-strong); color: var(--paper); }
+/* At either end the button stays in the Tab order (aria-disabled): dimmed by its colours, never by its
+   opacity, which would dim its focus ring too. */
+.lightbox__nav[aria-disabled="true"], .lightbox__nav[aria-disabled="true"]:hover { border-color: var(--line); color: var(--paper-3); cursor: default; }
 
 /* Info: the credit first (DP before director), then the frame's own lines. */
 .lightbox__info {

@@ -1,18 +1,25 @@
 // Check plugin (static + browser): the film page (project.html?slug=…), as the plan's "Film page" describes it.
 //
 //   static  film: the film page's markup (render.js renderProject, and the frame cards project.js adds) holds
-//           no root-relative or script URL, for the real data and for the fixture.
+//           no root-relative or script URL, for the real data and for the fixture. project.html's module
+//           preloads are relative files of the site, pieces/still.js among them while a lead frame is a
+//           placeholder (it paints the page's largest image).
 //   browser film, on the first sample film that has a sequence and a plot, at every --viewports size:
 //     - no console errors; no frame is cropped: every .frame img box is within 1.5 % of its natural aspect;
 //     - the crew block's "Photographed by" line and DP row; the plot SVG named by its title and described by
-//       its desc (and a plan that fits: its view stays under 30 m across); the sample badges ("Sample
-//       sequence", "Sample plot", "Placeholder still") visible.
+//       its desc (and a plan that fits: its view stays under 30 m across); from 900 px the plot's two
+//       columns (frame, caption and legend; plan and motivation) end within 80 px of each other; the sample
+//       badges ("Sample sequence", "Sample plot", "Placeholder still") visible.
+//     At the desktop size, a short window (480 px tall): the lead frame keeps at least 56 % of its height.
 //     At the desktop and the phone sizes, the lightbox: frame 02 opens it at "02 / 0N", focus on Close,
 //     html.modal-open, the live region; → / ← (no wrap), Home / End, i (the info panel and its DP-first
 //     credit), a swipe on phones; the previous/next buttons (and from 1024 px the info panel) never cover
 //     the picture; Esc closes, html.modal-open goes, focus is back on the button that opened it; Lenis
 //     stopped while it is open (desktop); no object URL left behind; the sequence opens its own set; a double
 //     click on a frame leaves it open (desktop). Under Motion off it opens and steps without animating.
+//     When the film's scripts fail (film-facts.js does not load; the data throws; the film throws as it
+//     renders), the static filmography and the footer show instead of a blank page; on a film that renders,
+//     html.film-failed is never set.
 //     Once: the work card on the index, the lead frame and frame 01 show one procedural image (a 24 × 10
 //     luminance signature; frame 02 is the control).
 //   A fixture run (tools/lib/fixture.mjs: real-still stand-ins, crew names, camera lines, palettes, srcset,
@@ -23,6 +30,8 @@
 import { pathToFileURL } from 'node:url';
 
 const ASPECT_TOLERANCE = 0.015;
+/** Two-column lighting plot (from 900 px): how far apart its columns may end before it reads as a hole. */
+const PLOT_BALANCE = 80;
 
 /** Root-relative and script URLs in markup: attributes, every srcset candidate, CSS url(). */
 function badUrls(markup) {
@@ -33,9 +42,19 @@ function badUrls(markup) {
   return hits;
 }
 
-async function runStatic({ pass, fail, R, abs, loadData, fixture }) {
+async function runStatic({ pass, fail, R, abs, read, exists, loadData, fixture }) {
   const FC = await import(pathToFileURL(abs('assets/js/site/frame-card.js')).href);
   const FF = await import(pathToFileURL(abs('assets/js/site/film-facts.js')).href);
+  // project.html's module preloads are relative and exist. While any film's lead frame is a placeholder,
+  // pieces/still.js is among them: project.js imports it only once the film has rendered, yet it paints
+  // the page's largest image (emulated 4G at 1440: that paint at 2.9 s without the preload, 2.4 s with it).
+  const preloads = [...read('project.html').matchAll(/<link rel="modulepreload" href="([^"]*)">/g)].map(m => m[1]);
+  const broken = preloads.filter(h => /^(?:[a-z]+:|\/)/i.test(h) || !exists(h));
+  const placeholderLead = ((await loadData()).films ?? []).some(f => FC.frameItems(f)[0]?.placeholder);
+  if (broken.length) fail(`project.html module preloads that are not relative files of the site: ${broken.join(', ')}`);
+  else if (placeholderLead && !preloads.includes('assets/js/pieces/still.js')) fail('project.html does not modulepreload assets/js/pieces/still.js, which paints the placeholder lead frame (the largest paint): it loads last, after the film has rendered');
+  else pass(`project.html preloads ${preloads.length} modules, all relative files of the site${placeholderLead ? ', pieces/still.js (the placeholder lead frame) among them' : ''}`);
+
   const sets = [['data/portfolio.js', await loadData()], ['the fixture', fixture.fixtureData()]];
   let pages = 0;
   for (const [name, d] of sets) {
@@ -106,10 +125,21 @@ const pageFacts = page => page.evaluate(() => {
   const seen = el => !!el && el.getClientRects().length > 0 && (el.checkVisibility?.({ opacityProperty: true, visibilityProperty: true }) ?? true);
   const svg = document.querySelector('.film-plot__svg');
   const vb = svg?.getAttribute('viewBox')?.split(/\s+/).map(Number) ?? [];
+  // Where the plot's two columns end, from the grid's top: the frame's (frame, caption, legend) and the plan's
+  // (drawing, motivation). Null while the block is one column.
+  const plotColumns = () => {
+    const grid = document.querySelector('.film-plot__grid');
+    if (!grid || getComputedStyle(grid).gridTemplateColumns.split(' ').length < 2) return null;
+    const g = grid.getBoundingClientRect(), mid = g.left + g.width / 2;
+    const kids = [...grid.children].map(e => e.getBoundingClientRect()).filter(r => r.height > 0);
+    const foot = side => Math.round(Math.max(0, ...kids.filter(r => (r.left < mid) === side).map(r => r.bottom - g.top)));
+    return { frame: foot(true), plan: foot(false) };
+  };
   return {
     credit: document.querySelector('.film__credit')?.textContent.replace(/\s+/g, ' ').trim() ?? null,
     rows: [...document.querySelectorAll('.film__crew .report__row')].map(r => [r.querySelector('dt')?.textContent.trim(), r.querySelector('dd')?.textContent.trim()]),
     plot: svg ? { title: svg.querySelector('title')?.textContent ?? '', desc: svg.querySelector('desc')?.textContent ?? '', rings: svg.querySelectorAll('circle').length, width: vb[2] ?? 0, labelled: svg.getAttribute('aria-labelledby') ?? '', described: svg.getAttribute('aria-describedby') ?? '', titleId: svg.querySelector('title')?.id ?? '', descId: svg.querySelector('desc')?.id ?? '' } : null,
+    plotCols: plotColumns(),
     badges: Object.fromEntries(['Sample sequence', 'Sample plot', 'Placeholder still', 'Sample'].map(t => [t, [...document.querySelectorAll('.badge-sample')].filter(b => b.textContent.trim() === t).some(seen)])),
   };
 });
@@ -219,6 +249,9 @@ async function runBrowser(api) {
         else if (p.title !== want || p.desc.length < 40 || p.labelled !== p.titleId || p.described !== p.descId) fail(`${tag}: plot SVG title "${p.title}" (want "${want}"), desc ${p.desc.length} chars, aria-labelledby "${p.labelled}" (want the title's id alone), aria-describedby "${p.described}" (want the desc's id)`);
         else if (!p.rings || !(p.width > 0 && p.width < 30)) fail(`${tag}: the plan did not fit: ${p.rings} rings, a view ${p.width.toFixed(1)} m across (a label too long for its place zooms the plan out)`);
         else pass(`${tag}: plot SVG named by its title "${p.title}" and described by its ${p.desc.length}-character desc; the plan spans ${p.width.toFixed(1)} m`);
+        const c = facts.plotCols;
+        if (c && Math.abs(c.frame - c.plan) > PLOT_BALANCE) fail(`${tag}: the lighting plot's columns end ${Math.abs(c.frame - c.plan)} px apart (frame, caption and legend ${c.frame} px; plan and motivation ${c.plan} px): a hole under the shorter one (at most ${PLOT_BALANCE})`);
+        else if (c) pass(`${tag}: the lighting plot's columns end together: frame, caption and legend ${c.frame} px; plan and motivation ${c.plan} px`);
       }
       const wanted = ['Placeholder still', ...(sequence?.placeholder ? ['Sample sequence'] : []), ...(film.lightingPlot?.placeholder ? ['Sample plot'] : []), ...(film.placeholder ? ['Sample'] : [])];
       const hidden = wanted.filter(t => !facts.badges[t]);
@@ -228,10 +261,41 @@ async function runBrowser(api) {
       if ((vp === desktop || vp === phone) && n > 1) {
         await lightbox(page, { tag, touch, n, film, sequence, smoothHolds, api });
       }
+      if (vp === desktop) await leadFloor(page, { tag, w, h, api });
+      if (await page.evaluate(() => document.documentElement.classList.contains('film-failed'))) fail(`${tag}: html.film-failed is set on a film that rendered (the filmography's fallback fired on a working page)`);
       clean(errors, tag);
     } catch (e) {
       fail(`${tag}: ${e.message.split('\n')[0]}`);
     } finally { await ctx.close(); }
+  }
+
+  // --- The film's scripts fail (a module that does not load, data that throws): the static filmography and
+  //     the footer show in place of a blank page.
+  if (desktop) {
+    const [w, h] = desktop;
+    for (const [what, pattern, body] of [
+      ['film-facts.js does not load', /site\/film-facts\.js$/, null],
+      ['the data throws', /data\/portfolio\.js$/, 'export default (() => { throw new Error("check: bad data"); })();'],
+      // The real data with every film's stills malformed: project.js's async boot() throws as it renders,
+      // which reaches the page as an unhandled rejection (the query string passes this route by).
+      ['the film throws as it renders', /data\/portfolio\.js$/, 'import d from "./portfolio.js?real"; for (const f of d.films ?? []) f.stills = 5; export default d;'],
+    ]) {
+      const tag = `${film.slug} ${w}×${h}, ${what}`;
+      const ctx = await chromium.newContext(contextOptions({ w, h }));
+      try {
+        const page = await ctx.newPage();
+        page.on('pageerror', () => {});   // the throw is the point
+        await page.route(pattern, r => (body ? r.fulfill({ status: 200, contentType: 'text/javascript', body }) : r.fulfill({ status: 404, body: '' })));
+        await page.goto(srv.url + `project.html?slug=${encodeURIComponent(film.slug)}`, { waitUntil: 'load', timeout: 45000 });
+        await page.waitForTimeout(1500);
+        const r = await page.evaluate(() => {
+          const seen = el => !!el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+          return { h1: [...document.querySelectorAll('main h1')].filter(seen).map(e => e.textContent.trim()), links: [...document.querySelectorAll('main a[href*="project.html?slug="]')].filter(seen).length, footer: seen(document.querySelector('.site-footer')) };
+        });
+        if (!r.h1.length || r.links < (films.length) || !r.footer) fail(`${tag}: the page is blank under the header (visible h1 ${JSON.stringify(r.h1)}, ${r.links} film link(s), footer ${r.footer ? 'shown' : 'hidden'}); the static filmography should show`);
+        else pass(`${tag}: the static filmography shows instead ("${r.h1[0]}", ${r.links} film links) and the footer with it`);
+      } catch (e) { fail(`${tag}: ${e.message.split('\n')[0]}`); } finally { await ctx.close(); }
+    }
   }
 
   // --- Motion off: the lightbox opens and steps without animating.
@@ -358,6 +422,25 @@ async function runBrowser(api) {
   }
 }
 
+/**
+ * A short desktop window (or a head grown by a long title): the lead frame keeps at least 56 % of the
+ * window's height (site.css), so the head costs scroll rather than picture; it never shrinks to a thumbnail.
+ */
+async function leadFloor(page, { tag, w, h, api }) {
+  const { pass, fail } = api, short = 480;
+  await page.setViewportSize({ width: w, height: short });
+  await page.waitForTimeout(500);
+  const r = await page.evaluate(() => {
+    const f = document.querySelector('.film__hero .film__frame')?.getBoundingClientRect();
+    return f ? { w: Math.round(f.width), h: Math.round(f.height), vw: innerWidth, vh: innerHeight } : null;
+  });
+  await page.setViewportSize({ width: w, height: h });
+  await page.waitForTimeout(500);
+  if (!r) fail(`${tag}: no lead frame (.film__hero .film__frame)`);
+  else if (r.h < 0.56 * r.vh - 2 && r.w < r.vw - 2) fail(`${tag}: at ${w}×${short} the lead frame shrinks to ${r.w}×${r.h} px, ${Math.round((r.h / r.vh) * 100)} % of the window's height (want at least 56 %): the head took the picture`);
+  else pass(`${tag}: at ${w}×${short} the lead frame keeps ${r.w}×${r.h} px (${Math.round((r.h / r.vh) * 100)} % of the window's height), running on below the fold`);
+}
+
 /** The before/after wipes on the fixture's film: placed after the plot, moved by mouse, keys and a tap. */
 async function wipes(page, { tag, touch, fx, api }) {
   const { pass, fail } = api;
@@ -435,6 +518,16 @@ async function lightbox(page, { tag, touch, n, film, sequence, smoothHolds, api 
   await press('End');
   if (atEnd !== counterOf(n, n) || atStart !== counterOf(1, n) || (await lightboxState(page)).counter !== counterOf(n, n)) fail(`${tag}: keys: ${seq.join(', ')}`);
   else pass(`${tag}: → and ← step without wrapping, Home and End jump (${seq.join(', ')})`);
+  // At the end, Next stays in the Tab order (aria-disabled): it is dimmed by its colours, never by its
+  // opacity, which would take its focus ring under 3:1.
+  const dim = await page.evaluate(() => {
+    const b = document.querySelector('dialog.lightbox[open] .lightbox__nav--next');
+    let op = 1;
+    for (let e = b; e; e = e.parentElement) op *= parseFloat(getComputedStyle(e).opacity);
+    return { disabled: b?.getAttribute('aria-disabled'), op: Math.round(op * 100) / 100 };
+  });
+  if (dim.disabled !== 'true' || dim.op < 1) fail(`${tag}: Next at the last frame: aria-disabled "${dim.disabled}", drawn at opacity ${dim.op} (its focus ring with it; want 1)`);
+  else pass(`${tag}: Next at the last frame is aria-disabled and dimmed by colour (opacity 1: its focus ring keeps full contrast)`);
 
   if (touch) {
     const swipe = dx => page.evaluate(d => {

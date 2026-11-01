@@ -6,10 +6,11 @@
    first paint, so the view chosen last is the one that paints. Without JavaScript the table is the
    filmography (the frames are palettes until scripts paint their stills).
    Columns by width: under 720 Year · Title · Format · Aspect; from 720 No and Director join; from 1100
-   the sticky preview pane sits beside the table; from 1366 Camera / Lens; from 1800 Production /
-   Platform and Premiere, so every column. Nine columns need 860–910 px (their min-content, measured),
-   and beside the pane there are 647 px at 1100, 841 at 1440 and 1046 at 1800: any sooner and the cells
-   wrap word by word, or the table is cut off. Without the pane (no JavaScript) the table has the full
+   the sticky preview pane sits beside the table; from 1800 Camera / Lens, Production / Platform and
+   Premiere, so every column. Nine columns need 860–910 px (their min-content, measured), and beside
+   the pane there are 647 px at 1100, 841 at 1440 and 1046 at 1800: any sooner and the cells wrap word
+   by word, or the table is cut off (Camera / Lens alone would wrap the titles, and six rows would no
+   longer fit the first screen at 1440 × 900). Without the pane (no JavaScript) the table has the full
    width and every column from 1100; print shows them all.
    Phones and tablets (no desktop layer): each card's gate wipes open as it scrolls in, the film strip's
    gate wipe (motion/work.js, numbers only: inset(0 100% 0 0) → inset(0), left to right) driven by the
@@ -101,19 +102,21 @@ td.work-index__no { color: var(--paper-3); transition: color 200ms var(--ease-ui
   transition: background-size 450ms var(--ease-io-expo);
 }
 .work-index__row:hover .work-index__title, .work-index__link:focus-visible .work-index__title { background-size: 100% 1px; background-position-x: 0; }
+/* The focus ring is the title's: the link's area (its ::after) can sit on an empty line after a wrapped
+   title, and the link's own ring would trace that empty fragment as a stray bracket. */
+.work-index__link:focus-visible { outline: 0; }
+.work-index__link:focus-visible .work-index__title { outline: var(--focus-ring); outline-offset: var(--focus-offset); }
+@media (forced-colors: active) { .work-index__link:focus-visible .work-index__title { outline-color: Highlight; } }
 .work-index__film .badge-sample { margin: 0; vertical-align: 0.35em; font-size: 0.62rem; padding: 1px 6px; }
 
 /* Columns by width (see the top): what a width cannot hold waits for a wider one. Without JavaScript
    there is no pane, so from 1100 the table has the full width and every column. */
 @media (max-width: 1799px) {
-  html.js .work-index :is(.work-index__prod, .work-index__premiere) { display: none; }
-}
-@media (max-width: 1365px) {
-  html.js .work-index .work-index__kit { display: none; }
+  html.js .work-index :is(.work-index__prod, .work-index__kit, .work-index__premiere) { display: none; }
 }
 /* With Camera / Lens (two or three lines of it) a row is taller: a tighter padding keeps all six rows on the
    first screen under the head. */
-@media (min-width: 1366px) {
+@media (min-width: 1800px) {
   .work-index__table tbody :is(th, td) { padding-block: 14px; }
 }
 @media (max-width: 1099px) {
@@ -122,12 +125,23 @@ td.work-index__no { color: var(--paper-3); transition: color 200ms var(--ease-ui
 @media (max-width: 719px) {
   .work-index :is(.work-index__no, .work-index__dir) { display: none; }
   /* A narrow window (320 px is a 1280 px screen at 400 %) or wider text spacing can need more than the
-     width: the table scrolls sideways instead of cutting off Aspect, and the title cell is the link's area. */
-  .work-index__list { margin-inline: calc(-1 * var(--s2)); overflow-x: auto; }
+     width: the table scrolls sideways instead of cutting off Aspect, and the title cell is the link's area.
+     The edge with more of the table beyond it carries a soft light (fixed to the box), which a cover in
+     the page's ink (carried with the table) hides once that edge is reached: a table that fits shows none. */
+  .work-index__list {
+    margin-inline: calc(-1 * var(--s2)); overflow-x: auto;
+    background:
+      linear-gradient(to right, var(--ink-1) 50%, rgb(12 13 16 / 0)) left / 28px 100% no-repeat local,
+      linear-gradient(to left, var(--ink-1) 50%, rgb(12 13 16 / 0)) right / 28px 100% no-repeat local,
+      radial-gradient(farthest-side at 0 50%, rgb(236 230 218 / 0.16), rgb(236 230 218 / 0)) left / 14px 100% no-repeat scroll,
+      radial-gradient(farthest-side at 100% 50%, rgb(236 230 218 / 0.16), rgb(236 230 218 / 0)) right / 14px 100% no-repeat scroll;
+  }
   .work-index__link::after { inset: 0; }
   .work-index__table :is(th, td) { padding: 14px var(--s2); }
   .work-index__table thead th { padding-block: 0 var(--s2); }
   .work-index__title { font-size: 1.35rem; }
+  /* A sample's badge under the title, in every row (inline, it would ride on some titles' lines only). */
+  .work-index__film .badge-sample { display: block; width: max-content; margin-top: 6px; }
 }
 
 /* Rack focus: on a pointer with motion on, the rows the pointer is not on go soft. Hover only: keyboard

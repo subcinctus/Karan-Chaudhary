@@ -229,7 +229,10 @@ export function plotRows(film) {
  */
 const legendValue = v => html`${keepDots(v).split(/(?<=\d) m\b/).map((part, k) => (k ? html`\u00a0<span class="film-plot__unit">m</span>${part}` : part))}`;
 
-/** The lighting plot block: its frame (7/12) beside the plan, the motivation and the legend (5/12). */
+/**
+ * The lighting plot block: its frame with the legend under it (7/12) beside the plan and the motivation
+ * (5/12). On phones it reads frame, plan, motivation, legend: the order of the markup.
+ */
 export function renderPlotShell(film, data) {
   const p = plotOf(film);
   if (!p) return '';
@@ -241,7 +244,7 @@ export function renderPlotShell(film, data) {
         <h2 class="cam-label film__h" id="plot-title">${keepDots(`Lighting plot${filled(p.scene) ? ` · ${p.scene}` : ''}`)}</h2>
         ${badge(p, data, 'Sample plot')}
       </header>
-      <div class="film-plot__grid">
+      <div class="film-plot__grid" style="--ar:${item.aspect}">
         <figure class="film-plot__shot">
           ${renderFrameButton(item, i, { total: items.length, cls: 'film-plot__frame', label: `Frame ${pad2(i + 1)} · lit as planned`, sizes: '(min-width: 900px) 58vw, 100vw' })}
           ${renderFrameCaption(film, item, i, { chips: false })}
@@ -249,8 +252,8 @@ export function renderPlotShell(film, data) {
         <div class="film-plot__plan">
           <svg class="film-plot__svg" id="film-plot-svg" viewBox="0 0 100 100" role="img" aria-labelledby="film-plot-svg-title" aria-describedby="film-plot-svg-desc"><title id="film-plot-svg-title">${plotTitle(film, p)}</title><desc id="film-plot-svg-desc">${filled(p.motivation) ?? ''}</desc></svg>
           ${filled(p.motivation) ? html`<p class="film-plot__why">${p.motivation}</p>` : ''}
-          <dl class="report report--tight film-plot__legend">${plotRows(film).map(([k, v]) => html`<div class="report__row"><dt>${k}</dt><dd>${legendValue(v)}</dd></div>`)}</dl>
         </div>
+        <dl class="report report--tight film-plot__legend">${plotRows(film).map(([k, v]) => html`<div class="report__row"><dt>${k}</dt><dd>${legendValue(v)}</dd></div>`)}</dl>
       </div>
     </section>`;
 }

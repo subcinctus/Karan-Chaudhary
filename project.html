@@ -70,7 +70,17 @@
       // lands on it. Otherwise the header paints at once (the footer waits unseen: film.css).
       var hold = false;
       try { hold = !!sessionStorage.getItem('kc:vt'); } catch (e) { /* storage blocked: no hand-off */ }
-      document.write('<script type="module" src="assets/js/site/project.js"' + (hold ? ' blocking="render"' : '') + '><\/script>');
+      // If project.js or a module it imports fails to load, or throws before the film is on the page, the
+      // static filmography shows in its place (html.film-failed: site.css, film.css), never a blank page.
+      // A throw inside project.js's boot() (async) arrives as an unhandled rejection, not an error.
+      var failed = function (load) {
+        var m = document.querySelector('[data-project]');
+        if (load === true || (m && !m.querySelector(':scope > :not(.film-static)'))) d.classList.add('film-failed');
+      };
+      addEventListener('error', failed);
+      addEventListener('unhandledrejection', failed);
+      window.kcFilmFailed = failed;
+      document.write('<script type="module" src="assets/js/site/project.js"' + (hold ? ' blocking="render"' : '') + ' onerror="kcFilmFailed(true)"><\/script>');
       addEventListener('pagereveal', function (e) {
         if (!e.viewTransition) { d.dataset.vt = 'none'; return; }
         if (d.dataset.motion === 'off') { e.viewTransition.skipTransition(); d.dataset.vt = 'skipped'; } else d.dataset.vt = 'on';
@@ -87,6 +97,8 @@
   <link rel="modulepreload" href="assets/js/site/film-facts.js">
   <link rel="modulepreload" href="assets/js/site/frame-card.js">
   <link rel="modulepreload" href="assets/js/site/match-cut.js">
+  <!-- Imported only once the film has rendered, but it paints a placeholder lead frame: the largest paint. -->
+  <link rel="modulepreload" href="assets/js/pieces/still.js">
 </head>
 <body class="site site--project">
   <a class="skip-link" href="#main">Skip to content</a>

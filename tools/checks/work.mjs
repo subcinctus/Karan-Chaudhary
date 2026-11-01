@@ -8,13 +8,14 @@
 //   browser work, on the index page:
 //     1440×900, armed: Frames → Index drops html.work-rail and the work-rail ScrollTrigger, keeps focus
 //       on the pressed button and the toggle where it was on screen, and stores the view; one row per
-//       film; hovering row 2 puts film 2 in the pane (one [data-preview-frame], its picture not cropped)
+//       film, every one on the first screen when the nav's Work link lands the Index view; hovering row 2 puts film 2 in the pane (one [data-preview-frame], its picture not cropped)
 //       and softens every other row, never the hovered one; Tab to a row puts its film in the pane and
 //       blurs nothing; Motion off then leaves no inline motion style and no blur; a reload keeps the
 //       view; Index → Frames re-pins the strip with the toggle still in its place; Motion off at the
 //       end leaves no inline motion style in <main>.
 //     1366×768: the pinned strip still fits after a round trip through the Index view.
-//     390×844, touch: the toggle switches the views (Year, Title, Format, Aspect), no desktop layer.
+//     390×844, touch: the toggle switches the views (Year, Title, Format, Aspect), no desktop layer; Tab
+//       to each title draws its ring round the title's lines only (no empty line box after a wrapped one).
 //     No JavaScript (the generated index.html): the table and every title show; the frames, the toggle
 //       and the pane do not.
 //     Print media: every column; the frames, the toggle and the pane are off the page.
@@ -78,6 +79,9 @@ const viewState = page => page.evaluate(() => {
     tops: { frames: Math.round(btn('frames')?.getBoundingClientRect().top ?? NaN), index: Math.round(btn('index')?.getBoundingClientRect().top ?? NaN) },
     grid: shown(document.querySelector('#work .work-grid')), table: shown(document.querySelector('.work-index__table')),
     rows: [...document.querySelectorAll('tr.work-index__row')].filter(shown).length,
+    // Rows wholly on the first screen, and where the last one ends.
+    onScreen: [...document.querySelectorAll('tr.work-index__row')].filter(r => shown(r) && r.getBoundingClientRect().top >= 0 && r.getBoundingClientRect().bottom <= innerHeight + 0.5).length,
+    lastBottom: Math.round(document.querySelector('tr.work-index__row:last-child')?.getBoundingClientRect().bottom ?? NaN),
   };
 });
 
@@ -158,6 +162,14 @@ async function desktop(api, { films }) {
     if (s1.rows !== films.length) p1.push(`${s1.rows} rows for ${films.length} films`);
     if (p1.length) fail(`${tag}: Frames → Index: ${p1.join('; ')}`);
     else pass(`${tag}: Frames → Index, clicked inside the pinned strip, unpins it (no html.work-rail, no work-rail ScrollTrigger, no pin spacer), shows ${s1.rows} rows, keeps focus on the pressed Index button and the toggle at ${s1.tops.index} px (was ${s0.tops.index}); stored in localStorage`);
+
+    // 1b. The scannable view: the nav's Work link lands the Index with every row on the first screen under
+    //     the head (rows 64–72 px, as planned), not a row cut off by the fold.
+    await page.click('.site-nav a[href$="#work"]');
+    await page.waitForTimeout(2500);
+    const s1b = await viewState(page);
+    if (s1b.onScreen !== s1b.rows) fail(`${tag}: the nav's Work link in the Index view shows ${s1b.onScreen} of ${s1b.rows} rows on the first screen (the last ends at ${s1b.lastBottom} px of 900)`);
+    else pass(`${tag}: the nav's Work link in the Index view shows all ${s1b.rows} rows on the first screen (the last ends at ${s1b.lastBottom} px of 900)`);
 
     // 2. Hover row 2: its film in the pane, the other rows softened, the hovered one sharp.
     await page.locator('tr.work-index__row').nth(1).hover();
@@ -278,12 +290,25 @@ async function phone(api, { films }) {
     const s = await viewState(page);
     const cols = await page.evaluate(() => [...document.querySelectorAll('.work-index__table thead th')].filter(th => getComputedStyle(th).display !== 'none').map(th => th.textContent.trim()));
     await page.screenshot({ path: abs('.artifacts/screens/work--index--390x844.png') });
+    // A keyboard on the phone layout: each title's ring traces the title's lines only, never an empty line
+    // box after a wrapped title (a stray bracket down to the SAMPLE badge).
+    const stray = [];
+    await page.focus('.work-view [data-view="index"]');
+    for (let k = 0; k < films.length; k++) {
+      await page.keyboard.press('Tab');
+      stray.push(...await page.evaluate(() => {
+        const a = document.activeElement;
+        const ringed = [a, a.querySelector('.work-index__title')].filter(e => e && getComputedStyle(e).outlineStyle !== 'none');
+        return ringed.flatMap(e => [...e.getClientRects()].filter(r => r.width < 1 || r.height < 1).map(() => `${a.textContent.trim()} (${e === a ? 'link' : 'title'})`));
+      }));
+    }
     await page.locator('.work-view [data-view="frames"]').tap();
     await page.waitForTimeout(400);
     const back = await viewState(page);
     const probs = [];
     if (s.view !== 'index' || s.grid || !s.table || s.rows !== films.length || s.pressed.index !== 'true') probs.push(`Index: ${JSON.stringify(s)}`);
     if (cols.join('|') !== 'Year|Title|Format|Aspect') probs.push(`columns ${cols.join(', ')}`);
+    if (stray.length) probs.push(`a focus ring traces an empty line box: ${stray.join(', ')}`);
     if (back.view !== 'frames' || !back.grid || back.table) probs.push(`back to Frames: ${JSON.stringify(back)}`);
     if (asked.length) probs.push(`requested ${asked.join(', ')}`);
     if (errors.length) probs.push(`${errors.length} error(s): ${errors.slice(0, 2).join(' | ')}`);

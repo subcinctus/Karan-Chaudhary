@@ -108,7 +108,7 @@ names the section of `npm run check` that verifies it: `data` (the schema in `to
 | A shot index into the reel (seen on a DP's own site: [Ian Coad](https://www.iancoad.com/reel/explore), checked 2026-10) | `reel.shots` (`t: '0:12'`, `film`, `lens`, `note`, `thumb`) | The shot index under the reel; `index.html?t=62#reel` | `data` (times in order, inside the runtime); `reel` |
 | Say when there is no dialogue (WAI) | `reel.dialogue: false`, `reel.captions` | "No dialogue — instrumental"; the player's captions | `reel` |
 | The reel in search results | `reel.poster`, `reel.uploadDate` | JSON-LD `VideoObject` with key moments | `seo-static` |
-| Format and camera for each film (AFI) | `format`, `camera`, `lenses`, `aspect`, `frameRate` | Film page camera report; the Index view | `film`, `work` |
+| Format and camera for each film (AFI) | `format`, `camera`, `lenses`, `aspect`, `frameRate` | Film page camera report; the Index view (format and aspect at every width; camera and lens on screens 1800 px wide and up, and in print) | `film`, `work` |
 | Made at a school or independently (AFI) | `madeAt: { type, name, note }` | Film page: "Made at" | `data` warns on a real film without it |
 | AI use for each film (AFI; NYU asks to disclose) | `aiUse: 'none'` or your own words | Film page: "AI use" | `data` warns on a real film without it |
 | Credited as operator and lighting designer (NFTS) | `operated`, `lit`, `crew` (real names only) | Film page credits: "Photographed by…", operator, lighting, gaffer, colourist, production designer | `data` warns on a real film without them; `film` |

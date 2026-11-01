@@ -12,8 +12,8 @@
 
 /* Until project.js renders the film, main holds only the static filmography (hidden under html.js): an
    arrival without a match cut paints the header first, and the footer waits unseen rather than jump
-   down the screen as the film arrives. */
-html.js .site--project main:has(> .film-static) ~ .site-footer { visibility: hidden; }
+   down the screen as the film arrives. If the film's scripts failed, the filmography and the footer show. */
+html.js:not(.film-failed) .site--project main:has(> .film-static) ~ .site-footer { visibility: hidden; }
 
 /* --- Frame cards ---------------------------------------------------------------------------------- */
 
@@ -83,19 +83,12 @@ html.js .site--project main:has(> .film-static) ~ .site-footer { visibility: hid
 .sequence__hindsight { margin-top: var(--s6); max-width: 60ch; display: grid; gap: var(--s2); }
 .sequence__hindsight-text { font-family: var(--font-display); font-style: italic; font-size: var(--step-1); line-height: 1.4; }
 
-/* --- Lighting plot: the frame (7/12) beside the plan of how it was lit (5/12) ------------------------ */
+/* --- Lighting plot: the frame and its legend (7/12) beside the plan of how it was lit (5/12) ---------- */
 
 .film-plot { padding-bottom: clamp(56px, 7vw, 112px); }
 .film-plot__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s4); margin-bottom: var(--s4); }
 .film-plot__head .film__h { margin: 0; }
 .film-plot__grid { display: grid; gap: var(--s6); }
-/* The columns and gaps of the film's body (site.css .film__body), so the plan stands on the notes' line;
-   the frame rides beside the taller plan and legend instead of leaving a hole under itself. */
-@media (min-width: 900px) {
-  .film-plot__grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); column-gap: clamp(48px, 6vw, 112px); align-items: start; }
-  .film-plot__shot { position: sticky; top: 96px; }
-}
-@media (min-width: 1440px) { .film-plot__grid { column-gap: clamp(96px, 8vw, 224px); } }
 .film-plot__shot { margin: 0; display: grid; gap: var(--s3); }
 .film-plot__plan { display: grid; gap: var(--s4); align-content: start; min-width: 0; }
 .film-plot__svg {
@@ -103,8 +96,24 @@ html.js .site--project main:has(> .film-static) ~ .site-footer { visibility: hid
   border: 1px solid var(--line); border-radius: var(--radius-2); background: var(--ink-0);
 }
 .film-plot__why { max-width: 46ch; font-family: var(--font-display); font-style: italic; font-size: var(--step-1); line-height: 1.35; text-wrap: balance; }
-.film-plot__legend { max-width: 460px; }
+.film-plot__legend { max-width: 460px; min-width: 0; }
 .film-plot__legend .report__row { grid-template-columns: minmax(8ch, 11ch) minmax(0, 1fr); }
+/* The columns and gaps of the film's body (site.css .film__body), so the plan stands on the notes' line.
+   The legend sits under the frame, across its column, and the plan and the motivation fill the other.
+   The plan grows with the frame (--ar, the plotted frame's aspect; the frame's column is 7/5 of the
+   plan's): as tall as the frame plus about its caption and legend, less the motivation, so the columns
+   end together at any width and aspect; never under 460 px, never wider than its column. */
+@media (min-width: 900px) {
+  .film-plot__grid {
+    grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); grid-template-rows: auto 1fr;
+    grid-template-areas: "shot plan" "legend plan"; column-gap: clamp(48px, 6vw, 112px); align-items: start;
+  }
+  .film-plot__shot { grid-area: shot; }
+  .film-plot__plan { grid-area: plan; }
+  .film-plot__svg { max-width: clamp(460px, 140% / var(--ar, 1.78) + 150px, 100%); }
+  .film-plot__legend { grid-area: legend; max-width: none; }
+}
+@media (min-width: 1440px) { .film-plot__grid { column-gap: clamp(96px, 8vw, 224px); } }
 .film-plot__unit { text-transform: none; }
 
 @media (forced-colors: active) {

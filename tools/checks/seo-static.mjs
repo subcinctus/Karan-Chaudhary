@@ -21,6 +21,9 @@
 //       motion on: every film page's Contact pill leads to index.html#contact), on #about, #credits and
 //       #contact (1440, reduced motion), and on #about and #contact (390). An arrival must also end on its
 //       target, under the header (its top within 6 px of scroll-padding-top).
+//     - An arrival on #contact the visitor scrolls away from before the previs plans load (previs.js held
+//       2.5 s) stays where the visitor went: nothing aims at the hash again under them. A key pressed
+//       while the arrival is held back for its type ends the hold: Tab never focuses an invisible link.
 // The text helper is exported for tools/test/prerender.test.mjs.
 
 import fs from 'node:fs';
@@ -235,6 +238,67 @@ async function browserRun({ pass, fail, info, browser, watch, loadData, fullPage
       if (hash && (r.top == null || Math.abs(r.top - r.line) > 6)) fail(`${tag}: the arrival ended with ${hash} at ${r.top} px, not under the header (${r.line} px)`);
       if (cls > 0.02) fail(`${tag}: layout shift ${cls.toFixed(4)} > 0.02 from the first paint through ${through} (${worst})`);
       else pass(`${tag}: layout shift ${cls.toFixed(4)} ≤ 0.02 from the first paint through ${through}, and 1.5 s after${hash ? `; ${hash} lands at ${r.top} px` : ''} (${r.shifts.length} shift(s)${worst ? `: ${worst}` : ''})`);
+    } catch (e) { fail(`index with JavaScript, ${tag}: ${e.message.split('\n')[0]}`); }
+    await ctx.close();
+  }
+
+  // 3. An arrival the visitor leaves before the previs plans are in (a slow network: previs.js held 2.5 s).
+  //    main.js aims at the hash again once they are; someone who has scrolled away stays where they went.
+  {
+    const tag = '1440×900 #contact, scrolled away before the previs plans load';
+    const ctx = await chromium.newContext(contextOptions({ w: 1440, h: 900 }));
+    await serve(ctx);
+    await ctx.route(u => u.pathname.endsWith('/assets/js/site/previs.js'), async r => { await new Promise(res => setTimeout(res, 2500)); await r.continue(); });
+    await ctx.addInitScript(() => addEventListener('kc:content', e => { if (e.detail?.scope?.matches?.('[data-previs-grid]')) window.__plans = true; }));
+    const page = await ctx.newPage();
+    const { errors } = watch(page, srv);
+    try {
+      await page.goto(url + '#contact', { waitUntil: 'domcontentloaded', timeout: 45000 });
+      await page.waitForFunction(() => !document.documentElement.classList.contains('is-arriving'), null, { timeout: 10000 });
+      const top = () => page.evaluate(() => Math.round(document.getElementById('contact').getBoundingClientRect().top));
+      const landed = await top();
+      await page.mouse.move(700, 450);
+      for (let i = 0; i < 4; i++) { await page.mouse.wheel(0, -400); await page.waitForTimeout(80); }
+      await page.waitForTimeout(700);
+      const left = await top();
+      await page.waitForFunction(() => window.__plans, null, { timeout: 15000 });
+      await page.waitForTimeout(2500);   // aim() waits for any scroll to end (up to 1.6 s) before it cuts
+      const end = await top();
+      if (errors.length) fail(`${tag}: ${errors.length} error(s): ${errors.slice(0, 2).join(' | ')}`);
+      if (left - landed < 800) fail(`${tag}: the wheel did not move the page (#contact at ${landed} px, then ${left} px)`);
+      else if (Math.abs(end - left) > 40) fail(`${tag}: once the plans were in, the page moved #contact from ${left} px to ${end} px under a visitor who had scrolled away from it`);
+      else pass(`${tag}: #contact landed at ${landed} px; the visitor scrolled it to ${left} px and it stays there (${end} px) after the plans load`);
+    } catch (e) { fail(`index with JavaScript, ${tag}: ${e.message.split('\n')[0]}`); }
+    await ctx.close();
+  }
+
+  // 4. A key pressed while an arrival is held back for its type (the faces held 3 s): the hold ends, so
+  //    the focus Tab gives (the email link) is never on an invisible page.
+  {
+    const tag = '1440×900 #contact, Tab while the type loads';
+    const ctx = await chromium.newContext(contextOptions({ w: 1440, h: 900 }));
+    await serve(ctx);
+    await ctx.route(u => u.pathname.endsWith('.woff2'), async r => { await new Promise(res => setTimeout(res, 3000)); await r.continue().catch(() => {}); });
+    const page = await ctx.newPage();
+    try {
+      await page.goto(url + '#contact', { waitUntil: 'commit', timeout: 45000 });
+      await page.waitForFunction(() => document.documentElement.classList.contains('is-arriving'), null, { timeout: 10000 });
+      // Once the page has been parsed (and the browser has set Tab's starting point at the target), well
+      // inside the 1.5 s cap.
+      await page.waitForFunction(() => document.readyState !== 'loading', null, { timeout: 10000 });
+      await page.waitForTimeout(250);
+      const before = await page.evaluate(() => document.documentElement.classList.contains('is-arriving'));
+      await page.keyboard.press('Tab');
+      await page.waitForTimeout(120);
+      const r = await page.evaluate(() => {
+        const a = document.activeElement;
+        let op = 1;
+        for (let e = a; e; e = e.parentElement) op *= parseFloat(getComputedStyle(e).opacity);
+        return { held: document.documentElement.classList.contains('is-arriving'), what: a ? `${a.tagName.toLowerCase()} "${a.textContent.trim().slice(0, 24)}"` : 'nothing', op };
+      });
+      if (!before) fail(`${tag}: the hold had ended before the key (the type was held 3 s; the cap is 1.5 s)`);
+      else if (r.held || r.op < 1 || r.what.startsWith('body')) fail(`${tag}: focus is on ${r.what} at opacity ${r.op}${r.held ? ' while the page is still held back' : ''}`);
+      else pass(`${tag}: the hold ends at the key; focus is on ${r.what}, at opacity 1`);
     } catch (e) { fail(`index with JavaScript, ${tag}: ${e.message.split('\n')[0]}`); }
     await ctx.close();
   }

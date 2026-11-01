@@ -143,6 +143,17 @@ test('plot arguments: Super 35 field of view at the film\'s aspect, role over Ke
   assert.match(shell, /id="plot-title">Lighting plot · Sc\. 03 · EXT\. BUS STOP · NIGHT</, 'the head\'s dots bound to the word before them');
   assert.match(shell, />Sample plot</);
   assert.match(shell, /data-lightbox="frames" data-lightbox-index="0"/, 'the plot\'s frame opens the lightbox on that frame');
+  // The grid holds the frame, the plan (drawing and motivation) and then the legend, side by side: from
+  // 900 px the legend sits under the frame and the plan grows with the frame's aspect (film.css), so the
+  // columns end together; on phones the markup's order reads frame, plan, motivation, legend.
+  const grid = shell.match(/<div class="film-plot__grid" style="--ar:([\d.]+)">([\s\S]*)<\/div>\s*<\/section>/);
+  assert.ok(grid, 'the grid carries the plotted frame\'s aspect');
+  assert.equal(Number(grid[1]), FC.frameItems(night)[night.lightingPlot.frame].aspect);
+  const at = s => grid[2].indexOf(s);
+  assert.ok(at('class="film-plot__shot"') >= 0 && at('class="film-plot__shot"') < at('class="film-plot__plan"'), 'the frame first');
+  assert.ok(at('class="film-plot__why"') < at('class="report report--tight film-plot__legend"'), 'the motivation before the legend');
+  assert.ok(at('</div>') < at('class="report report--tight film-plot__legend"') && grid[2].trimEnd().endsWith('</dl>'),
+    'the legend follows the plan, a direct child of the grid (never inside the plan\'s column)');
 });
 
 // pieces/still.js mirrors some compositions by seed. The plan's key must stand on the side its frame is lit
